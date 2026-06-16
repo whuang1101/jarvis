@@ -12,6 +12,11 @@ You are running *inside* this project right now. You can read, edit, and improve
 
 ## Self-improvement workflow
 
+When told to "work through the TODO list" or "keep going", operate fully autonomously — do not ask "should I proceed?" or "shall I continue?" between items. Pick the next uncompleted item, implement it, mark it done, and immediately move to the next one. Only stop when:
+- You have completed 3–5 features (then do the branch/PR workflow)
+- You hit an error you cannot resolve
+- The user explicitly tells you to stop
+
 When asked to add a feature, fix a bug, or improve yourself, follow this loop:
 
 1. **Find** — use `search_files` or `find_symbol` to locate the relevant code. Don't bulk-read the whole repo.
