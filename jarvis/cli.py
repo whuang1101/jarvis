@@ -5,6 +5,20 @@ import subprocess
 import sys
 from pathlib import Path
 
+
+def _find_jarvis_md() -> tuple[str, Path] | None:
+    """Walk up from cwd looking for JARVIS.md. Returns (content, path) or None."""
+    path = Path.cwd()
+    for _ in range(5):
+        candidate = path / "JARVIS.md"
+        if candidate.exists():
+            return candidate.read_text(encoding="utf-8"), candidate
+        parent = path.parent
+        if parent == path:
+            break
+        path = parent
+    return None
+
 from .agent import run_agent
 from .client import JarvisClient
 from .commands import handle_command, _EXIT_SENTINEL
@@ -86,12 +100,17 @@ def main() -> None:
         sys.exit(1)
 
     client = JarvisClient(config)
-    context = ContextManager()
     tracker = UsageTracker()
     mcp = MCPManager()
     logger = SessionLogger(cwd=os.getcwd())
 
+    # Load JARVIS.md project context if present
+    jarvis_md = _find_jarvis_md()
+    context = ContextManager(project_context=jarvis_md[0] if jarvis_md else None)
+
     print_banner()
+    if jarvis_md:
+        console.print(f"[dim]  ✓ Project context loaded ({jarvis_md[1]})[/dim]")
     _init_mcp(mcp)
     print_system("Type /help for available commands. Ctrl+D to exit.")
     console.print()

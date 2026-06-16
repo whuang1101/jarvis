@@ -13,10 +13,13 @@ from .package_info import PackageInfoTool
 from .find_symbol import FindSymbolTool
 from .web_search import WebSearchTool
 from .web_extract import WebExtractTool
+from .edit_file import EditFileTool
+from .git_tools import GitStatusTool, GitDiffTool, GitLogTool
 
 _REGISTRY: list[BaseTool] = [
     ReadFileTool(),
     WriteFileTool(),
+    EditFileTool(),
     RunCommandTool(),
     ListDirTool(),
     SearchFilesTool(),
@@ -25,6 +28,9 @@ _REGISTRY: list[BaseTool] = [
     FindSymbolTool(),
     WebSearchTool(),
     WebExtractTool(),
+    GitStatusTool(),
+    GitDiffTool(),
+    GitLogTool(),
 ]
 
 _BY_NAME: dict[str, BaseTool] = {t.name: t for t in _REGISTRY}

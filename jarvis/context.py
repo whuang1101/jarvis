@@ -22,7 +22,7 @@ class UsageTracker:
 _SYSTEM_PROMPT = (
     "You are Jarvis, an AI coding assistant running in the user's terminal. "
     "You have access to their filesystem and can run commands. "
-    "Be concise and direct. When editing files, show what you're changing and why. "
+    "Be concise and direct. When editing files, prefer edit_file over write_file for targeted changes. "
     "When something fails, explain why and suggest fixes. "
     "Prefer small, focused changes over large rewrites."
 )
@@ -33,12 +33,19 @@ _COMPACT_PROMPT = (
 
 
 class ContextManager:
-    def __init__(self) -> None:
+    def __init__(self, project_context: str | None = None) -> None:
         self._history: list[dict[str, Any]] = []
+        self._project_context = project_context
 
     @property
     def system_message(self) -> dict[str, Any]:
-        return {"role": "system", "content": _SYSTEM_PROMPT}
+        content = _SYSTEM_PROMPT
+        if self._project_context:
+            content += f"\n\n## Project Context (JARVIS.md)\n\n{self._project_context}"
+        return {"role": "system", "content": content}
+
+    def set_project_context(self, text: str) -> None:
+        self._project_context = text
 
     def messages(self) -> list[dict[str, Any]]:
         return [self.system_message] + self._history

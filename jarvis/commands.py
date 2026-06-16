@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+from pathlib import Path
 
 from .client import JarvisClient
 from .context import ContextManager, UsageTracker
@@ -15,8 +16,35 @@ _HELP_TEXT = """
   [cyan]/usage[/cyan]         Show token usage for this session
   [cyan]/file <path>[/cyan]   Load a file into context
   [cyan]/run <cmd>[/cyan]     Run a shell command and add output to context
+  [cyan]/init[/cyan]          Create a JARVIS.md project context file here
   [cyan]/exit[/cyan]          Exit Jarvis
   [cyan]/quit[/cyan]          Exit Jarvis
+"""
+
+_JARVIS_MD_TEMPLATE = """\
+# Project Context
+
+## Stack
+<!-- e.g. Python 3.12, FastAPI, PostgreSQL, React -->
+
+## Architecture
+<!-- How is the project organised? Key directories and what they contain. -->
+
+## Conventions
+<!-- Naming conventions, code style, patterns to follow or avoid. -->
+
+## Key files
+<!-- Important files Jarvis should know about upfront. -->
+
+## Common commands
+<!-- How to run, test, lint, and deploy. -->
+```
+npm run dev        # start dev server
+pytest             # run tests
+```
+
+## Notes
+<!-- Anything else Jarvis should keep in mind. -->
 """
 
 _EXIT_SENTINEL = "__EXIT__"
@@ -91,6 +119,15 @@ def handle_command(
             print_error("Command timed out after 30s")
         except Exception as e:
             print_error(f"Error running command: {e}")
+        return None
+
+    if cmd == "/init":
+        target = Path.cwd() / "JARVIS.md"
+        if target.exists():
+            print_error(f"JARVIS.md already exists at {target}")
+            return None
+        target.write_text(_JARVIS_MD_TEMPLATE, encoding="utf-8")
+        print_system(f"Created {target} — fill it in to give Jarvis project context.")
         return None
 
     print_error(f"Unknown command: {cmd}  (type /help for available commands)")

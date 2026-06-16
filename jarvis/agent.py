@@ -7,6 +7,7 @@ from .client import JarvisClient
 from .context import ContextManager, UsageTracker
 from .formatter import print_streaming_token, console
 from .logger import SessionLogger
+from .permissions import needs_permission, request_permission
 from .tools import get_all_tools, get_tool_by_name
 
 _MAX_TOOL_ITERATIONS = 10
@@ -14,9 +15,18 @@ _MAX_TOOL_ITERATIONS = 10
 _TOOL_VERBS = {
     "read_file": "Reading",
     "write_file": "Writing",
+    "edit_file": "Editing",
     "list_dir": "Listing",
     "search_files": "Searching",
     "run_command": "Running",
+    "git_status": "git status",
+    "git_diff": "git diff",
+    "git_log": "git log",
+    "web_search": "Searching web",
+    "web_extract": "Extracting",
+    "fetch_url": "Fetching",
+    "find_symbol": "Finding",
+    "package_info": "Looking up",
 }
 
 
@@ -116,17 +126,23 @@ def run_agent(user_message: str, client: JarvisClient, context: ContextManager, 
                 if logger:
                     logger.tool_call(tool_name, args)
 
-                tool = get_tool_by_name(tool_name)
-                if tool is None:
-                    result = f"Error: unknown tool '{tool_name}'"
-                    console.print(f"[dim]  ✗ {label}[/dim]")
-                else:
-                    with console.status(f"[dim]{label}[/dim]", spinner="dots"):
-                        try:
-                            result = tool.execute(args)
-                        except Exception as e:
-                            result = f"Error executing {tool_name}: {e}"
-                    console.print(f"[dim]  ✓ {label}[/dim]")
+                # Permission gate — show diff/warning and ask before proceeding
+                result: str | None = None
+                if needs_permission(tool_name, args):
+                    result = request_permission(tool_name, args)
+
+                if result is None:
+                    tool = get_tool_by_name(tool_name)
+                    if tool is None:
+                        result = f"Error: unknown tool '{tool_name}'"
+                        console.print(f"[dim]  ✗ {label}[/dim]")
+                    else:
+                        with console.status(f"[dim]{label}[/dim]", spinner="dots"):
+                            try:
+                                result = tool.execute(args)
+                            except Exception as e:
+                                result = f"Error executing {tool_name}: {e}"
+                        console.print(f"[dim]  ✓ {label}[/dim]")
 
                 if logger:
                     logger.tool_result(tool_name, result)
