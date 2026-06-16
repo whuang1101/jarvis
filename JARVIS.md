@@ -1,5 +1,9 @@
 # Jarvis — Project Context
 
+## Improvement backlog
+
+See **`TODO.md`** in this directory for the full prioritized list of features to build and bugs to fix. Check it before suggesting new features — something may already be planned or completed. Mark items `[x]` when done.
+
 ## What this is
 
 Jarvis is a self-hosted CLI coding assistant built on Azure OpenAI (gpt-4o). It is a streaming agentic REPL with tool use, MCP server integrations, session logging, and a permission/diff system. The CLI is installed globally via `pipx` and invoked with `jarvis`.
