@@ -23,8 +23,7 @@ When asked to add a feature, fix a bug, or improve yourself, follow this loop:
    - New tool → add to the architecture file list
    - New gotcha or known issue → add to the Known issues section
    - New improvement idea completed → remove it from Improvement ideas
-6. **Reinstall** — use `run_command` to execute `python3 -m pipx reinstall jarvis` yourself. Do not ask the user to run it.
-7. **Tell the user to restart** — after reinstalling, tell the user to exit (`/exit` or Ctrl+D) and run `jarvis` again. The running process cannot hot-reload; new code only takes effect in a fresh session.
+6. **Reinstall and restart** — run the `/restart` command. It reinstalls the package and replaces the running process with a fresh one via `os.execv` — no manual exit needed. Do not ask the user to do this themselves.
 
 **Common mistakes to catch in step 4:**
 - Using `Path` without `from pathlib import Path`

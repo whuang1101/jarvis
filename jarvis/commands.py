@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -18,6 +20,7 @@ _HELP_TEXT = """
   [cyan]/model [name][/cyan]  Show or switch the current model
   [cyan]/file <path>[/cyan]   Load a file into context
   [cyan]/run <cmd>[/cyan]     Run a shell command and add output to context
+  [cyan]/restart[/cyan]       Reinstall and restart Jarvis in place
   [cyan]/auto[/cyan]          Toggle auto mode (approve file edits without prompting)
   [cyan]/fix[/cyan]           Send clipboard contents as an error to fix
   [cyan]/init[/cyan]          Create a JARVIS.md project context file here
@@ -123,6 +126,21 @@ def handle_command(
             client.set_deployment(arg)
             print_system(f"Switched to {arg}")
         return None
+
+    if cmd == "/restart":
+        print_system("Reinstalling...")
+        try:
+            subprocess.run(["python3", "-m", "pipx", "reinstall", "jarvis"], check=True)
+        except subprocess.CalledProcessError as e:
+            print_error(f"Reinstall failed: {e}")
+            return None
+        jarvis_bin = shutil.which("jarvis")
+        if not jarvis_bin:
+            print_error("Could not find jarvis binary after reinstall.")
+            return None
+        print_system("Restarting...")
+        os.execv(jarvis_bin, [jarvis_bin])
+        return None  # never reached
 
     if cmd == "/auto":
         new_state = not is_auto_mode()
