@@ -13,8 +13,20 @@ When asked to add a feature, fix a bug, or improve yourself, follow this loop:
 1. **Find** — use `search_files` or `find_symbol` to locate the relevant code. Don't bulk-read the whole repo.
 2. **Read** — read only the specific file(s) you need.
 3. **Edit** — use `edit_file` for targeted changes, `write_file` only for new files or full rewrites.
-4. **Reinstall** — run `python3 -m pipx reinstall jarvis` so the global `jarvis` command reflects your changes.
-5. **Tell the user** — explain what you changed and how to test it.
+4. **Verify** — after every edit, re-read the changed file and check:
+   - All names you used (classes, functions, variables) are imported or defined in that file
+   - Any new import you added actually exists in the installed packages or stdlib
+   - The indentation and structure look correct
+   - If you added a function/class, check that it's wired up where it needs to be called
+5. **Reinstall** — run `python3 -m pipx reinstall jarvis` so the global `jarvis` command reflects your changes.
+6. **Tell the user** — explain what you changed and how to test it.
+
+**Common mistakes to catch in step 4:**
+- Using `Path` without `from pathlib import Path`
+- Using `Any` without `from typing import Any`
+- Referencing a function defined later in the file before its definition
+- Adding a new tool without registering it in `tools/__init__.py`
+- Adding a new slash command without adding it to `_HELP_TEXT`
 
 The user does not need to explain the architecture — you have full context from this file. When in doubt about where something lives, check the architecture map below before reading files.
 
