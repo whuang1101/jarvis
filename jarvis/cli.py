@@ -26,6 +26,7 @@ from .agent import run_agent
 from .client import JarvisClient
 from .commands import handle_command, _EXIT_SENTINEL, _RUN_AGENT_PREFIX
 from .permissions import is_auto_mode, set_auto_mode
+from .context import is_plan_mode, set_plan_mode
 from .config import Config
 from .context import ContextManager, UsageTracker
 from .formatter import print_banner, print_error, print_system, print_user_header, console
@@ -131,6 +132,9 @@ def main() -> None:
             if resume.get("auto"):
                 set_auto_mode(True)
                 console.print("[dim yellow]Auto mode restored from resume state.[/dim yellow]")
+            if resume.get("plan"):
+                set_plan_mode(True)
+                console.print("[dim blue]Plan mode restored from resume state.[/dim blue]")
             resume_message = resume.get("message")
         except Exception:
             _RESUME_FILE.unlink(missing_ok=True)
@@ -150,8 +154,12 @@ def main() -> None:
                 short = "~" / cwd.relative_to(Path.home())
             except ValueError:
                 short = cwd
-            auto_tag = " [bold yellow]AUTO[/bold yellow]" if is_auto_mode() else ""
-            user_input = console.input(f"[dim]{short}[/dim]{auto_tag} [bold]>[/bold] ").strip()
+            tags = ""
+            if is_plan_mode():
+                tags += " [bold blue]PLAN[/bold blue]"
+            if is_auto_mode():
+                tags += " [bold yellow]AUTO[/bold yellow]"
+            user_input = console.input(f"[dim]{short}[/dim]{tags} [bold]>[/bold] ").strip()
             if user_input:
                 readline.add_history(user_input)
         except EOFError:

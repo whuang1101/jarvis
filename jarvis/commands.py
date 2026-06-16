@@ -6,7 +6,7 @@ import subprocess
 from pathlib import Path
 
 from .client import JarvisClient
-from .context import ContextManager, UsageTracker
+from .context import ContextManager, UsageTracker, is_plan_mode, set_plan_mode
 from .formatter import print_command_output, print_system, print_error, console
 from .permissions import is_auto_mode, set_auto_mode
 
@@ -23,6 +23,9 @@ _HELP_TEXT = """
   [cyan]/model [name][/cyan]  Show or switch the current model
   [cyan]/file <path>[/cyan]   Load a file into context
   [cyan]/run <cmd>[/cyan]     Run a shell command and add output to context
+  [cyan]/plan[/cyan]          Toggle plan mode (Jarvis drafts a plan before making changes)
+  [cyan]/go[/cyan]            Approve the current plan and execute it
+  [cyan]/cancel[/cyan]        Cancel the current plan
   [cyan]/restart[/cyan]       Reinstall and restart Jarvis in place
   [cyan]/auto[/cyan]          Toggle auto mode (approve file edits without prompting)
   [cyan]/fix[/cyan]           Send clipboard contents as an error to fix
@@ -177,6 +180,21 @@ def handle_command(
         print_system("Restarting...")
         os.execv(jarvis_bin, [jarvis_bin])
         return None  # never reached
+
+    if cmd == "/plan":
+        new_state = not is_plan_mode()
+        set_plan_mode(new_state)
+        if new_state:
+            print_system("Plan mode ON — Jarvis will draft a plan and wait for /go before making any changes.")
+        else:
+            print_system("Plan mode OFF — Jarvis will implement directly.")
+        return None
+
+    if cmd == "/go":
+        return f"{_RUN_AGENT_PREFIX}The plan is approved. Execute each step in order now."
+
+    if cmd == "/cancel":
+        return f"{_RUN_AGENT_PREFIX}The plan is cancelled. Do not implement anything. Ask the user what they'd like to do instead."
 
     if cmd == "/auto":
         new_state = not is_auto_mode()
