@@ -69,6 +69,11 @@ class ContextManager:
         content = _SYSTEM_PROMPT
         if self._project_context:
             content += f"\n\n## Project Context (JARVIS.md)\n\n{self._project_context}"
+        memory_path = Path.home() / '.jarvis/memory.md'
+        if memory_path.is_file():
+            with open(memory_path, 'r') as f:
+                memory_content = f.read()
+                content += f"\n\n## Persistent Memory\n\n{memory_content}"
         return {"role": "system", "content": content}
 
     def set_project_context(self, text: str) -> None:
