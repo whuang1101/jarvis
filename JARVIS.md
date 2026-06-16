@@ -18,8 +18,13 @@ When asked to add a feature, fix a bug, or improve yourself, follow this loop:
    - Any new import you added actually exists in the installed packages or stdlib
    - The indentation and structure look correct
    - If you added a function/class, check that it's wired up where it needs to be called
-5. **Reinstall** — run `python3 -m pipx reinstall jarvis` so the global `jarvis` command reflects your changes.
-6. **Tell the user** — explain what you changed and how to test it.
+5. **Update JARVIS.md** — if the feature adds a new tool, command, flow, or gotcha, update the relevant section of this file so future sessions have accurate context. Specifically:
+   - New slash command → add to the commands table and `_HELP_TEXT` note
+   - New tool → add to the architecture file list
+   - New gotcha or known issue → add to the Known issues section
+   - New improvement idea completed → remove it from Improvement ideas
+6. **Reinstall** — run `python3 -m pipx reinstall jarvis` so the global `jarvis` command reflects your changes.
+7. **Tell the user** — explain what you changed and how to test it.
 
 **Common mistakes to catch in step 4:**
 - Using `Path` without `from pathlib import Path`
