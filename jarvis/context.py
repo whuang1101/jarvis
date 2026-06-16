@@ -108,7 +108,8 @@ class ContextManager:
             with open(memory_path, 'r') as f:
                 memory_content = f.read()
                 content += f"\n\n## Persistent Memory\n\n{memory_content}"
-        if _plan_mode:
+        from .permissions import is_auto_mode
+        if _plan_mode or is_auto_mode():
             content += _PLAN_MODE_PROMPT
         return {"role": "system", "content": content}
 

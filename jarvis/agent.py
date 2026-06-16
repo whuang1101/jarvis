@@ -78,8 +78,8 @@ def run_agent(user_message: str, client: JarvisClient, context: ContextManager, 
     if context.token_estimate() > _CONTEXT_WARN_TOKENS:
         console.print(f"[yellow]⚠ Context is large (~{context.token_estimate():,} tokens). Run /compact to shrink it.[/yellow]")
 
-    # In plan mode, track whether a plan has been shown before allowing writes
-    plan_shown = not is_plan_mode()  # True means writes are allowed
+    # When auto mode is on, enforce planning before any writes
+    plan_shown = not is_auto_mode()  # True means writes are allowed
 
     for iteration in range(_MAX_TOOL_ITERATIONS):
         collected_tool_calls: dict[int, dict[str, Any]] = {}
