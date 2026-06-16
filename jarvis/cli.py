@@ -117,12 +117,10 @@ def main() -> None:
     console.print()
 
     import readline
-
-    history = []
+    readline.parse_and_bind("tab: complete")
 
     while True:
         try:
-            readline.set_startup_hook(lambda: readline.insert_text(history[-1]) if history else None)
             console.rule(style="dim")
             cwd = Path.cwd()
             try:
@@ -132,7 +130,7 @@ def main() -> None:
             auto_tag = " [bold yellow]AUTO[/bold yellow]" if is_auto_mode() else ""
             user_input = console.input(f"[dim]{short}[/dim]{auto_tag} [bold]>[/bold] ").strip()
             if user_input:
-                history.append(user_input)
+                readline.add_history(user_input)
         except EOFError:
             print_system("\nGoodbye.")
             break
