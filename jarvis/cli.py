@@ -25,7 +25,7 @@ from .commands import handle_command, _EXIT_SENTINEL, _RUN_AGENT_PREFIX
 from .permissions import is_auto_mode
 from .config import Config
 from .context import ContextManager, UsageTracker
-from .formatter import print_banner, print_error, print_system, console
+from .formatter import print_banner, print_error, print_system, print_user_header, console
 from .logger import SessionLogger
 from .mcp_manager import MCPManager
 from .tools import register_tool
@@ -116,8 +116,13 @@ def main() -> None:
     print_system("Type /help for available commands. Ctrl+D to exit.")
     console.print()
 
+    import readline
+
+    history = []
+
     while True:
         try:
+            readline.set_startup_hook(lambda: readline.insert_text(history[-1]) if history else None)
             console.rule(style="dim")
             cwd = Path.cwd()
             try:
@@ -126,6 +131,8 @@ def main() -> None:
                 short = cwd
             auto_tag = " [bold yellow]AUTO[/bold yellow]" if is_auto_mode() else ""
             user_input = console.input(f"[dim]{short}[/dim]{auto_tag} [bold]>[/bold] ").strip()
+            if user_input:
+                history.append(user_input)
         except EOFError:
             print_system("\nGoodbye.")
             break
@@ -154,6 +161,7 @@ def main() -> None:
                 print_error(f"Command failed: {e}")
             continue
 
+        print_user_header(user_input)
         try:
             run_agent(user_input, client, context, tracker, logger)
         except KeyboardInterrupt:
@@ -162,5 +170,3 @@ def main() -> None:
         except Exception as e:
             logger.error(str(e))
             print_error(f"Unexpected error: {e}")
-
-        console.print()

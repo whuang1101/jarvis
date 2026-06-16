@@ -8,7 +8,8 @@ from openai import BadRequestError, RateLimitError
 
 from .client import JarvisClient
 from .context import ContextManager, UsageTracker
-from .formatter import print_streaming_token, console
+from rich.markdown import Markdown
+from .formatter import print_jarvis_header, make_live_markdown, console
 from .logger import SessionLogger
 from .permissions import needs_permission, request_permission
 from .tools import get_all_tools, get_tool_by_name
@@ -94,48 +95,59 @@ def run_agent(user_message: str, client: JarvisClient, context: ContextManager, 
                     return
             else:
                 raise
-        with console.status("[dim]Thinking...[/dim]", spinner="dots") as status:
-            for chunk in chunks:
-                if chunk.usage:
-                    tracker.record(chunk.usage.prompt_tokens, chunk.usage.completion_tokens, client.current_deployment())
+        status = console.status("[dim]Thinking...[/dim]", spinner="dots")
+        status.start()
+        live = None
 
-                choice = chunk.choices[0] if chunk.choices else None
-                if choice is None:
-                    continue
+        for chunk in chunks:
+            if chunk.usage:
+                tracker.record(chunk.usage.prompt_tokens, chunk.usage.completion_tokens, client.current_deployment())
 
-                finish_reason = choice.finish_reason
-                delta = choice.delta
+            choice = chunk.choices[0] if chunk.choices else None
+            if choice is None:
+                continue
 
-                if not streaming_started and (delta.content or delta.tool_calls):
-                    status.stop()
-                    streaming_started = True
+            finish_reason = choice.finish_reason
+            delta = choice.delta
 
-                if delta.content:
-                    text_chunks.append(delta.content)
-                    print_streaming_token(delta.content)
+            if not streaming_started and (delta.content or delta.tool_calls):
+                status.stop()
+                streaming_started = True
 
-                if delta.tool_calls:
-                    for tc in delta.tool_calls:
-                        idx = tc.index
-                        if idx not in collected_tool_calls:
-                            collected_tool_calls[idx] = {
-                                "id": tc.id or "",
-                                "name": tc.function.name if tc.function else "",
-                                "arguments": "",
-                            }
-                        if tc.id:
-                            collected_tool_calls[idx]["id"] = tc.id
-                        if tc.function:
-                            if tc.function.name:
-                                collected_tool_calls[idx]["name"] = tc.function.name
-                            if tc.function.arguments:
-                                collected_tool_calls[idx]["arguments"] += tc.function.arguments
+            if delta.content:
+                if live is None:
+                    print_jarvis_header()
+                    live = make_live_markdown()
+                    live.start()
+                text_chunks.append(delta.content)
+                live.update(Markdown("".join(text_chunks)))
+
+            if delta.tool_calls:
+                for tc in delta.tool_calls:
+                    idx = tc.index
+                    if idx not in collected_tool_calls:
+                        collected_tool_calls[idx] = {
+                            "id": tc.id or "",
+                            "name": tc.function.name if tc.function else "",
+                            "arguments": "",
+                        }
+                    if tc.id:
+                        collected_tool_calls[idx]["id"] = tc.id
+                    if tc.function:
+                        if tc.function.name:
+                            collected_tool_calls[idx]["name"] = tc.function.name
+                        if tc.function.arguments:
+                            collected_tool_calls[idx]["arguments"] += tc.function.arguments
+
+        if live:
+            live.stop()
+        else:
+            status.stop()
 
         full_text = "".join(text_chunks)
 
         if finish_reason == "stop" or (finish_reason != "tool_calls" and not collected_tool_calls):
-            if full_text:
-                console.print()
+            console.print()
             context.append({"role": "assistant", "content": full_text})
             if logger:
                 logger.assistant(full_text)
