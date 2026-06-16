@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
+import time
 from typing import Any
+
+from openai import RateLimitError
 
 from .client import JarvisClient
 from .context import ContextManager, UsageTracker
@@ -11,6 +14,18 @@ from .permissions import needs_permission, request_permission
 from .tools import get_all_tools, get_tool_by_name
 
 _MAX_TOOL_ITERATIONS = 10
+_RETRY_DELAYS = (5, 15, 30)  # seconds between attempts
+
+
+def _stream_with_retry(client: JarvisClient, messages: list, tools: list):
+    for attempt, delay in enumerate((*_RETRY_DELAYS, None)):
+        try:
+            return list(client.stream(messages, tools=tools))
+        except RateLimitError:
+            if delay is None:
+                raise
+            console.print(f"[yellow]Rate limited — retrying in {delay}s...[/yellow]")
+            time.sleep(delay)
 
 _TOOL_VERBS = {
     "read_file": "Reading",
@@ -56,7 +71,7 @@ def run_agent(user_message: str, client: JarvisClient, context: ContextManager, 
 
         tool_schemas = [t.to_openai_schema() for t in get_all_tools()]
         with console.status("[dim]Thinking...[/dim]", spinner="dots") as status:
-            for chunk in client.stream(context.messages(), tools=tool_schemas):
+            for chunk in _stream_with_retry(client, context.messages(), tool_schemas):
                 if chunk.usage:
                     tracker.record(chunk.usage.prompt_tokens, chunk.usage.completion_tokens, client.current_deployment())
 
