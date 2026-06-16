@@ -81,7 +81,24 @@ class ContextManager:
         self._project_context = text
 
     def messages(self) -> list[dict[str, Any]]:
-        return [self.system_message] + self._history
+        return [self.system_message] + self._clean_history()
+
+    def _clean_history(self) -> list[dict[str, Any]]:
+        """Remove assistant tool_call messages that have no matching tool results."""
+        # Collect all tool_call_ids that have a response
+        responded = {
+            m["tool_call_id"]
+            for m in self._history
+            if m.get("role") == "tool" and "tool_call_id" in m
+        }
+        cleaned = []
+        for m in self._history:
+            if m.get("role") == "assistant" and m.get("tool_calls"):
+                ids = {tc["id"] for tc in m["tool_calls"]}
+                if not ids.issubset(responded):
+                    continue  # drop orphaned tool_call message
+            cleaned.append(m)
+        return cleaned
 
     def append(self, message: dict[str, Any]) -> None:
         self._history.append(message)
