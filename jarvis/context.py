@@ -55,9 +55,42 @@ _SYSTEM_PROMPT = (
     "those files. Keep your responses short. If context is growing large, tell the user to run /compact."
 )
 
+_PLAN_MODE_PROMPT = """
+## Plan Mode is ACTIVE
+
+Before implementing anything or calling any tools that modify files or run commands, you MUST:
+
+1. Read the relevant files to understand what needs to change
+2. Output a clear numbered plan in this format:
+
+**Plan: <short title>**
+1. <exact file and what will change>
+2. <exact file and what will change>
+...
+
+If Auto Mode is also active: execute the plan immediately after showing it — do not wait for /go.
+If Auto Mode is NOT active: end with "Type `/go` to execute or `/cancel` to abort." and wait.
+
+Do NOT call write_file, edit_file, or run_command before showing the plan.
+You MAY call read_file, list_dir, search_files, and find_symbol to research before planning.
+After approval (or immediately if auto mode is on), execute each step in order and note each as done.
+"""
+
 _COMPACT_PROMPT = (
     "Summarize this conversation in 3-4 sentences focusing on what was discussed and decided."
 )
+
+
+_plan_mode: bool = False
+
+
+def is_plan_mode() -> bool:
+    return _plan_mode
+
+
+def set_plan_mode(enabled: bool) -> None:
+    global _plan_mode
+    _plan_mode = enabled
 
 
 class ContextManager:
@@ -75,6 +108,8 @@ class ContextManager:
             with open(memory_path, 'r') as f:
                 memory_content = f.read()
                 content += f"\n\n## Persistent Memory\n\n{memory_content}"
+        if _plan_mode:
+            content += _PLAN_MODE_PROMPT
         return {"role": "system", "content": content}
 
     def set_project_context(self, text: str) -> None:

@@ -65,12 +65,14 @@ class RunCommandTool(BaseTool):
                 # If auto mode is on, write a resume state so the new session
                 # picks up where it left off without any user input
                 from ..permissions import is_auto_mode
+                from ..context import is_plan_mode
                 if is_auto_mode():
                     resume_path = Path.home() / ".jarvis" / "resume.json"
                     resume_path.parent.mkdir(parents=True, exist_ok=True)
                     resume_path.write_text(json.dumps({
                         "message": "Continue working through TODO.md autonomously. Check for the next uncompleted item, implement it, mark it done, then move to the next. Do not ask to proceed between items.",
                         "auto": True,
+                        "plan": is_plan_mode(),
                     }))
                 jarvis_bin = shutil.which("jarvis")
                 if jarvis_bin:
