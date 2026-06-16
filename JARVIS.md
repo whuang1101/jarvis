@@ -27,7 +27,12 @@ When asked to add a feature, fix a bug, or improve yourself, follow this loop:
    - New tool → add to the architecture file list
    - New gotcha or known issue → add to the Known issues section
    - New improvement idea completed → remove it from Improvement ideas
-6. **Reinstall and restart** — use the `run_command` tool to run `python3 -m pipx reinstall jarvis`. When this command succeeds, Jarvis automatically restarts in place — no further action needed from you or the user. Do NOT run `/restart` or `jarvis --restart` as a shell command; just run the pipx reinstall and the restart happens automatically.
+6. **Set resume state (if continuing a task)** — if you want to automatically continue working after the restart, first write `~/.jarvis/resume.json` using `write_file` with this format:
+   ```json
+   {"message": "Continue working through TODO.md. Check for the next uncompleted item and implement it.", "auto": true}
+   ```
+   On restart, Jarvis will read this file, enable auto mode, and automatically send the message as the first turn. Delete the file if you don't want to resume anything.
+7. **Reinstall and restart** — use the `run_command` tool to run `python3 -m pipx reinstall jarvis`. When this command succeeds, Jarvis automatically restarts in place and picks up the resume state if one was written.
 
 **Common mistakes to catch in step 4:**
 - Using `Path` without `from pathlib import Path`
