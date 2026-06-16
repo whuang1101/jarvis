@@ -201,6 +201,20 @@ def handle_command(
             print_error(f"Failed to save: {e}")
         return None
 
+    if cmd == "/copy":
+        if not context._history or context._history[-1]['role'] != 'assistant':
+            print_error("No assistant response to copy.")
+            return None
+        response = context._history[-1]['content']
+        try:
+            subprocess.run(["pbcopy"], input=response, text=True, check=True)
+            print_system("Copied last assistant response to clipboard.")
+        except FileNotFoundError:
+            print_error("pbcopy not available on this system.")
+        except Exception as e:
+            print_error(f"Failed to copy: {e}")
+        return None
+
     if cmd == "/fix":
         text = arg or _get_clipboard()
         if not text:
