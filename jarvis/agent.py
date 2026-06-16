@@ -10,6 +10,8 @@ from .client import JarvisClient
 from .context import ContextManager, UsageTracker
 from rich.markdown import Markdown
 from .formatter import print_jarvis_header, make_live_markdown, console
+from .context import is_plan_mode
+from .permissions import is_auto_mode
 from .logger import SessionLogger
 from .permissions import needs_permission, request_permission
 from .tools import get_all_tools, get_tool_by_name
@@ -65,6 +67,7 @@ def _tool_status_label(tool_name: str, args: dict[str, Any]) -> str:
 
 
 _CONTEXT_WARN_TOKENS = 20_000  # warn at ~20K estimated tokens in history
+_WRITE_TOOLS = {"write_file", "edit_file", "run_command"}
 
 
 def run_agent(user_message: str, client: JarvisClient, context: ContextManager, tracker: UsageTracker, logger: SessionLogger | None = None) -> None:
@@ -74,6 +77,9 @@ def run_agent(user_message: str, client: JarvisClient, context: ContextManager, 
 
     if context.token_estimate() > _CONTEXT_WARN_TOKENS:
         console.print(f"[yellow]⚠ Context is large (~{context.token_estimate():,} tokens). Run /compact to shrink it.[/yellow]")
+
+    # In plan mode, track whether a plan has been shown before allowing writes
+    plan_shown = not is_plan_mode()  # True means writes are allowed
 
     for iteration in range(_MAX_TOOL_ITERATIONS):
         collected_tool_calls: dict[int, dict[str, Any]] = {}
@@ -153,6 +159,10 @@ def run_agent(user_message: str, client: JarvisClient, context: ContextManager, 
                 logger.assistant(full_text)
             return
 
+        # Once the model has output text in plan mode, mark the plan as shown
+        if full_text and not plan_shown:
+            plan_shown = True
+
         if collected_tool_calls:
             if full_text:
                 console.print()
@@ -177,9 +187,17 @@ def run_agent(user_message: str, client: JarvisClient, context: ContextManager, 
                 if logger:
                     logger.tool_call(tool_name, args)
 
-                # Permission gate — show diff/warning and ask before proceeding
+                # Plan mode gate — block write tools until a plan has been shown
                 result: str | None = None
-                if needs_permission(tool_name, args):
+                if not plan_shown and tool_name in _WRITE_TOOLS:
+                    result = (
+                        "Plan mode is active. You must output a numbered plan first before "
+                        "calling any write or command tools. Show the plan now, then execute "
+                        "after the user types /go (or immediately if auto mode is on)."
+                    )
+
+                # Permission gate — show diff/warning and ask before proceeding
+                if result is None and needs_permission(tool_name, args):
                     result = request_permission(tool_name, args)
 
                 if result is None:
