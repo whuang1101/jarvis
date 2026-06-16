@@ -58,10 +58,16 @@ def _tool_status_label(tool_name: str, args: dict[str, Any]) -> str:
     return f"{verb} {first_val[:60]}"
 
 
+_CONTEXT_WARN_TOKENS = 20_000  # warn at ~20K estimated tokens in history
+
+
 def run_agent(user_message: str, client: JarvisClient, context: ContextManager, tracker: UsageTracker, logger: SessionLogger | None = None) -> None:
     context.append({"role": "user", "content": user_message})
     if logger:
         logger.user(user_message)
+
+    if context.token_estimate() > _CONTEXT_WARN_TOKENS:
+        console.print(f"[yellow]⚠ Context is large (~{context.token_estimate():,} tokens). Run /compact to shrink it.[/yellow]")
 
     for iteration in range(_MAX_TOOL_ITERATIONS):
         collected_tool_calls: dict[int, dict[str, Any]] = {}

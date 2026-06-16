@@ -48,7 +48,10 @@ _SYSTEM_PROMPT = (
     "You have access to their filesystem and can run commands. "
     "Be concise and direct. When editing files, prefer edit_file over write_file for targeted changes. "
     "When something fails, explain why and suggest fixes. "
-    "Prefer small, focused changes over large rewrites."
+    "Prefer small, focused changes over large rewrites. "
+    "IMPORTANT: You are on a low token quota. Read only the specific files you need — never bulk-read "
+    "an entire repo. Use search_files or find_symbol to locate what you need first, then read only "
+    "those files. Keep your responses short. If context is growing large, tell the user to run /compact."
 )
 
 _COMPACT_PROMPT = (
