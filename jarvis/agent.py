@@ -6,6 +6,7 @@ from typing import Any
 from .client import JarvisClient
 from .context import ContextManager, UsageTracker
 from .formatter import print_streaming_token, console
+from .logger import SessionLogger
 from .tools import get_all_tools, get_tool_by_name
 
 _MAX_TOOL_ITERATIONS = 10
@@ -32,8 +33,10 @@ def _tool_status_label(tool_name: str, args: dict[str, Any]) -> str:
     return f"{verb} {first_val[:60]}"
 
 
-def run_agent(user_message: str, client: JarvisClient, context: ContextManager, tracker: UsageTracker) -> None:
+def run_agent(user_message: str, client: JarvisClient, context: ContextManager, tracker: UsageTracker, logger: SessionLogger | None = None) -> None:
     context.append({"role": "user", "content": user_message})
+    if logger:
+        logger.user(user_message)
 
     for iteration in range(_MAX_TOOL_ITERATIONS):
         collected_tool_calls: dict[int, dict[str, Any]] = {}
@@ -85,6 +88,8 @@ def run_agent(user_message: str, client: JarvisClient, context: ContextManager, 
             if full_text:
                 console.print()
             context.append({"role": "assistant", "content": full_text})
+            if logger:
+                logger.assistant(full_text)
             return
 
         if collected_tool_calls:
@@ -108,6 +113,8 @@ def run_agent(user_message: str, client: JarvisClient, context: ContextManager, 
                     args = {}
 
                 label = _tool_status_label(tool_name, args)
+                if logger:
+                    logger.tool_call(tool_name, args)
 
                 tool = get_tool_by_name(tool_name)
                 if tool is None:
@@ -120,6 +127,9 @@ def run_agent(user_message: str, client: JarvisClient, context: ContextManager, 
                         except Exception as e:
                             result = f"Error executing {tool_name}: {e}"
                     console.print(f"[dim]  ✓ {label}[/dim]")
+
+                if logger:
+                    logger.tool_result(tool_name, result)
 
                 context.append({
                     "role": "tool",

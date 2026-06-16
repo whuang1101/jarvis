@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 from .agent import run_agent
 from .client import JarvisClient
@@ -10,6 +11,7 @@ from .commands import handle_command, _EXIT_SENTINEL
 from .config import Config
 from .context import ContextManager, UsageTracker
 from .formatter import print_banner, print_error, print_system, console
+from .logger import SessionLogger
 from .mcp_manager import MCPManager
 from .tools import register_tool
 
@@ -87,6 +89,7 @@ def main() -> None:
     context = ContextManager()
     tracker = UsageTracker()
     mcp = MCPManager()
+    logger = SessionLogger(cwd=os.getcwd())
 
     print_banner()
     _init_mcp(mcp)
@@ -96,7 +99,12 @@ def main() -> None:
     while True:
         try:
             console.rule(style="dim")
-            user_input = console.input("[bold]> [/bold]").strip()
+            cwd = Path.cwd()
+            try:
+                short = "~" / cwd.relative_to(Path.home())
+            except ValueError:
+                short = cwd
+            user_input = console.input(f"[dim]{short}[/dim] [bold]>[/bold] ").strip()
         except EOFError:
             print_system("\nGoodbye.")
             break
@@ -117,11 +125,12 @@ def main() -> None:
             continue
 
         try:
-            run_agent(user_input, client, context, tracker)
+            run_agent(user_input, client, context, tracker, logger)
         except KeyboardInterrupt:
             console.print()
             print_system("Cancelled.")
         except Exception as e:
+            logger.error(str(e))
             print_error(f"Unexpected error: {e}")
 
         console.print()

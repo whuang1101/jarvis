@@ -11,6 +11,8 @@ from .search_files import SearchFilesTool
 from .fetch_url import FetchUrlTool
 from .package_info import PackageInfoTool
 from .find_symbol import FindSymbolTool
+from .web_search import WebSearchTool
+from .web_extract import WebExtractTool
 
 _REGISTRY: list[BaseTool] = [
     ReadFileTool(),
@@ -21,6 +23,8 @@ _REGISTRY: list[BaseTool] = [
     FetchUrlTool(),
     PackageInfoTool(),
     FindSymbolTool(),
+    WebSearchTool(),
+    WebExtractTool(),
 ]
 
 _BY_NAME: dict[str, BaseTool] = {t.name: t for t in _REGISTRY}
