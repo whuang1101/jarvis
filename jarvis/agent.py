@@ -4,7 +4,7 @@ import json
 import time
 from typing import Any
 
-from openai import RateLimitError
+from openai import BadRequestError, RateLimitError
 
 from .client import JarvisClient
 from .context import ContextManager, UsageTracker
@@ -15,6 +15,11 @@ from .tools import get_all_tools, get_tool_by_name
 
 _MAX_TOOL_ITERATIONS = 10
 _RETRY_DELAYS = (5, 15, 30)  # seconds between attempts
+
+
+def _is_context_length_error(e: BadRequestError) -> bool:
+    msg = str(e).lower()
+    return "context_length_exceeded" in msg or "maximum context length" in msg or "too many tokens" in msg
 
 
 def _stream_with_retry(client: JarvisClient, messages: list, tools: list):
@@ -76,8 +81,21 @@ def run_agent(user_message: str, client: JarvisClient, context: ContextManager, 
         streaming_started = False
 
         tool_schemas = [t.to_openai_schema() for t in get_all_tools()]
+        try:
+            chunks = _stream_with_retry(client, context.messages(), tool_schemas)
+        except BadRequestError as e:
+            if _is_context_length_error(e):
+                console.print("[yellow]⚠ Context window full — compacting and continuing...[/yellow]")
+                context.compact(client, tracker)
+                try:
+                    chunks = _stream_with_retry(client, context.messages(), tool_schemas)
+                except Exception as retry_err:
+                    console.print(f"[red]Error after compaction: {retry_err}[/red]")
+                    return
+            else:
+                raise
         with console.status("[dim]Thinking...[/dim]", spinner="dots") as status:
-            for chunk in _stream_with_retry(client, context.messages(), tool_schemas):
+            for chunk in chunks:
                 if chunk.usage:
                     tracker.record(chunk.usage.prompt_tokens, chunk.usage.completion_tokens, client.current_deployment())
 
