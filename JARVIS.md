@@ -34,6 +34,35 @@ When asked to add a feature, fix a bug, or improve yourself, follow this loop:
    On restart, Jarvis will read this file, enable auto mode, and automatically send the message as the first turn. Delete the file if you don't want to resume anything.
 7. **Reinstall and restart** — use the `run_command` tool to run `python3 -m pipx reinstall jarvis`. When this command succeeds, Jarvis automatically restarts in place and picks up the resume state if one was written.
 
+## Branching and PR workflow
+
+After every **3–5 completed features**, or when finishing a logical group from TODO.md (e.g. all Robustness items), create a branch, open a PR, and merge it:
+
+```bash
+# 1. Create a branch named after the batch
+git checkout -b feat/robustness-improvements
+
+# 2. Stage and commit all changes
+git add -A
+git commit -m "Add tool result truncation, read_file size guard, auto-compact"
+
+# 3. Push and open a PR with a meaningful title and description
+git push -u origin feat/robustness-improvements
+gh pr create \
+  --title "Robustness: tool truncation, file size guard, auto-compact" \
+  --body "## What\n- Tool results over 8K chars are truncated\n- read_file warns on files over 100KB\n- Context auto-compacts at 25K tokens\n\n## Why\nPrevents context blowups from large file reads and long sessions."
+
+# 4. Merge and return to main
+gh pr merge --squash --delete-branch
+git checkout main
+git pull
+```
+
+**Branch naming:** `feat/<category>-<short-description>` e.g. `feat/shell-integration`, `feat/session-management`
+**PR title format:** `<Category>: short summary of features`
+**Always squash merge** to keep main history clean.
+**Do not wait for the user to ask** — after 3–5 features, do this automatically as part of the loop.
+
 **Common mistakes to catch in step 4:**
 - Using `Path` without `from pathlib import Path`
 - Using `Any` without `from typing import Any`
