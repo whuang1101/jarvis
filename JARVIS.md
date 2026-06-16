@@ -6,6 +6,18 @@ Jarvis is a self-hosted CLI coding assistant built on Azure OpenAI (gpt-4o). It 
 
 You are running *inside* this project right now. You can read, edit, and improve your own source code.
 
+## Self-improvement workflow
+
+When asked to add a feature, fix a bug, or improve yourself, follow this loop:
+
+1. **Find** — use `search_files` or `find_symbol` to locate the relevant code. Don't bulk-read the whole repo.
+2. **Read** — read only the specific file(s) you need.
+3. **Edit** — use `edit_file` for targeted changes, `write_file` only for new files or full rewrites.
+4. **Reinstall** — run `python3 -m pipx reinstall jarvis` so the global `jarvis` command reflects your changes.
+5. **Tell the user** — explain what you changed and how to test it.
+
+The user does not need to explain the architecture — you have full context from this file. When in doubt about where something lives, check the architecture map below before reading files.
+
 ## Stack
 
 - Python 3.11+ (3.13 in practice)
