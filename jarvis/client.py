@@ -40,6 +40,12 @@ class JarvisClient:
             kwargs["tool_choice"] = "auto"
         return self._client.chat.completions.create(**kwargs)
 
+    def current_deployment(self) -> str:
+        return self._deployment
+
+    def set_deployment(self, deployment: str) -> None:
+        self._deployment = deployment
+
     def complete(
         self,
         messages: list[dict[str, Any]],

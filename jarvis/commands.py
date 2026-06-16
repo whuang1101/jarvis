@@ -13,9 +13,11 @@ _HELP_TEXT = """
   [cyan]/help[/cyan]          Show this help message
   [cyan]/clear[/cyan]         Clear conversation history
   [cyan]/compact[/cyan]       Summarize and compress conversation history
-  [cyan]/usage[/cyan]         Show token usage for this session
+  [cyan]/usage[/cyan]         Show token usage and estimated cost for this session
+  [cyan]/model [name][/cyan]  Show or switch the current model
   [cyan]/file <path>[/cyan]   Load a file into context
   [cyan]/run <cmd>[/cyan]     Run a shell command and add output to context
+  [cyan]/fix[/cyan]           Send clipboard contents as an error to fix
   [cyan]/init[/cyan]          Create a JARVIS.md project context file here
   [cyan]/exit[/cyan]          Exit Jarvis
   [cyan]/quit[/cyan]          Exit Jarvis
@@ -48,6 +50,18 @@ pytest             # run tests
 """
 
 _EXIT_SENTINEL = "__EXIT__"
+_RUN_AGENT_PREFIX = "__RUN__:"
+
+
+def _get_clipboard() -> str | None:
+    for cmd in (["pbpaste"], ["xclip", "-o"], ["wl-paste"]):
+        try:
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=3)
+            if r.returncode == 0 and r.stdout.strip():
+                return r.stdout.strip()
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            continue
+    return None
 
 
 def handle_command(
@@ -56,7 +70,13 @@ def handle_command(
     context: ContextManager,
     tracker: UsageTracker,
 ) -> str | None:
-    """Handle a slash command. Returns _EXIT_SENTINEL to signal exit, None otherwise."""
+    """
+    Handle a slash command.
+    Returns:
+      None             → nothing to do
+      _EXIT_SENTINEL   → exit the REPL
+      _RUN_AGENT_PREFIX + message → run this message through the agent
+    """
     parts = raw.strip().split(None, 1)
     cmd = parts[0].lower()
     arg = parts[1] if len(parts) > 1 else ""
@@ -82,14 +102,45 @@ def handle_command(
 
     if cmd == "/usage":
         msgs = context.message_count()
+        cost = tracker.cost_usd
         console.print(
-            f"\n[bold cyan]Session token usage[/bold cyan]\n"
+            f"\n[bold cyan]Session usage[/bold cyan]\n"
+            f"  Model:              [cyan]{client.current_deployment()}[/cyan]\n"
             f"  Prompt tokens:      [cyan]{tracker.prompt_tokens:>10,}[/cyan]\n"
             f"  Completion tokens:  [cyan]{tracker.completion_tokens:>10,}[/cyan]\n"
             f"  Total tokens:       [bold cyan]{tracker.total_tokens:>10,}[/bold cyan]\n"
+            f"  Estimated cost:     [bold cyan]${cost:>10.4f}[/bold cyan]\n"
             f"\n[dim]Context window: {msgs} messages[/dim]"
         )
         return None
+
+    if cmd == "/model":
+        if not arg:
+            print_command_output(f"Current model: {client.current_deployment()}")
+        else:
+            client.set_deployment(arg)
+            print_system(f"Switched to {arg}")
+        return None
+
+    if cmd == "/fix":
+        text = arg or _get_clipboard()
+        if not text:
+            # Fall back to manual paste
+            console.print("[dim]Paste the error then press Ctrl+D:[/dim]")
+            lines: list[str] = []
+            try:
+                while True:
+                    lines.append(console.input(""))
+            except EOFError:
+                text = "\n".join(lines).strip()
+        if not text:
+            print_error("No error text to fix.")
+            return None
+        # Show what we're sending
+        preview = text[:300] + ("..." if len(text) > 300 else "")
+        console.print(f"[dim]{preview}[/dim]")
+        message = f"I got this error:\n```\n{text}\n```\nPlease diagnose and fix it."
+        return f"{_RUN_AGENT_PREFIX}{message}"
 
     if cmd == "/file":
         if not arg:

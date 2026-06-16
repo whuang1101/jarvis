@@ -58,7 +58,7 @@ def run_agent(user_message: str, client: JarvisClient, context: ContextManager, 
         with console.status("[dim]Thinking...[/dim]", spinner="dots") as status:
             for chunk in client.stream(context.messages(), tools=tool_schemas):
                 if chunk.usage:
-                    tracker.record(chunk.usage.prompt_tokens, chunk.usage.completion_tokens)
+                    tracker.record(chunk.usage.prompt_tokens, chunk.usage.completion_tokens, client.current_deployment())
 
                 choice = chunk.choices[0] if chunk.choices else None
                 if choice is None:

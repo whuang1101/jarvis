@@ -5,19 +5,43 @@ from typing import Any, TYPE_CHECKING
 if TYPE_CHECKING:
     from .client import JarvisClient
 
+# Price per 1M tokens in USD (input, output)
+_PRICING: dict[str, tuple[float, float]] = {
+    "gpt-4o":       (2.50,  10.00),
+    "gpt-4o-mini":  (0.15,   0.60),
+    "gpt-4-turbo":  (10.00, 30.00),
+    "gpt-4":        (30.00, 60.00),
+    "gpt-35-turbo": (0.50,   1.50),
+    "o1":           (15.00, 60.00),
+    "o1-mini":      (3.00,  12.00),
+}
+
+
+def _lookup_price(deployment: str) -> tuple[float, float]:
+    dl = deployment.lower()
+    for key, price in _PRICING.items():
+        if key in dl:
+            return price
+    return (2.50, 10.00)
+
 
 class UsageTracker:
     def __init__(self) -> None:
         self.prompt_tokens: int = 0
         self.completion_tokens: int = 0
+        self.cost_usd: float = 0.0
 
     @property
     def total_tokens(self) -> int:
         return self.prompt_tokens + self.completion_tokens
 
-    def record(self, prompt: int, completion: int) -> None:
+    def record(self, prompt: int, completion: int, deployment: str = "") -> None:
         self.prompt_tokens += prompt
         self.completion_tokens += completion
+        if deployment:
+            inp, out = _lookup_price(deployment)
+            self.cost_usd += (prompt * inp + completion * out) / 1_000_000
+
 
 _SYSTEM_PROMPT = (
     "You are Jarvis, an AI coding assistant running in the user's terminal. "

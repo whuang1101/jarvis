@@ -21,7 +21,7 @@ def _find_jarvis_md() -> tuple[str, Path] | None:
 
 from .agent import run_agent
 from .client import JarvisClient
-from .commands import handle_command, _EXIT_SENTINEL
+from .commands import handle_command, _EXIT_SENTINEL, _RUN_AGENT_PREFIX
 from .config import Config
 from .context import ContextManager, UsageTracker
 from .formatter import print_banner, print_error, print_system, console
@@ -139,6 +139,15 @@ def main() -> None:
                 result = handle_command(user_input, client, context, tracker)
                 if result == _EXIT_SENTINEL:
                     break
+                if result and result.startswith(_RUN_AGENT_PREFIX):
+                    agent_message = result[len(_RUN_AGENT_PREFIX):]
+                    try:
+                        run_agent(agent_message, client, context, tracker, logger)
+                    except KeyboardInterrupt:
+                        console.print()
+                        print_system("Cancelled.")
+                    except Exception as e:
+                        print_error(f"Unexpected error: {e}")
             except Exception as e:
                 print_error(f"Command failed: {e}")
             continue
