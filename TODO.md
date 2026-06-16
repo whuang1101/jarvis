@@ -7,7 +7,7 @@ Check this file before suggesting new features. Mark items `[x]` when done and n
 ## UX / Quality of Life
 
 - [x] **`/undo`** — pop the last user + assistant turn from `context._history`
-- [ ] **`/retry`** — resend the last user message through the agent
+- [x] **`/retry`** — resend the last user message through the agent
 - [x] **`/history`** — print the last N exchanges from the current session in a readable format
 - [ ] **`/save <file>`** — dump the current conversation to a markdown file
 - [ ] **`/copy`** — copy the last assistant response to clipboard via `pbcopy`
