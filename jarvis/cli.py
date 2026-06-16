@@ -22,6 +22,7 @@ def _find_jarvis_md() -> tuple[str, Path] | None:
 from .agent import run_agent
 from .client import JarvisClient
 from .commands import handle_command, _EXIT_SENTINEL, _RUN_AGENT_PREFIX
+from .permissions import is_auto_mode
 from .config import Config
 from .context import ContextManager, UsageTracker
 from .formatter import print_banner, print_error, print_system, console
@@ -123,7 +124,8 @@ def main() -> None:
                 short = "~" / cwd.relative_to(Path.home())
             except ValueError:
                 short = cwd
-            user_input = console.input(f"[dim]{short}[/dim] [bold]>[/bold] ").strip()
+            auto_tag = " [bold yellow]AUTO[/bold yellow]" if is_auto_mode() else ""
+            user_input = console.input(f"[dim]{short}[/dim]{auto_tag} [bold]>[/bold] ").strip()
         except EOFError:
             print_system("\nGoodbye.")
             break

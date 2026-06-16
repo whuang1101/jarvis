@@ -18,12 +18,25 @@ _DESTRUCTIVE_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Auto mode: skip approval for file writes/edits; destructive commands always blocked.
+_auto_mode: bool = False
+
+
+def is_auto_mode() -> bool:
+    return _auto_mode
+
+
+def set_auto_mode(enabled: bool) -> None:
+    global _auto_mode
+    _auto_mode = enabled
+
 
 def needs_permission(tool_name: str, args: dict[str, Any]) -> bool:
-    if tool_name in ("write_file", "edit_file"):
-        return True
     if tool_name == "run_command":
+        # Destructive commands always require approval regardless of auto mode
         return bool(_DESTRUCTIVE_RE.search(args.get("command", "")))
+    if tool_name in ("write_file", "edit_file"):
+        return not _auto_mode
     return False
 
 
@@ -67,13 +80,8 @@ def _edit_diff(path: str, old_string: str, new_string: str) -> str | None:
     return "\n".join(lines)
 
 
-def request_permission(tool_name: str, args: dict[str, Any]) -> str | None:
-    """
-    Show a preview and prompt the user for approval.
-    Returns None if approved, or a refusal string to return as the tool result.
-    """
-    console.print()
-
+def _show_diff(tool_name: str, args: dict[str, Any]) -> str | None:
+    """Render the diff/preview. Returns None on success or an error string."""
     if tool_name == "write_file":
         path = args.get("path", "")
         content = args.get("content", "")
@@ -82,8 +90,7 @@ def request_permission(tool_name: str, args: dict[str, Any]) -> str | None:
             n = content.count("\n") + 1
             console.print(f"  [bold]New file:[/bold] {path} ({n} lines)")
         elif diff == "":
-            console.print(f"  [dim]No changes to {path}[/dim]")
-            return None  # nothing to approve
+            return ""  # sentinel: no changes
         else:
             console.print(f"  [bold]Write {path}[/bold]")
             console.print(Syntax(diff, "diff", theme="ansi_dark", padding=(0, 4)))
@@ -94,12 +101,36 @@ def request_permission(tool_name: str, args: dict[str, Any]) -> str | None:
         if diff is None:
             return f"Error: could not compute diff for {path}"
         if diff == "":
-            console.print(f"  [dim]No changes to {path}[/dim]")
-            return None
+            return ""  # sentinel: no changes
         console.print(f"  [bold]Edit {path}[/bold]")
         console.print(Syntax(diff, "diff", theme="ansi_dark", padding=(0, 4)))
 
+    return None
+
+
+def request_permission(tool_name: str, args: dict[str, Any]) -> str | None:
+    """
+    Show a preview and prompt the user for approval.
+    In auto mode, file writes/edits are approved automatically (diff still shown).
+    Destructive commands always require explicit approval.
+    Returns None if approved, or a refusal string to return as the tool result.
+    """
+    console.print()
+
+    if tool_name in ("write_file", "edit_file"):
+        result = _show_diff(tool_name, args)
+        if result == "":
+            # No changes — auto-approve silently
+            console.print(f"  [dim]No changes to {args.get('path', '')}[/dim]")
+            return None
+        if result is not None:
+            return result  # error string
+        if _auto_mode:
+            console.print("  [dim green]✓ Auto-applied[/dim green]")
+            return None
+
     elif tool_name == "run_command":
+        # Destructive commands always go through the prompt, even in auto mode
         cmd = args.get("command", "")
         console.print(f"  [yellow bold]⚠ Destructive command:[/yellow bold] {cmd}")
 

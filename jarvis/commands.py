@@ -6,6 +6,7 @@ from pathlib import Path
 from .client import JarvisClient
 from .context import ContextManager, UsageTracker
 from .formatter import print_command_output, print_system, print_error, console
+from .permissions import is_auto_mode, set_auto_mode
 
 _HELP_TEXT = """
 [bold cyan]Available commands:[/bold cyan]
@@ -17,6 +18,7 @@ _HELP_TEXT = """
   [cyan]/model [name][/cyan]  Show or switch the current model
   [cyan]/file <path>[/cyan]   Load a file into context
   [cyan]/run <cmd>[/cyan]     Run a shell command and add output to context
+  [cyan]/auto[/cyan]          Toggle auto mode (approve file edits without prompting)
   [cyan]/fix[/cyan]           Send clipboard contents as an error to fix
   [cyan]/init[/cyan]          Create a JARVIS.md project context file here
   [cyan]/exit[/cyan]          Exit Jarvis
@@ -120,6 +122,15 @@ def handle_command(
         else:
             client.set_deployment(arg)
             print_system(f"Switched to {arg}")
+        return None
+
+    if cmd == "/auto":
+        new_state = not is_auto_mode()
+        set_auto_mode(new_state)
+        if new_state:
+            print_system("Auto mode ON — file edits apply without prompting. Destructive commands still require approval.")
+        else:
+            print_system("Auto mode OFF — all changes require approval.")
         return None
 
     if cmd == "/fix":
