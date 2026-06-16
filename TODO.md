@@ -6,9 +6,9 @@ Check this file before suggesting new features. Mark items `[x]` when done and n
 
 ## UX / Quality of Life
 
-- [ ] **`/undo`** — pop the last user + assistant turn from `context._history`
+- [x] **`/undo`** — pop the last user + assistant turn from `context._history`
 - [ ] **`/retry`** — resend the last user message through the agent
-- [ ] **`/history`** — print the last N exchanges from the current session in a readable format
+- [x] **`/history`** — print the last N exchanges from the current session in a readable format
 - [ ] **`/save <file>`** — dump the current conversation to a markdown file
 - [ ] **`/copy`** — copy the last assistant response to clipboard via `pbcopy`
 - [ ] **`/memory`** — subcommands: `/memory show`, `/memory add <text>`, `/memory clear` to manage `~/.jarvis/memory.md`

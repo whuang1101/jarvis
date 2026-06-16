@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
 from pathlib import Path
+
+_RESUME_FILE = Path.home() / ".jarvis" / "resume.json"
 
 
 def _find_jarvis_md() -> tuple[str, Path] | None:
@@ -22,7 +25,7 @@ def _find_jarvis_md() -> tuple[str, Path] | None:
 from .agent import run_agent
 from .client import JarvisClient
 from .commands import handle_command, _EXIT_SENTINEL, _RUN_AGENT_PREFIX
-from .permissions import is_auto_mode
+from .permissions import is_auto_mode, set_auto_mode
 from .config import Config
 from .context import ContextManager, UsageTracker
 from .formatter import print_banner, print_error, print_system, print_user_header, console
@@ -118,6 +121,26 @@ def main() -> None:
 
     import readline
     readline.parse_and_bind("tab: complete")
+
+    # Check for a resume state written before the last restart
+    resume_message: str | None = None
+    if _RESUME_FILE.exists():
+        try:
+            resume = json.loads(_RESUME_FILE.read_text())
+            _RESUME_FILE.unlink()
+            if resume.get("auto"):
+                set_auto_mode(True)
+                console.print("[dim yellow]Auto mode restored from resume state.[/dim yellow]")
+            resume_message = resume.get("message")
+        except Exception:
+            _RESUME_FILE.unlink(missing_ok=True)
+
+    if resume_message:
+        print_user_header(resume_message)
+        try:
+            run_agent(resume_message, client, context, tracker, logger)
+        except Exception as e:
+            print_error(f"Resume error: {e}")
 
     while True:
         try:

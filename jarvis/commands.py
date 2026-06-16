@@ -14,6 +14,9 @@ _HELP_TEXT = """
 [bold cyan]Available commands:[/bold cyan]
 
   [cyan]/help[/cyan]          Show this help message
+  [cyan]/history[/cyan]       Show the last 10 exchanges
+  [cyan]/retry[/cyan]         Retry the last user message
+  [cyan]/undo[/cyan]          Undo the last exchange (user + assistant)
   [cyan]/clear[/cyan]         Clear conversation history
   [cyan]/compact[/cyan]       Summarize and compress conversation history
   [cyan]/usage[/cyan]         Show token usage and estimated cost for this session
@@ -23,6 +26,7 @@ _HELP_TEXT = """
   [cyan]/restart[/cyan]       Reinstall and restart Jarvis in place
   [cyan]/auto[/cyan]          Toggle auto mode (approve file edits without prompting)
   [cyan]/fix[/cyan]           Send clipboard contents as an error to fix
+  [cyan]/save <file>[/cyan]   Dump the current conversation to a markdown file
   [cyan]/init[/cyan]          Create a JARVIS.md project context file here
   [cyan]/exit[/cyan]          Exit Jarvis
   [cyan]/quit[/cyan]          Exit Jarvis
@@ -94,6 +98,38 @@ def handle_command(
         console.print(_HELP_TEXT)
         return None
 
+    if cmd == "/history":
+        if context._history:
+            console.print("\n[bold cyan]Conversation History:[/bold cyan]")
+            for i, turn in enumerate(context._history[-10:]):
+                role = turn["role"].capitalize()
+                content = turn["content"]
+                console.print(f"[dim]{i + 1}: {role}[/dim]\n{content}\n")
+        else:
+            print_error("No history available.")
+        return None
+
+    if cmd == "/retry":
+        if context._history:
+            last_message = context._history[-2]["content"] if len(context._history) >= 2 else None
+            if last_message:
+                print_system("Retrying last user message...")
+                return f"{_RUN_AGENT_PREFIX}{last_message}"
+            else:
+                print_error("No user message to retry.")
+        else:
+            print_error("No history to retry.")
+        return None
+
+    if cmd == "/undo":
+        if context._history:
+            context._history.pop()
+            context._history.pop() # Assuming exchanges are user-assistant pairs
+            print_system("Last exchange undone.")
+        else:
+            print_error("No history to undo.")
+        return None
+
     if cmd == "/clear":
         context.clear()
         print_system("History cleared.")
@@ -149,6 +185,20 @@ def handle_command(
             print_system("Auto mode ON — file edits apply without prompting. Destructive commands still require approval.")
         else:
             print_system("Auto mode OFF — all changes require approval.")
+        return None
+
+    if cmd == "/save":
+        if not arg:
+            print_error("/save requires a file path argument")
+            return None
+        try:
+            history_text = "\n\n".join(
+                f"## {turn['role'].capitalize()}\n{turn['content']}" for turn in context._history
+            )
+            Path(arg).write_text(history_text, encoding="utf-8")
+            print_system(f"Conversation saved to {arg}.")
+        except Exception as e:
+            print_error(f"Failed to save: {e}")
         return None
 
     if cmd == "/fix":
