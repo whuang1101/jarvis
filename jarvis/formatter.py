@@ -1,0 +1,44 @@
+from __future__ import annotations
+
+from rich.console import Console
+from rich.markdown import Markdown
+from rich.text import Text
+
+console = Console()
+
+
+def print_banner() -> None:
+    console.print()
+    console.print(
+        "  [bold cyan]J.A.R.V.I.S.[/bold cyan] [dim]v0.1.0[/dim]",
+    )
+    console.print("  [dim]Just A Rather Very Intelligent System[/dim]")
+    console.print()
+
+
+def print_tool_call(tool_name: str, brief_args: str) -> None:
+    console.print(f"[dim]  [{tool_name}: {brief_args}][/dim]")
+
+
+def print_streaming_token(token: str) -> None:
+    console.print(token, end="", markup=False)
+
+
+def print_assistant_markdown(text: str) -> None:
+    console.print(Markdown(text))
+
+
+def print_error(message: str) -> None:
+    console.print(f"[bold red]Error:[/bold red] {message}")
+
+
+def print_system(message: str) -> None:
+    console.print(f"[yellow]{message}[/yellow]")
+
+
+def print_command_output(message: str) -> None:
+    console.print(f"[cyan]{message}[/cyan]")
+
+
+def get_user_prompt() -> str:
+    return console.input("[bold]> [/bold]")
