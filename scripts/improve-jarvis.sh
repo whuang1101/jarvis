@@ -24,7 +24,10 @@ git checkout main -q && git pull -q
 for i in $(seq 1 20); do
   echo "--- step attempt $i $(date -u) ---"
   claude -p "Read ROADMAP.md. Follow its per-step contract exactly: implement the
-FIRST unchecked step only. Use .venv/bin/python -m pytest jarvis/tests -q to run
+FIRST unchecked step only. If NO unchecked steps remain, instead follow the
+'Autonomy loop instruction' at the bottom of PARITY.md: pick the top feasible ❌
+feature, append a new properly-formatted phase to ROADMAP.md, commit that as its
+own PR, and stop — the next run will implement it. Use .venv/bin/python -m pytest jarvis/tests -q to run
 tests and never commit on red. Mark the step [x] and update JARVIS.md in the same
 change. Then: git checkout -b feat/roadmap-step-N (N = the step number), commit,
 push, and open a PR with gh pr create. Do NOT merge the PR. Finish by checking

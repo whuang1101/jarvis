@@ -40,6 +40,11 @@ Per-step loop (this is the contract — do not shortcut it):
 6. Every 3–5 steps: branch → commit → push → `gh pr create` → `gh pr merge --squash
    --delete-branch` (details in JARVIS.md). Commit messages name the roadmap steps.
 
+**When every step here is checked**, the roadmap refills itself: follow the
+"Autonomy loop instruction" at the bottom of **PARITY.md** (the Claude Code
+feature catalogue) — pick the next missing capability, append it here as a new
+phase in this same step format, and keep going.
+
 Steps marked *Verify: manual* need a human at the keyboard — implement them, note
 "needs manual verification" under the step, and let the user confirm later rather
 than blocking on it.
