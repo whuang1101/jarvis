@@ -11,6 +11,7 @@ from typing import Any
 from rich.syntax import Syntax
 
 from .formatter import console
+from .settings import Settings
 
 _DESTRUCTIVE_RE = re.compile(
     r"\brm\s|rmdir\b|sudo\s|kill\s|pkill\b|killall\b"
@@ -22,7 +23,7 @@ _DESTRUCTIVE_RE = re.compile(
 )
 
 # Auto mode: skip approval for file writes/edits; destructive commands always blocked.
-_auto_mode: bool = False
+_auto_mode: bool = Settings.load().auto_mode
 
 
 def is_auto_mode() -> bool:
