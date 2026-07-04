@@ -35,6 +35,28 @@ from .mcp_manager import MCPManager
 from .tools import register_tool
 
 
+def _read_input(status_plain: str) -> str:
+    """Claude-Code-style input bar:
+
+        ╭─ ~/jarvis · 0.0k tokens ───────────╮
+        │ > user types here
+        ╰────────────────────────────────────╯
+
+    The prompt must go through builtin input() (NOT console.input): Rich prints
+    its prompt separately from input(), so any readline redraw repaints the line
+    from column 0 and erases it. ANSI codes inside the prompt are wrapped in
+    \\001/\\002 so readline excludes them from its length accounting.
+    """
+    width = max(min(console.width, 120), 20)
+    top = f"╭─ {status_plain} " + "─" * max(width - len(status_plain) - 5, 0) + "╮"
+    console.print(f"[bright_black]{top}[/bright_black]")
+    prompt = "\001\x1b[2m\002│\001\x1b[0m\002 \001\x1b[1m\002>\001\x1b[0m\002 "
+    try:
+        return input(prompt)
+    finally:
+        console.print("[bright_black]╰" + "─" * (width - 2) + "╯[/bright_black]")
+
+
 def _gh_token() -> str | None:
     """Get GitHub token from gh CLI, fall back to env var."""
     try:
@@ -156,13 +178,12 @@ def main() -> None:
                     short = "~" / cwd.relative_to(Path.home())
                 except ValueError:
                     short = cwd
-                tags = f" · {context.token_estimate() / 1000:.1f}k tokens"
+                status = f"{short} · {context.token_estimate() / 1000:.1f}k tokens"
                 if is_plan_mode():
-                    tags += " · [bold blue]plan[/bold blue]"
+                    status += " · PLAN"
                 if is_auto_mode():
-                    tags += " · [bold yellow]auto[/bold yellow]"
-                console.print(f"[bright_black]{short}{tags}[/bright_black]")
-                user_input = console.input("[bold]>[/bold] ").strip()
+                    status += " · AUTO"
+                user_input = _read_input(status).strip()
                 if user_input:
                     readline.add_history(user_input)
                 interrupted_once = False
