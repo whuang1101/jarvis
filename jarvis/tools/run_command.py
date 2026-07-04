@@ -11,7 +11,9 @@ from typing import Any
 from .base import BaseTool
 
 _TIMEOUT = 120
-_CD_RE = re.compile(r"^\s*cd\s+(.*?)\s*$")
+# Matches `cd` alone (-> home) or `cd <path>`, but NOT commands merely prefixed
+# with cd like `cdiff` or `cdr` (the optional group still requires whitespace).
+_CD_RE = re.compile(r"^\s*cd(?:\s+(.*?))?\s*$")
 _REINSTALL_RE = re.compile(r"pipx\s+reinstall\s+jarvis")
 
 
@@ -32,7 +34,7 @@ class RunCommandTool(BaseTool):
         # Handle `cd` by actually changing the process working directory
         m = _CD_RE.match(command)
         if m:
-            target = m.group(1).strip("'\"") or str(Path.home())
+            target = (m.group(1) or "").strip("'\"") or str(Path.home())
             target = os.path.expanduser(target)
             try:
                 os.chdir(target)

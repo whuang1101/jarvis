@@ -20,7 +20,9 @@ _PRICING: dict[str, tuple[float, float]] = {
 
 def _lookup_price(deployment: str) -> tuple[float, float]:
     dl = deployment.lower()
-    for key, price in _PRICING.items():
+    # Longest key first so a specific variant (e.g. "gpt-4o-mini") is matched
+    # before its prefix ("gpt-4o"), which would otherwise misprice -mini models.
+    for key, price in sorted(_PRICING.items(), key=lambda kv: len(kv[0]), reverse=True):
         if key in dl:
             return price
     return (2.50, 10.00)
@@ -58,22 +60,19 @@ _SYSTEM_PROMPT = (
 _PLAN_MODE_PROMPT = """
 ## Plan Mode is ACTIVE
 
-Before implementing anything or calling any tools that modify files or run commands, you MUST:
+Do NOT call write_file, edit_file, or run_command yet. First, research with
+read_file / search_files / find_symbol as needed, then output a numbered plan
+and STOP.
 
-1. Read the relevant files to understand what needs to change
-2. Output a clear numbered plan in this format:
+Format:
+**Plan: <title>**
+1. <file> — <what changes>
+2. <file> — <what changes>
 
-**Plan: <short title>**
-1. <exact file and what will change>
-2. <exact file and what will change>
-...
-
-If Auto Mode is also active: execute the plan immediately after showing it — do not wait for /go.
-If Auto Mode is NOT active: end with "Type `/go` to execute or `/cancel` to abort." and wait.
-
-Do NOT call write_file, edit_file, or run_command before showing the plan.
-You MAY call read_file, list_dir, search_files, and find_symbol to research before planning.
-After approval (or immediately if auto mode is on), execute each step in order and note each as done.
+After the plan, end with: "Type `/go` to execute or `/cancel` to abort." Then
+wait — do not make any changes until the user runs /go. If they run /cancel,
+abandon the plan. (To execute without review, the user turns plan mode off and
+uses auto mode instead.)
 """
 
 _COMPACT_PROMPT = (
@@ -108,8 +107,7 @@ class ContextManager:
             with open(memory_path, 'r') as f:
                 memory_content = f.read()
                 content += f"\n\n## Persistent Memory\n\n{memory_content}"
-        from .permissions import is_auto_mode
-        if _plan_mode or is_auto_mode():
+        if _plan_mode:
             content += _PLAN_MODE_PROMPT
         return {"role": "system", "content": content}
 
@@ -120,19 +118,36 @@ class ContextManager:
         return [self.system_message] + self._clean_history()
 
     def _clean_history(self) -> list[dict[str, Any]]:
-        """Remove assistant tool_call messages that have no matching tool results."""
-        # Collect all tool_call_ids that have a response
+        """Drop assistant tool_call messages missing results, and orphaned tool messages.
+
+        The API rejects a request where an assistant tool_calls message lacks a
+        matching tool result, OR where a role:tool message references a tool_call_id
+        that no surviving assistant message declared. Both can happen when a
+        multi-tool turn is interrupted, so we prune both directions.
+        """
+        # tool_call_ids that actually received a response
         responded = {
             m["tool_call_id"]
             for m in self._history
             if m.get("role") == "tool" and "tool_call_id" in m
         }
+        # tool_call_ids declared by assistant messages we will KEEP
+        kept_call_ids: set[str] = set()
+        for m in self._history:
+            if m.get("role") == "assistant" and m.get("tool_calls"):
+                ids = {tc["id"] for tc in m["tool_calls"]}
+                if ids.issubset(responded):
+                    kept_call_ids |= ids
+
         cleaned = []
         for m in self._history:
             if m.get("role") == "assistant" and m.get("tool_calls"):
                 ids = {tc["id"] for tc in m["tool_calls"]}
                 if not ids.issubset(responded):
                     continue  # drop orphaned tool_call message
+            elif m.get("role") == "tool":
+                if m.get("tool_call_id") not in kept_call_ids:
+                    continue  # drop orphaned tool result
             cleaned.append(m)
         return cleaned
 
@@ -161,6 +176,6 @@ class ContextManager:
             {"role": "user", "content": f"{_COMPACT_PROMPT}\n\n{history_text}"},
         ])
         if tracker:
-            tracker.record(result.prompt_tokens, result.completion_tokens)
+            tracker.record(result.prompt_tokens, result.completion_tokens, client.current_deployment())
         self._history = [{"role": "assistant", "content": f"[Summary of previous conversation]\n{result.text}"}]
         return result.text

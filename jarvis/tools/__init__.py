@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 from .base import BaseTool
 from .read_file import ReadFileTool
 from .write_file import WriteFileTool

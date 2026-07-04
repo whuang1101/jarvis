@@ -35,14 +35,6 @@ def make_live_markdown() -> Live:
     )
 
 
-def print_tool_call(tool_name: str, brief_args: str) -> None:
-    console.print(f"[dim]  [{tool_name}: {brief_args}][/dim]")
-
-
-def print_streaming_token(token: str) -> None:
-    console.print(token, end="", markup=False)
-
-
 def print_assistant_markdown(text: str) -> None:
     console.print(Markdown(text))
 
@@ -57,7 +49,3 @@ def print_system(message: str) -> None:
 
 def print_command_output(message: str) -> None:
     console.print(f"[cyan]{message}[/cyan]")
-
-
-def get_user_prompt() -> str:
-    return console.input("[bold]> [/bold]")

@@ -65,7 +65,11 @@ class MCPManager:
                 ready.set()
 
         asyncio.run_coroutine_threadsafe(_connect(), self._loop)
-        ready.wait(timeout=30)
+        if not ready.wait(timeout=30) and not errors:
+            # Coroutine never signalled readiness and recorded no error: the server
+            # hung during initialize()/list_tools(). Fail clearly instead of letting
+            # _make_tools raise a bare KeyError on the unregistered server.
+            raise TimeoutError(f"{name} did not become ready within 30s")
 
         if errors:
             raise errors[0]

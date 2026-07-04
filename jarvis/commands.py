@@ -29,7 +29,9 @@ _HELP_TEXT = """
   [cyan]/restart[/cyan]       Reinstall and restart Jarvis in place
   [cyan]/auto[/cyan]          Toggle auto mode (approve file edits without prompting)
   [cyan]/fix[/cyan]           Send clipboard contents as an error to fix
-  [cyan]/save <file>[/cyan]   Dump the current conversation to a markdown file
+  [cyan]/copy[/cyan]          Copy the last assistant response to the clipboard
+  [cyan]/save <file>[/cyan]   Save conversation history to a markdown file.
+  [cyan]/memory[/cyan]        Manage persistent memory (`~/.jarvis/memory.md`)
   [cyan]/init[/cyan]          Create a JARVIS.md project context file here
   [cyan]/exit[/cyan]          Exit Jarvis
   [cyan]/quit[/cyan]          Exit Jarvis
@@ -76,6 +78,19 @@ def _get_clipboard() -> str | None:
     return None
 
 
+def _copy_to_clipboard(text: str) -> bool:
+    """Copy text to the system clipboard. Returns True on success."""
+    for tool, cmd in (
+        ("pbcopy", ["pbcopy"]),
+        ("xclip", ["xclip", "-selection", "clipboard"]),
+        ("wl-copy", ["wl-copy"]),
+    ):
+        if shutil.which(tool):
+            subprocess.run(cmd, input=text, text=True, check=True)
+            return True
+    return False
+
+
 def handle_command(
     raw: str,
     client: JarvisClient,
@@ -97,7 +112,37 @@ def handle_command(
         print_system("Goodbye.")
         return _EXIT_SENTINEL
 
-    if cmd == "/help":
+    if cmd == "/help" or cmd == "/":
+        if not arg:
+            commands_list = [
+                "/help",
+                "/history",
+                "/retry",
+                "/undo",
+                "/clear",
+                "/compact",
+                "/usage",
+                "/model",
+                "/file",
+                "/run",
+                "/plan",
+                "/go",
+                "/cancel",
+                "/restart",
+                "/auto",
+                "/fix",
+                "/copy",
+                "/save",
+                "/memory",
+                "/init",
+                "/exit",
+                "/quit",
+            ]
+
+            print("\n[bold cyan]Available commands:[/bold cyan]")
+            for cmd in commands_list:
+                print(f"  [cyan]{cmd}[/cyan]")
+            return None
         console.print(_HELP_TEXT)
         return None
 
@@ -113,24 +158,64 @@ def handle_command(
         return None
 
     if cmd == "/retry":
-        if context._history:
-            last_message = context._history[-2]["content"] if len(context._history) >= 2 else None
-            if last_message:
-                print_system("Retrying last user message...")
-                return f"{_RUN_AGENT_PREFIX}{last_message}"
-            else:
-                print_error("No user message to retry.")
-        else:
-            print_error("No history to retry.")
+        # Find the most recent user message — a backward scan is required because a
+        # tool-using turn leaves assistant(tool_calls)/tool/assistant entries after it,
+        # so the last user message is not reliably at history[-2].
+        last_message = next(
+            (m["content"] for m in reversed(context._history)
+             if m.get("role") == "user" and m.get("content")),
+            None,
+        )
+        if last_message:
+            print_system("Retrying last user message...")
+            return f"{_RUN_AGENT_PREFIX}{last_message}"
+        print_error("No user message to retry.")
         return None
 
     if cmd == "/undo":
-        if context._history:
-            context._history.pop()
-            context._history.pop() # Assuming exchanges are user-assistant pairs
-            print_system("Last exchange undone.")
-        else:
+        # Pop back to and including the most recent user message. A tool-using turn
+        # appends assistant/tool/assistant entries, so popping a fixed two would
+        # corrupt history (or raise IndexError when only one entry exists).
+        if not context._history:
             print_error("No history to undo.")
+            return None
+        while context._history:
+            m = context._history.pop()
+            if m.get("role") == "user":
+                break
+        print_system("Last exchange undone.")
+        return None
+
+    if cmd == "/memory":
+        memory_path = Path("~/.jarvis/memory.md").expanduser()
+
+        if arg.startswith("show"):
+            if memory_path.exists():
+                console.print(memory_path.read_text(encoding="utf-8"))
+            else:
+                print_error("No memory file found.")
+            return None
+
+        if arg.startswith("add "):
+            text_to_add = arg[4:].strip()
+            try:
+                memory_path.parent.mkdir(parents=True, exist_ok=True)
+                with memory_path.open("a", encoding="utf-8") as f:
+                    f.write(text_to_add + "\n")
+                print_system("Memory updated.")
+            except Exception as e:
+                print_error(f"Failed to add to memory: {e}")
+            return None
+
+        if arg.startswith("clear"):
+            try:
+                memory_path.write_text("", encoding="utf-8")
+                print_system("Memory cleared.")
+            except Exception as e:
+                print_error(f"Failed to clear memory: {e}")
+            return None
+
+        print_error("Invalid /memory command. Use show, add <text>, or clear.")
         return None
 
     if cmd == "/clear":
@@ -213,22 +298,22 @@ def handle_command(
             history_text = "\n\n".join(
                 f"## {turn['role'].capitalize()}\n{turn['content']}" for turn in context._history
             )
-            Path(arg).write_text(history_text, encoding="utf-8")
+            Path(arg).write_text(f"# Conversation History\n\n{history_text}", encoding="utf-8")
             print_system(f"Conversation saved to {arg}.")
         except Exception as e:
             print_error(f"Failed to save: {e}")
         return None
 
     if cmd == "/copy":
-        if not context._history or context._history[-1]['role'] != 'assistant':
+        if not context._history or context._history[-1]["role"] != "assistant":
             print_error("No assistant response to copy.")
             return None
-        response = context._history[-1]['content']
+        response = context._history[-1]["content"]
         try:
-            subprocess.run(["pbcopy"], input=response, text=True, check=True)
-            print_system("Copied last assistant response to clipboard.")
-        except FileNotFoundError:
-            print_error("pbcopy not available on this system.")
+            if _copy_to_clipboard(response):
+                print_system("Copied last assistant response to clipboard.")
+            else:
+                print_error("No compatible clipboard utility found on this system.")
         except Exception as e:
             print_error(f"Failed to copy: {e}")
         return None

@@ -146,56 +146,59 @@ def main() -> None:
         except Exception as e:
             print_error(f"Resume error: {e}")
 
-    while True:
-        try:
-            console.rule(style="dim")
-            cwd = Path.cwd()
+    try:
+        while True:
             try:
-                short = "~" / cwd.relative_to(Path.home())
-            except ValueError:
-                short = cwd
-            tags = ""
-            if is_plan_mode():
-                tags += " [bold blue]PLAN[/bold blue]"
-            if is_auto_mode():
-                tags += " [bold yellow]AUTO[/bold yellow]"
-            user_input = console.input(f"[dim]{short}[/dim]{tags} [bold]>[/bold] ").strip()
-            if user_input:
-                readline.add_history(user_input)
-        except EOFError:
-            print_system("\nGoodbye.")
-            break
-        except KeyboardInterrupt:
-            print_system("\nGoodbye.")
-            break
+                console.rule(style="dim")
+                cwd = Path.cwd()
+                try:
+                    short = "~" / cwd.relative_to(Path.home())
+                except ValueError:
+                    short = cwd
+                tags = f" [{context.token_estimate() / 1000:.1f}k]"
+                if is_plan_mode():
+                    tags += " [bold blue]PLAN[/bold blue]"
+                if is_auto_mode():
+                    tags += " [bold yellow]AUTO[/bold yellow]"
+                user_input = console.input(f"[dim]{short}[/dim]{tags} [bold]>[/bold] ").strip()
+                if user_input:
+                    readline.add_history(user_input)
+            except EOFError:
+                print_system("\nGoodbye.")
+                break
+            except KeyboardInterrupt:
+                print_system("\nGoodbye.")
+                break
 
-        if not user_input:
-            continue
+            if not user_input:
+                continue
 
-        if user_input.startswith("/"):
+            if user_input.startswith("/"):
+                try:
+                    result = handle_command(user_input, client, context, tracker)
+                    if result == _EXIT_SENTINEL:
+                        break
+                    if result and result.startswith(_RUN_AGENT_PREFIX):
+                        agent_message = result[len(_RUN_AGENT_PREFIX):]
+                        try:
+                            run_agent(agent_message, client, context, tracker, logger)
+                        except KeyboardInterrupt:
+                            console.print()
+                            print_system("Cancelled.")
+                        except Exception as e:
+                            print_error(f"Unexpected error: {e}")
+                except Exception as e:
+                    print_error(f"Command failed: {e}")
+                continue
+
+            print_user_header(user_input)
             try:
-                result = handle_command(user_input, client, context, tracker)
-                if result == _EXIT_SENTINEL:
-                    break
-                if result and result.startswith(_RUN_AGENT_PREFIX):
-                    agent_message = result[len(_RUN_AGENT_PREFIX):]
-                    try:
-                        run_agent(agent_message, client, context, tracker, logger)
-                    except KeyboardInterrupt:
-                        console.print()
-                        print_system("Cancelled.")
-                    except Exception as e:
-                        print_error(f"Unexpected error: {e}")
+                run_agent(user_input, client, context, tracker, logger)
+            except KeyboardInterrupt:
+                console.print()
+                print_system("Cancelled.")
             except Exception as e:
-                print_error(f"Command failed: {e}")
-            continue
-
-        print_user_header(user_input)
-        try:
-            run_agent(user_input, client, context, tracker, logger)
-        except KeyboardInterrupt:
-            console.print()
-            print_system("Cancelled.")
-        except Exception as e:
-            logger.error(str(e))
-            print_error(f"Unexpected error: {e}")
+                logger.error(str(e))
+                print_error(f"Unexpected error: {e}")
+    finally:
+        logger.end(tracker.prompt_tokens, tracker.completion_tokens)

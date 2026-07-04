@@ -38,7 +38,10 @@ def needs_permission(tool_name: str, args: dict[str, Any]) -> bool:
     if tool_name == "run_command":
         return bool(_DESTRUCTIVE_RE.search(args.get("command", "")))
     if tool_name in ("write_file", "edit_file"):
-        return not _auto_mode
+        # Always route file ops through request_permission so the diff is shown.
+        # In auto mode request_permission renders the diff then auto-applies;
+        # otherwise it prompts for approval.
+        return True
     return False
 
 
@@ -116,14 +119,28 @@ def _write_diff(path: str, new_content: str) -> str | None:
     return "\n".join(lines)
 
 
+class _DiffError(str):
+    """A diff-computation error message (distinct from a real diff string)."""
+
+
 def _edit_diff(path: str, old_string: str, new_string: str) -> str | None:
     try:
         original = Path(path).read_text(encoding="utf-8", errors="replace")
     except FileNotFoundError:
-        return None
+        return _DiffError(f"Error: {path} not found")
 
-    if old_string not in original:
-        return None
+    # Mirror EditFileTool's rules so the preview never shows a diff the tool will reject.
+    count = original.count(old_string)
+    if count == 0:
+        return _DiffError(
+            f"Error: old_string not found in {path}. Make sure the text matches "
+            "exactly, including whitespace and indentation."
+        )
+    if count > 1:
+        return _DiffError(
+            f"Error: old_string appears {count} times in {path}. Add more "
+            "surrounding context to make it unique."
+        )
 
     new_content = original.replace(old_string, new_string, 1)
     lines = list(difflib.unified_diff(
@@ -154,8 +171,8 @@ def _show_diff(tool_name: str, args: dict[str, Any]) -> str | None:
     elif tool_name == "edit_file":
         path = args.get("path", "")
         diff = _edit_diff(path, args.get("old_string", ""), args.get("new_string", ""))
-        if diff is None:
-            return f"Error: could not compute diff for {path}"
+        if isinstance(diff, _DiffError):
+            return str(diff)  # forward edit_file's exact rejection message
         if diff == "":
             return ""
         console.print(f"  [bold]Edit {path}[/bold]")

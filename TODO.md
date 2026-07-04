@@ -9,17 +9,17 @@ Check this file before suggesting new features. Mark items `[x]` when done and n
 - [x] **`/undo`** — pop the last user + assistant turn from `context._history`
 - [x] **`/retry`** — resend the last user message through the agent
 - [x] **`/history`** — print the last N exchanges from the current session in a readable format
-- [ ] **`/save <file>`** — dump the current conversation to a markdown file
-- [ ] **`/copy`** — copy the last assistant response to clipboard via `pbcopy`
-- [ ] **`/memory`** — subcommands: `/memory show`, `/memory add <text>`, `/memory clear` to manage `~/.jarvis/memory.md`
-- [ ] **Token count in prompt** — show estimated context size in the prompt e.g. `~/jarvis [4.2k] >` using `context.token_estimate()`
+- [x] **`/save <file>`** — dump the current conversation to a markdown file
+- [x] **`/copy`** — copy the last assistant response to clipboard via `pbcopy`
+- [x] **`/memory`** — subcommands: `/memory show`, `/memory add <text>`, `/memory clear` to manage `~/.jarvis/memory.md`
+- [x] **Token count in prompt** — show estimated context size in the prompt e.g. `~/jarvis [4.2k] >` using `context.token_estimate()` (`cli.py:157`)
 - [ ] **Syntax-highlighted streaming output** — detect triple-backtick fences in streamed tokens and render code blocks with Rich `Syntax` instead of plain text
 - [ ] **`/theme`** — let user switch Rich syntax highlighting theme (monokai, dracula, etc.)
 - [ ] **Multiline input** — detect when user types `\` at end of line or opens a triple-backtick block and allow multi-line input before sending
 
 ## Plan Mode
 
-- [ ] **`/plan` mode** — before executing, Jarvis drafts a step-by-step plan and shows it to the user for approval before touching any files or running any commands. Exit plan mode with `/go` to execute or `/cancel` to abort
+- [x] **`/plan` mode** — before executing, Jarvis drafts a step-by-step plan and waits for approval before touching any files or running any commands. Execute with `/go`, abort with `/cancel` (`commands.py`, `context.py:_PLAN_MODE_PROMPT`, `cli.py`)
 - [ ] **Plan display** — show the plan as a numbered checklist, check off each step as it completes
 - [ ] **Step-level approval** — in plan mode, optionally approve each step individually rather than the whole plan at once
 
@@ -135,12 +135,25 @@ Check this file before suggesting new features. Mark items `[x]` when done and n
 - [x] **MCP integrations** — GitHub, Azure, Brave Search via MCP SDK (`mcp_manager.py`)
 - [x] **Persistent memory** — loads `~/.jarvis/memory.md` into system prompt (`context.py`)
 - [x] **Message history navigation** — UP arrow recalls previous inputs via `readline` (`cli.py`)
-- [x] **Rate limit retry** — exponential backoff on 429 errors (`agent.py`)
+- [x] **Rate limit retry** — fixed-delay retry (5s, 15s, 30s) on `RateLimitError`, then give up (`agent.py`)
 - [x] **Context size warning** — warns at 20K estimated tokens and suggests `/compact` (`agent.py`)
-- [x] **Directory in prompt** — shows current working directory at all times (`cli.py`)
-- [x] **`cd` support** — `run_command` intercepts `cd` and calls `os.chdir()` (`tools/run_command.py`)
-- [x] **Git tools** — `git_status`, `git_diff`, `git_log` tools (`tools/git_tools.py`)
-- [x] **`edit_file` tool** — targeted string replacement with diff preview (`tools/edit_file.py`)
-- [x] **JARVIS.md auto-load** — walks up from cwd to find and inject project context (`cli.py`)
-- [x] **Web search** — DuckDuckGo search via `ddgs` (`tools/web_search.py`)
-- [x] **Web extract** — fetch and clean page content via `trafilatura` (`tools/web_extract.py`)
+
+## Bug fixes (codebase audit)
+
+- [x] **Real-time streaming** — `_stream_with_retry` was `list()`-buffering the whole response (no live render); now a lazy generator via `_stream_turn` (`agent.py`)
+- [x] **Duplicate command blocks removed** — `/memory` and `/copy` each had a second unreachable copy (`commands.py`)
+- [x] **`/copy` in `/help`** — was implemented but missing from `_HELP_TEXT` (`commands.py`)
+- [x] **`/retry` after tool turns** — backward-scans for the last user message instead of assuming `history[-2]` (`commands.py`)
+- [x] **`/undo` after tool turns / single entry** — pops back to the last user message instead of a blind double-pop (no more `IndexError`) (`commands.py`)
+- [x] **`-mini` mispricing** — `_lookup_price` now matches longest key first so `gpt-4o-mini`/`o1-mini` price correctly (`context.py`)
+- [x] **Plan-mode prompt** — no longer self-contradicts; tells the model to plan then wait for `/go` (`context.py`)
+- [x] **Orphaned tool messages** — `_clean_history` now also drops `role:tool` messages with no surviving assistant tool_call (`context.py`)
+- [x] **Compaction cost** — `compact()` passes the deployment so the summary call's USD cost is counted (`context.py`)
+- [x] **Auto-mode diffs** — file ops always route through `request_permission` so the diff shows even when auto-applied (`permissions.py`)
+- [x] **Edit preview matches edit_file** — preview enforces the unique-`old_string` rule and forwards the exact rejection message (`permissions.py`)
+- [x] **Token tag formatting** — prompt tag uses `token_estimate()/1000:.1f` instead of `% 1000` as a fake decimal (`cli.py`)
+- [x] **`session_end` logged** — REPL wrapped in try/finally so `logger.end()` runs on every exit (`cli.py`)
+- [x] **MCP connect timeout** — raises `TimeoutError` instead of a bare `KeyError` on a hung server (`mcp_manager.py`)
+- [x] **`find_symbol` robustness** — subprocess calls guarded; definition pattern word-boundary + `re.escape` so `foo` no longer matches `foobar` (`find_symbol.py`)
+- [x] **Bare `cd`** — `cd` with no arg now resolves to home without misreading `cdiff`/`cdr` (`run_command.py`)
+- [x] **Dead code removed** — unused `print_streaming_token`/`get_user_prompt`/`print_tool_call` (`formatter.py`) and stray import (`tools/__init__.py`)

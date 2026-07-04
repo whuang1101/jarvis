@@ -10,8 +10,6 @@ from .client import JarvisClient
 from .context import ContextManager, UsageTracker
 from rich.markdown import Markdown
 from .formatter import print_jarvis_header, make_live_markdown, console
-from .context import is_plan_mode
-from .permissions import is_auto_mode
 from .logger import SessionLogger
 from .permissions import needs_permission, request_permission
 from .tools import get_all_tools, get_tool_by_name
@@ -26,14 +24,23 @@ def _is_context_length_error(e: BadRequestError) -> bool:
 
 
 def _stream_with_retry(client: JarvisClient, messages: list, tools: list):
+    """Yield streaming chunks lazily so they render in real time.
+
+    The request is initiated (and RateLimitError surfaces) when iteration begins;
+    `yield from` then forwards SSE chunks as they arrive instead of buffering the
+    whole response with list(). BadRequestError is left to propagate to the caller.
+    """
     for attempt, delay in enumerate((*_RETRY_DELAYS, None)):
         try:
-            return list(client.stream(messages, tools=tools))
+            stream = client.stream(messages, tools=tools)
         except RateLimitError:
             if delay is None:
                 raise
             console.print(f"[yellow]Rate limited — retrying in {delay}s...[/yellow]")
             time.sleep(delay)
+            continue
+        yield from stream
+        return
 
 _TOOL_VERBS = {
     "read_file": "Reading",
@@ -67,7 +74,89 @@ def _tool_status_label(tool_name: str, args: dict[str, Any]) -> str:
 
 
 _CONTEXT_WARN_TOKENS = 20_000  # warn at ~20K estimated tokens in history
-_WRITE_TOOLS = {"write_file", "edit_file", "run_command"}
+
+
+def _accumulate_tool_calls(collected: dict[int, dict[str, Any]], tool_calls: Any) -> None:
+    """Merge streamed tool_call fragments (which arrive split across chunks) by index."""
+    for tc in tool_calls:
+        idx = tc.index
+        if idx not in collected:
+            collected[idx] = {
+                "id": tc.id or "",
+                "name": tc.function.name if tc.function else "",
+                "arguments": "",
+            }
+        if tc.id:
+            collected[idx]["id"] = tc.id
+        if tc.function:
+            if tc.function.name:
+                collected[idx]["name"] = tc.function.name
+            if tc.function.arguments:
+                collected[idx]["arguments"] += tc.function.arguments
+
+
+def _stream_turn(
+    client: JarvisClient, context: ContextManager, tracker: UsageTracker
+) -> tuple[str, dict[int, dict[str, Any]], str | None]:
+    """Stream one model response, rendering tokens live as they arrive.
+
+    Returns (full_text, collected_tool_calls, finish_reason). RateLimitError is
+    retried inside _stream_with_retry; a context_length_exceeded error triggers a
+    one-time compaction and re-stream. Returns empty results if recovery fails.
+    """
+    tool_schemas = [t.to_openai_schema() for t in get_all_tools()]
+    state: dict[str, Any] = {"text": [], "tools": {}, "finish": None, "started": False, "live": None}
+
+    def drain(chunks: Any, status: Any) -> None:
+        for chunk in chunks:
+            if chunk.usage:
+                tracker.record(chunk.usage.prompt_tokens, chunk.usage.completion_tokens, client.current_deployment())
+            choice = chunk.choices[0] if chunk.choices else None
+            if choice is None:
+                continue
+            state["finish"] = choice.finish_reason
+            delta = choice.delta
+            if not state["started"] and (delta.content or delta.tool_calls):
+                status.stop()
+                state["started"] = True
+            if delta.content:
+                if state["live"] is None:
+                    print_jarvis_header()
+                    state["live"] = make_live_markdown()
+                    state["live"].start()
+                state["text"].append(delta.content)
+                state["live"].update(Markdown("".join(state["text"])))
+            if delta.tool_calls:
+                _accumulate_tool_calls(state["tools"], delta.tool_calls)
+
+    def stop(status: Any) -> None:
+        if state["live"]:
+            state["live"].stop()
+        else:
+            status.stop()
+
+    status = console.status("[dim]Thinking...[/dim]", spinner="dots")
+    status.start()
+    try:
+        drain(_stream_with_retry(client, context.messages(), tool_schemas), status)
+    except BadRequestError as e:
+        stop(status)
+        if not _is_context_length_error(e):
+            raise
+        console.print("[yellow]⚠ Context window full — compacting and continuing...[/yellow]")
+        context.compact(client, tracker)
+        state.update({"text": [], "tools": {}, "finish": None, "started": False, "live": None})
+        status = console.status("[dim]Thinking...[/dim]", spinner="dots")
+        status.start()
+        try:
+            drain(_stream_with_retry(client, context.messages(), tool_schemas), status)
+        except Exception as retry_err:
+            stop(status)
+            console.print(f"[red]Error after compaction: {retry_err}[/red]")
+            return "", {}, None
+
+    stop(status)
+    return "".join(state["text"]), state["tools"], state["finish"]
 
 
 def run_agent(user_message: str, client: JarvisClient, context: ContextManager, tracker: UsageTracker, logger: SessionLogger | None = None) -> None:
@@ -78,79 +167,8 @@ def run_agent(user_message: str, client: JarvisClient, context: ContextManager, 
     if context.token_estimate() > _CONTEXT_WARN_TOKENS:
         console.print(f"[yellow]⚠ Context is large (~{context.token_estimate():,} tokens). Run /compact to shrink it.[/yellow]")
 
-    # When auto mode is on, enforce planning before any writes
-    plan_shown = not is_auto_mode()  # True means writes are allowed
-
     for iteration in range(_MAX_TOOL_ITERATIONS):
-        collected_tool_calls: dict[int, dict[str, Any]] = {}
-        text_chunks: list[str] = []
-        finish_reason: str | None = None
-        streaming_started = False
-
-        tool_schemas = [t.to_openai_schema() for t in get_all_tools()]
-        try:
-            chunks = _stream_with_retry(client, context.messages(), tool_schemas)
-        except BadRequestError as e:
-            if _is_context_length_error(e):
-                console.print("[yellow]⚠ Context window full — compacting and continuing...[/yellow]")
-                context.compact(client, tracker)
-                try:
-                    chunks = _stream_with_retry(client, context.messages(), tool_schemas)
-                except Exception as retry_err:
-                    console.print(f"[red]Error after compaction: {retry_err}[/red]")
-                    return
-            else:
-                raise
-        status = console.status("[dim]Thinking...[/dim]", spinner="dots")
-        status.start()
-        live = None
-
-        for chunk in chunks:
-            if chunk.usage:
-                tracker.record(chunk.usage.prompt_tokens, chunk.usage.completion_tokens, client.current_deployment())
-
-            choice = chunk.choices[0] if chunk.choices else None
-            if choice is None:
-                continue
-
-            finish_reason = choice.finish_reason
-            delta = choice.delta
-
-            if not streaming_started and (delta.content or delta.tool_calls):
-                status.stop()
-                streaming_started = True
-
-            if delta.content:
-                if live is None:
-                    print_jarvis_header()
-                    live = make_live_markdown()
-                    live.start()
-                text_chunks.append(delta.content)
-                live.update(Markdown("".join(text_chunks)))
-
-            if delta.tool_calls:
-                for tc in delta.tool_calls:
-                    idx = tc.index
-                    if idx not in collected_tool_calls:
-                        collected_tool_calls[idx] = {
-                            "id": tc.id or "",
-                            "name": tc.function.name if tc.function else "",
-                            "arguments": "",
-                        }
-                    if tc.id:
-                        collected_tool_calls[idx]["id"] = tc.id
-                    if tc.function:
-                        if tc.function.name:
-                            collected_tool_calls[idx]["name"] = tc.function.name
-                        if tc.function.arguments:
-                            collected_tool_calls[idx]["arguments"] += tc.function.arguments
-
-        if live:
-            live.stop()
-        else:
-            status.stop()
-
-        full_text = "".join(text_chunks)
+        full_text, collected_tool_calls, finish_reason = _stream_turn(client, context, tracker)
 
         if finish_reason == "stop" or (finish_reason != "tool_calls" and not collected_tool_calls):
             console.print()
@@ -158,10 +176,6 @@ def run_agent(user_message: str, client: JarvisClient, context: ContextManager, 
             if logger:
                 logger.assistant(full_text)
             return
-
-        # Once the model has output text in plan mode, mark the plan as shown
-        if full_text and not plan_shown:
-            plan_shown = True
 
         if collected_tool_calls:
             if full_text:
@@ -187,14 +201,7 @@ def run_agent(user_message: str, client: JarvisClient, context: ContextManager, 
                 if logger:
                     logger.tool_call(tool_name, args)
 
-                # Plan mode gate — block write tools until a plan has been shown
                 result: str | None = None
-                if not plan_shown and tool_name in _WRITE_TOOLS:
-                    result = (
-                        "Plan mode is active. You must output a numbered plan first before "
-                        "calling any write or command tools. Show the plan now, then execute "
-                        "after the user types /go (or immediately if auto mode is on)."
-                    )
 
                 # Permission gate — show diff/warning and ask before proceeding
                 if result is None and needs_permission(tool_name, args):

@@ -1,190 +1,231 @@
 # Jarvis — Project Context
 
+> You (Jarvis) are running *inside* this project. You can read, edit, and improve your own
+> source code. This file is your map — keep it accurate. When you change behavior, update the
+> matching section here in the same turn (see **Self-improvement workflow → step 5**).
+
 ## Improvement backlog
 
-See **`TODO.md`** in this directory for the full prioritized list of features to build and bugs to fix. Check it before suggesting new features — something may already be planned or completed. Mark items `[x]` when done.
+See **`ROADMAP.md`** for the ordered, step-by-step self-improvement plan (do those phases in
+order), and **`TODO.md`** for the raw feature/bug backlog. Check it before suggesting new
+features — something may already be planned or done. Mark items `[x]` when complete and note the file changed.
 
 ## What this is
 
-Jarvis is a self-hosted CLI coding assistant built on Azure OpenAI (gpt-4o). It is a streaming agentic REPL with tool use, MCP server integrations, session logging, and a permission/diff system. The CLI is installed globally via `pipx` and invoked with `jarvis`.
-
-You are running *inside* this project right now. You can read, edit, and improve your own source code.
+Jarvis is a self-hosted CLI coding assistant on **Azure OpenAI** (`AzureOpenAI` client). It is a
+streaming agentic REPL with tool use, MCP integrations, session logging, a permission/diff gate,
+plan mode, auto mode, and persistent memory. Installed globally via `pipx` and invoked as `jarvis`.
 
 ## Self-improvement workflow
 
-When told to "work through the TODO list" or "keep going", operate fully autonomously — do not ask "should I proceed?" or "shall I continue?" between items. Pick the next uncompleted item, implement it, mark it done, and immediately move to the next one. Only stop when:
-- You have completed 3–5 features (then do the branch/PR workflow)
-- You hit an error you cannot resolve
-- The user explicitly tells you to stop
+When told to "work through the TODO list" or "keep going", operate autonomously — do not ask
+"should I proceed?" between items. Pick the next uncompleted item, implement it, mark it done,
+move on. Stop only when: you've completed 3–5 features (then do the branch/PR workflow), you hit
+an error you can't resolve, or the user says stop. (This autonomy is **auto mode**, toggled with
+`/auto`. It is independent of **plan mode** — see Key flows.)
 
-When asked to add a feature, fix a bug, or improve yourself, follow this loop:
+The edit loop:
 
-1. **Find** — use `search_files` or `find_symbol` to locate the relevant code. Don't bulk-read the whole repo.
-2. **Read** — read only the specific file(s) you need.
-3. **Edit** — use `edit_file` for targeted changes, `write_file` only for new files or full rewrites.
-4. **Verify** — after every edit, re-read the changed file and check:
-   - All names you used (classes, functions, variables) are imported or defined in that file
-   - Any new import you added actually exists in the installed packages or stdlib
-   - The indentation and structure look correct
-   - If you added a function/class, check that it's wired up where it needs to be called
-5. **Update JARVIS.md** — if the feature adds a new tool, command, flow, or gotcha, update the relevant section of this file so future sessions have accurate context. Specifically:
-   - New slash command → add to the commands table and `_HELP_TEXT` note
-   - New tool → add to the architecture file list
-   - New gotcha or known issue → add to the Known issues section
-   - New improvement idea completed → remove it from Improvement ideas
-6. **Set resume state (if continuing a task)** — if you want to automatically continue working after the restart, first write `~/.jarvis/resume.json` using `write_file` with this format:
+1. **Find** — `search_files` (grep) or `find_symbol` to locate code. Don't bulk-read the repo.
+2. **Read** — read only the specific file(s) you need. `read_file` truncates at 10,000 chars.
+3. **Edit** — `edit_file` for targeted changes (its `old_string` must be **unique** in the file),
+   `write_file` for new files or full rewrites.
+4. **Verify** — after every edit, re-read the changed region and check:
+   - Every name you used (class, function, variable) is imported or defined in that file
+   - Any new import exists in the installed packages or stdlib
+   - Indentation/structure is correct
+   - If you added a function/class/tool/command, it is wired up where it's called/registered
+5. **Update JARVIS.md** — if you added/changed a tool, command, flow, or gotcha, update the
+   relevant section here so future sessions stay accurate:
+   - New slash command → add to `_HELP_TEXT` **and** the command list below
+   - New tool → register in `tools/__init__.py` **and** add to the tool table below
+   - New gotcha → add to Known issues
+   - Completed idea → remove it from Improvement ideas / check it off in TODO.md
+6. **Set resume state (only if continuing across a restart)** — write `~/.jarvis/resume.json`
+   with `write_file`. Schema (all fields read by `cli.py`):
    ```json
-   {"message": "Continue working through TODO.md. Check for the next uncompleted item and implement it.", "auto": true}
+   {"message": "Continue the next uncompleted TODO item.", "auto": true, "plan": false}
    ```
-   On restart, Jarvis will read this file, enable auto mode, and automatically send the message as the first turn. Delete the file if you don't want to resume anything.
-7. **Reinstall and restart** — use the `run_command` tool to run `python3 -m pipx reinstall jarvis`. When this command succeeds, Jarvis automatically restarts in place and picks up the resume state if one was written.
+   On restart Jarvis reads it, restores `auto`/`plan` mode, deletes the file, and runs `message`
+   as the first turn. NOTE: `run_command`'s auto-restart only writes this file when **auto mode
+   is on**; a `/restart` or pipx reinstall in non-auto mode re-execs with no resume.
+7. **Reinstall and restart** — run `python3 -m pipx reinstall jarvis` via `run_command`. On
+   success the tool auto-restarts Jarvis in place (and picks up resume state if written).
 
 ## Branching and PR workflow
 
-After every **3–5 completed features**, or when finishing a logical group from TODO.md (e.g. all Robustness items), create a branch, open a PR, and merge it:
+After every **3–5 completed features**, or when finishing a logical group from TODO.md, create a
+branch, open a PR, and merge it:
 
 ```bash
-# 1. Create a branch named after the batch
-git checkout -b feat/robustness-improvements
-
-# 2. Stage and commit all changes
+git checkout -b feat/<category>-<short-description>
 git add -A
-git commit -m "Add tool result truncation, read_file size guard, auto-compact"
-
-# 3. Push and open a PR with a meaningful title and description
-git push -u origin feat/robustness-improvements
-gh pr create \
-  --title "Robustness: tool truncation, file size guard, auto-compact" \
-  --body "## What\n- Tool results over 8K chars are truncated\n- read_file warns on files over 100KB\n- Context auto-compacts at 25K tokens\n\n## Why\nPrevents context blowups from large file reads and long sessions."
-
-# 4. Merge and return to main
+git commit -m "<Category>: short summary of features"
+git push -u origin feat/<category>-<short-description>
+gh pr create --title "<Category>: summary" --body "## What ... ## Why ..."
 gh pr merge --squash --delete-branch
-git checkout main
-git pull
+git checkout main && git pull
 ```
 
-**Branch naming:** `feat/<category>-<short-description>` e.g. `feat/shell-integration`, `feat/session-management`
-**PR title format:** `<Category>: short summary of features`
-**Always squash merge** to keep main history clean.
-**Do not wait for the user to ask** — after 3–5 features, do this automatically as part of the loop.
+**Always squash merge.** Don't wait to be asked — do this as part of the loop.
 
-**Common mistakes to catch in step 4:**
-- Using `Path` without `from pathlib import Path`
-- Using `Any` without `from typing import Any`
+**Common mistakes to catch in verification:**
+- Using `Path` without `from pathlib import Path`, or `Any` without `from typing import Any`
 - Referencing a function defined later in the file before its definition
-- Adding a new tool without registering it in `tools/__init__.py`
-- Adding a new slash command without adding it to `_HELP_TEXT`
-
-The user does not need to explain the architecture — you have full context from this file. When in doubt about where something lives, check the architecture map below before reading files.
+- Adding a tool without registering it in `tools/__init__.py`
+- Adding a slash command without adding it to `_HELP_TEXT`
+- Duplicating an `if cmd == "/x":` block — handlers all `return`, so a second copy is dead code
 
 ## Stack
 
-- Python 3.11+ (3.13 in practice)
-- Azure OpenAI (`openai` SDK, `AzureOpenAI` client, gpt-4o deployment)
-- Rich (all terminal output — Console, Status spinners, Syntax, Rule)
-- MCP SDK (`mcp>=1.0`) for GitHub / Azure / Brave Search integrations
-- trafilatura (web content extraction), ddgs (DuckDuckGo search)
-- pipx for global CLI install from editable local source
+- Python ≥3.11 (3.13 in practice)
+- Azure OpenAI via the `openai` SDK (`AzureOpenAI`); `client.py` is the only file that imports it
+  for requests. `agent.py` imports `openai` only for the `BadRequestError`/`RateLimitError` classes.
+- **Rich** for all terminal output — `Console`, `Status` spinners, `Syntax`, `Rule`, and crucially
+  `rich.live.Live` + `rich.markdown.Markdown` (the streaming render mechanism)
+- MCP SDK (`mcp>=1.0`) for GitHub / Azure / Brave Search
+- `trafilatura` (web extraction), `ddgs` (DuckDuckGo search)
+- `pipx` for global CLI install from editable local source
 
 ## Architecture
 
 ```
 jarvis/
-├── cli.py           Entry point. REPL loop, MCP init, JARVIS.md loading.
-├── agent.py         Streaming tool-use loop. Drives all model interactions.
-├── client.py        Only file that imports openai. stream() / complete() / set_deployment().
-├── config.py        Loads .env from candidate paths. Validates 4 Azure env vars.
-├── context.py       ContextManager (message history), UsageTracker (tokens + cost), pricing table.
-├── commands.py      Slash command handlers (/help /usage /model /fix /file /run /clear /compact /init).
-├── permissions.py   Diff preview + y/N gate for write_file, edit_file, and destructive shell commands.
-├── formatter.py     Rich helpers: print_banner, print_streaming_token, print_system, print_error.
-├── logger.py        SessionLogger — JSONL logs to ~/.jarvis/logs/YYYY-MM-DD.jsonl.
-├── mcp_manager.py   Async MCP client via background daemon thread + asyncio event loop.
+├── cli.py           Entry point. main(): load Config → build client/tracker/MCP/logger → load
+│                    JARVIS.md → connect MCP → run resume.json (if any) → REPL loop (try/finally
+│                    calls logger.end on exit). Prompt shows cwd, token tag, PLAN/AUTO badges.
+├── agent.py         Streaming tool-use loop. run_agent() + _stream_turn() (renders live) +
+│                    _stream_with_retry() (lazy generator) + _accumulate_tool_calls().
+├── client.py        Only file importing openai for requests. stream() (lazy, include_usage),
+│                    complete(), current_deployment(), set_deployment().
+├── config.py        Frozen Config dataclass. load() searches _ENV_CANDIDATES, validates 4 Azure vars.
+├── context.py       ContextManager (history + system prompt), UsageTracker (tokens+cost),
+│                    _PRICING table, plan-mode globals, _clean_history, compact().
+├── commands.py      handle_command(): all slash commands. Returns None / _EXIT_SENTINEL /
+│                    _RUN_AGENT_PREFIX+msg.
+├── permissions.py   Auto-mode globals; needs_permission/request_permission; arrow-key Yes/No
+│                    selector; unified-diff preview for write_file/edit_file.
+├── formatter.py     Shared Rich `console` + helpers: print_banner, print_user_header,
+│                    print_jarvis_header, make_live_markdown, print_assistant_markdown,
+│                    print_system, print_error, print_command_output.
+├── logger.py        SessionLogger — JSONL to ~/.jarvis/logs/YYYY-MM-DD.jsonl (session_start,
+│                    user, assistant, tool_call, tool_result[≤500 chars], error, session_end).
+├── mcp_manager.py   Daemon-thread asyncio loop. MCPManager.connect() launches a server, lists
+│                    tools, parks the session alive; MCPTool wraps each as a BaseTool.
 └── tools/
-    ├── __init__.py      Tool registry (_REGISTRY list). register_tool() for MCP tools.
-    ├── base.py          BaseTool abstract class (name, description, parameters, execute, to_openai_schema).
-    ├── read_file.py     Read any file.
-    ├── write_file.py    Write file (goes through permission gate).
-    ├── edit_file.py     Targeted old_string → new_string replacement (goes through permission gate).
-    ├── run_command.py   Run shell command. Intercepts `cd` and calls os.chdir().
-    ├── list_dir.py      List directory contents.
-    ├── search_files.py  Grep/ripgrep for patterns.
-    ├── fetch_url.py     HTTP GET a URL.
+    ├── __init__.py      _REGISTRY (14 built-ins) + get_all_tools/get_tool_by_name/register_tool.
+    ├── base.py          BaseTool(ABC): name/description/parameters/execute + to_openai_schema().
+    ├── read_file.py     Read a file; truncates at 10,000 chars.
+    ├── write_file.py    Write a file (through permission gate).
+    ├── edit_file.py     Replace old_string→new_string; old_string must appear exactly once.
+    ├── run_command.py   Run a shell command; intercepts `cd`/`cd <path>` via os.chdir().
+    ├── list_dir.py      Directory tree to depth 2, honoring top-level .gitignore.
+    ├── search_files.py  grep -rn for a pattern; caps output at 200 lines.
+    ├── fetch_url.py     HTTP GET a URL; truncates at 8,000 chars.
     ├── web_search.py    DuckDuckGo search via ddgs.
-    ├── web_extract.py   Fetch URL and extract clean text via trafilatura.
-    ├── find_symbol.py   Find function/class definitions in source files.
-    ├── package_info.py  Look up package metadata.
-    └── git_tools.py     git_status, git_diff (staged/file/ref), git_log.
+    ├── web_extract.py   Fetch + extract clean text via trafilatura; truncates at 12,000 chars.
+    ├── find_symbol.py   grep for definitions/references of a symbol (word-boundary matched).
+    ├── package_info.py  npm / PyPI package metadata lookup.
+    └── git_tools.py     git_status, git_diff, git_log (shared _git() helper, 15s timeout).
 ```
 
 ## Key flows
 
-### Streaming agent loop (`agent.py:run_agent`)
+### Streaming agent loop (`agent.py`)
 
-1. Append user message to `ContextManager`
-2. Call `client.stream(context.messages(), tools=tool_schemas)` — Azure streams chunks
-3. Accumulate text tokens (print immediately via `print_streaming_token`) and tool call fragments
-4. On `finish_reason == "stop"` → append assistant message, return
-5. On `finish_reason == "tool_calls"` → for each tool call:
-   - Run `needs_permission()` — if yes, show diff/warning and prompt y/N
-   - Execute tool, append `role: tool` result to context
-6. Loop up to `_MAX_TOOL_ITERATIONS = 10`
+`run_agent()` appends the user message, warns (does **not** auto-compact) if
+`token_estimate() > 20_000`, then loops up to `_MAX_TOOL_ITERATIONS = 10`. Each iteration:
+
+1. `_stream_turn(client, context, tracker)` streams one model response **live**: chunks arrive
+   lazily from `_stream_with_retry` (a generator — it does **not** buffer with `list()`), and on
+   the first content delta it prints the Jarvis header and renders an incrementally-updated
+   `rich.live.Live` Markdown widget. A `Thinking…` spinner runs until the first chunk.
+   - `RateLimitError` → retried with fixed delays `(5, 15, 30)` then give up (not exponential).
+   - `BadRequestError` matching context-length → compact once and re-stream.
+2. Returns `(full_text, collected_tool_calls, finish_reason)`. Tool-call fragments are merged by
+   `tc.index` across chunks (`_accumulate_tool_calls`).
+3. **Terminate** when `finish_reason == "stop"` OR (`finish_reason != "tool_calls"` AND no tool
+   calls collected): append the assistant message and return.
+4. Otherwise execute each collected tool call (permission gate → execute → append `role:tool`
+   result keyed by `tool_call_id`), then loop.
 
 ### Permission gate (`permissions.py`)
 
-- `needs_permission()` returns True for `write_file`, `edit_file`, and `run_command` matching `_DESTRUCTIVE_RE`
-- `request_permission()` shows a unified diff (for file ops) or warning (for commands) and prompts `Apply? [y/N]`
-- Returns `None` if approved, or a cancellation string to inject as the tool result if denied
+- `needs_permission(tool, args)`: `run_command` → True only if it matches `_DESTRUCTIVE_RE`
+  (`rm `, `rmdir`, `sudo`, `kill`/`pkill`/`killall`, `git reset --hard`, `git clean -fdx`,
+  `DROP TABLE/DATABASE`, `TRUNCATE`, `mkfs`, `fdisk`). **Auto mode never bypasses this.**
+  `write_file`/`edit_file` → **always True** (so the diff is shown); in auto mode
+  `request_permission` renders the diff then auto-applies, otherwise it prompts.
+- `request_permission` prints a unified-diff preview (Rich `Syntax`, "diff") then asks via
+  `_arrow_confirm()` — an **arrow-key Yes/No selector** (raw termios; default **No**; Enter
+  confirms; y/n jump directly). Returns `None` if approved, else a cancellation string injected
+  as the tool result. The edit preview enforces the same uniqueness rule as `edit_file`, so it
+  never shows a diff the tool would reject.
 
 ### Slash commands (`commands.py`)
 
-`handle_command()` returns:
-- `None` → nothing to do
-- `_EXIT_SENTINEL` → exit REPL
-- `_RUN_AGENT_PREFIX + message` → `cli.py` extracts the message and calls `run_agent()`
+`handle_command()` returns `None` (handled in place), `_EXIT_SENTINEL` (`__EXIT__`, exit REPL),
+or `_RUN_AGENT_PREFIX` (`__RUN__:`) + message (the REPL strips the prefix and runs it through
+`run_agent`). `/retry`, `/fix`, `/go`, `/cancel` use the `_RUN_AGENT_PREFIX` path. Commands are
+case-insensitive; the argument keeps original case.
+
+Implemented commands: `/help /history /retry /undo /clear /compact /usage /model /file /run /plan
+/go /cancel /restart /auto /fix /copy /save /memory /init /exit /quit`. Every one is listed in
+`_HELP_TEXT` — keep that invariant.
+
+### Plan mode vs auto mode (independent toggles)
+
+- **Plan mode** (`/plan`, state in `context.py`): when on, `_PLAN_MODE_PROMPT` is appended to the
+  system prompt instructing the model to research, output a numbered plan, and **stop** — waiting
+  for `/go` (execute) or `/cancel` (abort). It does not auto-execute.
+- **Auto mode** (`/auto`, state in `permissions.py`): skips the approval prompt for file
+  writes/edits (diff still shown, then auto-applied). Destructive shell commands still prompt.
 
 ### Cost tracking (`context.py:UsageTracker`)
 
-- `tracker.record(prompt, completion, deployment)` called per streaming response chunk that has `.usage`
-- `_lookup_price(deployment)` matches deployment name against `_PRICING` dict (substring match, case-insensitive)
-- `/usage` shows total tokens and `$0.0000` estimated cost
+`record(prompt, completion, deployment)` is called per streaming chunk with `.usage`.
+`_lookup_price` lowercases the deployment and matches `_PRICING` keys **longest-first** (so
+`gpt-4o-mini` isn't mispriced as `gpt-4o`), falling back to gpt-4o pricing (2.50/10.00 per 1M).
+`/usage` shows tokens and estimated USD. `token_estimate()` is rough: total content chars ÷ 4
+(ignores tool_calls payloads and the system message).
 
 ### MCP integration (`mcp_manager.py`)
 
-- Daemon thread runs a persistent asyncio event loop
-- `mcp.connect()` launches an MCP server subprocess, initializes the session, lists tools, then parks with `await asyncio.Event().wait()` to keep it alive
-- Each MCP tool becomes an `MCPTool(BaseTool)` registered into the global `_REGISTRY`
-- GitHub: uses `gh auth token` CLI (falls back to `GITHUB_PERSONAL_ACCESS_TOKEN` env)
-- Azure: uses `az login` / DefaultAzureCredential (checks `az account show` first)
-- Brave Search: needs `BRAVE_API_KEY` in `.env`
+A daemon thread runs a persistent asyncio loop. `connect()` launches a server subprocess via
+`stdio_client`, initializes the session, lists tools, and parks the coroutine alive; on a 30s
+timeout it raises `TimeoutError` (not a bare KeyError). Each tool becomes an `MCPTool(BaseTool)`
+registered into the global `_REGISTRY` by `cli._connect_mcp`. Servers connect **at startup only**
+(GitHub via `gh auth token` → `GITHUB_PERSONAL_ACCESS_TOKEN`; Azure if `az account show` succeeds;
+Brave if `BRAVE_API_KEY` set). If one crashes, restart Jarvis.
 
 ### JARVIS.md loading (`cli.py:_find_jarvis_md`)
 
-Walks up 5 directory levels from `cwd` looking for `JARVIS.md`. When found, its content is injected into the system prompt via `ContextManager(project_context=...)`. This file is that context.
+Checks `cwd` and up to 4 parent directories (5 candidates total), stopping at the filesystem
+root. First hit is injected into the system prompt as project context. This file is that context.
 
 ## Conventions
 
-- All terminal output goes through `formatter.py` helpers — never `print()` directly
-- Tools return plain strings (not JSON, not Rich markup)
-- Tool errors should return `"Error: ..."` strings, not raise exceptions (agent handles them gracefully)
-- New tools must subclass `BaseTool` and be added to `_REGISTRY` in `tools/__init__.py`
-- New slash commands go in `commands.py:handle_command()` with a matching entry in `_HELP_TEXT`
-- Streaming token display uses `print_streaming_token()` which writes directly to stdout without a newline
-- `console.print()` (bare) adds the newline after streaming finishes
+- All terminal output goes through `formatter.py` helpers and the shared `console` — never `print()`.
+- Tools return plain **strings** (not JSON, not Rich markup). Tool errors return `"Error: ..."`
+  strings rather than raising — `run_agent` also wraps `execute()` to catch stragglers.
+- New tools subclass `BaseTool` and are added to `_REGISTRY` in `tools/__init__.py`.
+- New slash commands go in `commands.py:handle_command()` with a matching `_HELP_TEXT` entry. Each
+  handler must `return` (None/sentinel/run-prefix); don't fall through.
+- Plan-mode and auto-mode state are **module-level globals**, not per-instance.
 
 ## Key files to know
 
 | File | Why it matters |
 |---|---|
-| `jarvis/agent.py` | Central loop — start here when changing model interaction behavior |
-| `jarvis/tools/__init__.py` | Add new tools here |
-| `jarvis/commands.py` | Add new slash commands here |
-| `jarvis/context.py` | Change system prompt, pricing, or token tracking here |
-| `jarvis/permissions.py` | Change what requires approval or how diffs are shown |
-| `jarvis/client.py` | Only place that touches the OpenAI SDK |
-| `pyproject.toml` | Dependencies and entry point |
+| `jarvis/agent.py` | Central loop + live streaming — start here for model-interaction changes |
+| `jarvis/tools/__init__.py` | Register new tools here |
+| `jarvis/commands.py` | Add new slash commands here (+ `_HELP_TEXT`) |
+| `jarvis/context.py` | System prompt, plan-mode prompt, pricing, history cleaning, compaction |
+| `jarvis/permissions.py` | What requires approval; diff preview; auto-mode behavior |
+| `jarvis/client.py` | Only place that touches the OpenAI SDK for requests |
+| `pyproject.toml` | Dependencies and the `jarvis` entry point |
 
-## Environment variables (in `.env`)
+## Environment variables (in `.env`, gitignored)
 
 ```
 AZURE_OPENAI_ENDPOINT=https://....openai.azure.com/
@@ -194,75 +235,52 @@ AZURE_OPENAI_API_VERSION=2024-08-01-preview
 BRAVE_API_KEY=...           # optional — enables Brave Search MCP
 ```
 
-`.env` is gitignored. Never commit API keys.
+`.env` search order (first existing wins, `override=False`): `cwd/.env` → `~/.jarvis.env` →
+`~/jarvis/.env` → package-root `.env`. All four `AZURE_OPENAI_*` vars are required or `load()` raises.
 
 ## Common commands
 
 ```bash
-# After any source change — reinstall the global CLI
-python3 -m pipx reinstall jarvis
-
-# Run from this directory (picks up this JARVIS.md automatically)
-jarvis
-
-# Commit and push
-git add -p
-git commit -m "..."
-git push origin main
-
-# Check what's installed
-pipx list
-
-# View session logs
-ls ~/.jarvis/logs/
-cat ~/.jarvis/logs/$(date +%Y-%m-%d).jsonl | jq .
+python3 -m pipx reinstall jarvis     # after any source change (auto-restarts in place)
+jarvis                                # run from a dir under this JARVIS.md
+pipx list                             # check what's installed
+cat ~/.jarvis/logs/$(date +%Y-%m-%d).jsonl | jq .   # view today's session log
 ```
 
 ## How to add a new tool
 
-1. Create `jarvis/tools/my_tool.py` subclassing `BaseTool`:
-   ```python
-   from .base import BaseTool
-   class MyTool(BaseTool):
-       name = "my_tool"
-       description = "Does X given Y."
-       parameters = {
-           "type": "object",
-           "properties": {"arg": {"type": "string", "description": "..."}},
-           "required": ["arg"],
-       }
-       def execute(self, args: dict) -> str:
-           return "result"
-   ```
-2. Import and add to `_REGISTRY` in `jarvis/tools/__init__.py`
-3. Reinstall with `python3 -m pipx reinstall jarvis`
+1. Create `jarvis/tools/my_tool.py` subclassing `BaseTool` (`name`, `description`, `parameters`,
+   `execute(self, args) -> str`). Catch failures and return `"Error: ..."`.
+2. Import it and add an instance to `_REGISTRY` in `jarvis/tools/__init__.py`.
+3. Add a row to the tool table above. Reinstall.
 
 ## How to add a new slash command
 
-1. Add a block in `commands.py:handle_command()`:
-   ```python
-   if cmd == "/mycommand":
-       # ... do work ...
-       return None  # or _EXIT_SENTINEL or f"{_RUN_AGENT_PREFIX}message"
-   ```
-2. Add an entry to `_HELP_TEXT` at the top of `commands.py`
-3. Reinstall
+1. Add an `if cmd == "/x":` block in `commands.py:handle_command()` that returns
+   None / `_EXIT_SENTINEL` / `f"{_RUN_AGENT_PREFIX}message"`.
+2. Add an entry to `_HELP_TEXT` and to the command list under Key flows. Reinstall.
 
 ## Known issues / gotchas
 
-- `cd` in `run_command` works (calls `os.chdir()`), but the prompt only updates on the next REPL iteration
-- MCP servers connect at startup only — if a server crashes, restart jarvis
-- `stream_options: {"include_usage": True}` is required to get real token counts (not estimates) from Azure
-- `edit_file` requires `old_string` to appear exactly once in the file — if it appears 0 or 2+ times it returns an error
-- The `.env` candidate search order: `cwd/.env` → `~/.jarvis.env` → `~/jarvis/.env` → package root `.env`
-- Cost estimates are approximations — Azure pricing may differ from the hardcoded `_PRICING` table in `context.py`
+- `cd` in `run_command` persists via `os.chdir()` (bare `cd` → home; `cd <path>` → that dir; not
+  triggered by lookalikes like `cdiff`). The prompt's cwd updates on the next REPL iteration.
+- MCP servers connect at startup only — if one crashes, restart Jarvis.
+- `stream_options={"include_usage": True}` is required for real token counts from Azure.
+- `edit_file` needs `old_string` to appear **exactly once** (0 or 2+ → error). The permission
+  preview enforces the same rule.
+- `token_estimate()` is a chars÷4 approximation and ignores tool_call payloads + system prompt.
+- Cost figures use the hardcoded `_PRICING` table; real Azure pricing may differ.
+- `_history` holds raw message dicts (user/assistant/tool/tool_calls), so `/usage`'s
+  "N messages" and `/history` include tool-result and tool-call entries, not just turns.
+- The `build/` directory is a stale copy — the live source is `jarvis/`. Ignore `build/` and `.venv/`.
 
 ## Improvement ideas
 
-- Multi-file context (`/file` loads one file; could auto-load all files matching a glob)
-- Persistent memory across sessions (write key facts to `~/.jarvis/memory.md`, auto-load it)
-- Interrupt mid-stream with Ctrl+C to start a new message (currently cancels and shows "Cancelled")
-- Auto-compact when context exceeds a token threshold (hook into `token_estimate()`)
-- `/undo` command to pop the last assistant + user turn from history
-- Test suite — no tests exist yet, `pytest jarvis/tests/` would be the path
-- Syntax-highlighted output for code blocks in streaming responses (currently plain markdown)
+- Multi-file context (auto-load all files matching a glob for `/file`)
+- Interrupt mid-stream with Ctrl+C to start a new message (currently cancels the turn)
+- Proactive auto-compact at a token threshold (today: warn at ~20K; compact only reactively on a
+  context-length API error)
+- Test suite — none yet; `jarvis/tests/` with unit tests for `permissions.py`, `context.py`, and
+  each tool's `execute()` would be the path
+- Syntax-highlighted code blocks during streaming (currently plain Markdown via Live)
+- `/pin` a message that survives `/compact` and `/clear`
