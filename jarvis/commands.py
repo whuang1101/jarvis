@@ -33,6 +33,7 @@ _HELP_TEXT = """
   [cyan]/save <file>[/cyan]   Save conversation history to a markdown file.
   [cyan]/memory[/cyan]        Manage persistent memory (`~/.jarvis/memory.md`)
   [cyan]/init[/cyan]          Create a JARVIS.md project context file here
+  [cyan]/selftest[/cyan]      Run Jarvis's own test suite (pytest)
   [cyan]/exit[/cyan]          Exit Jarvis
   [cyan]/quit[/cyan]          Exit Jarvis
 """
@@ -135,6 +136,7 @@ def handle_command(
                 "/save",
                 "/memory",
                 "/init",
+                "/selftest",
                 "/exit",
                 "/quit",
             ]
@@ -366,6 +368,29 @@ def handle_command(
             print_error("Command timed out after 30s")
         except Exception as e:
             print_error(f"Error running command: {e}")
+        return None
+
+    if cmd == "/selftest":
+        import sys
+        tests_dir = Path(__file__).parent / "tests"
+        if not tests_dir.is_dir():
+            print_error(f"Test directory not found: {tests_dir}")
+            return None
+        print_system("Running test suite...")
+        try:
+            r = subprocess.run(
+                [sys.executable, "-m", "pytest", str(tests_dir), "-q"],
+                capture_output=True, text=True, timeout=120,
+            )
+            print_command_output(r.stdout.strip() or r.stderr.strip())
+            if r.returncode == 0:
+                print_system("✓ All tests passed.")
+            else:
+                print_error("✗ Tests failed — fix before reinstalling.")
+        except FileNotFoundError:
+            print_error("pytest is not installed in this environment (pip install pytest).")
+        except subprocess.TimeoutExpired:
+            print_error("Test run timed out after 120s.")
         return None
 
     if cmd == "/init":

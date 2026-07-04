@@ -19,7 +19,7 @@
 The single biggest gap vs Claude Code: no tests. A self-improving CLI without tests
 will eventually break itself and not notice.
 
-- [ ] **0.1 Test scaffolding.**
+- [x] **0.1 Test scaffolding.**
   Create `jarvis/tests/__init__.py` and `jarvis/tests/test_tools.py`. Add `pytest` to
   `[project.optional-dependencies] dev` in `pyproject.toml`. Write tests for the pure
   tools first (no network, no prompts): `edit_file` (unique-string rule: 0, 1, 2+
@@ -27,18 +27,18 @@ will eventually break itself and not notice.
   `find_symbol`. Use `tmp_path` fixtures.
   *Verify:* `python3 -m pytest jarvis/tests/ -q` passes.
 
-- [ ] **0.2 Tests for context.py.**
+- [x] **0.2 Tests for context.py.**
   `jarvis/tests/test_context.py`: `_clean_history` (orphaned tool messages dropped),
   `_lookup_price` (longest-match: `gpt-4o-mini` ≠ `gpt-4o`), `token_estimate`.
   *Verify:* pytest passes.
 
-- [ ] **0.3 Tests for permissions.py.**
+- [x] **0.3 Tests for permissions.py.**
   `jarvis/tests/test_permissions.py`: `needs_permission` — every `_DESTRUCTIVE_RE`
   pattern matches; benign commands (`ls`, `git status`, `echo rm`) do not;
   `write_file`/`edit_file` always True.
   *Verify:* pytest passes.
 
-- [ ] **0.4 Self-check gate in the workflow.**
+- [x] **0.4 Self-check gate in the workflow.**
   Add a `/selftest` slash command in `commands.py` that runs
   `python3 -m pytest jarvis/tests/ -q` via subprocess and prints the result.
   Then update JARVIS.md's "Self-improvement workflow": step 6.5 = "run `/selftest`

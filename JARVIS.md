@@ -41,7 +41,9 @@ The edit loop:
    - New tool → register in `tools/__init__.py` **and** add to the tool table below
    - New gotcha → add to Known issues
    - Completed idea → remove it from Improvement ideas / check it off in TODO.md
-6. **Set resume state (only if continuing across a restart)** — write `~/.jarvis/resume.json`
+6. **Run the test suite** — `/selftest` (or `python3 -m pytest jarvis/tests -q`). If it fails,
+   fix the failure before reinstalling. Add tests when you add behavior.
+7. **Set resume state (only if continuing across a restart)** — write `~/.jarvis/resume.json`
    with `write_file`. Schema (all fields read by `cli.py`):
    ```json
    {"message": "Continue the next uncompleted TODO item.", "auto": true, "plan": false}
@@ -49,7 +51,7 @@ The edit loop:
    On restart Jarvis reads it, restores `auto`/`plan` mode, deletes the file, and runs `message`
    as the first turn. NOTE: `run_command`'s auto-restart only writes this file when **auto mode
    is on**; a `/restart` or pipx reinstall in non-auto mode re-execs with no resume.
-7. **Reinstall and restart** — run `python3 -m pipx reinstall jarvis` via `run_command`. On
+8. **Reinstall and restart** — run `python3 -m pipx reinstall jarvis` via `run_command`. On
    success the tool auto-restarts Jarvis in place (and picks up resume state if written).
 
 ## Branching and PR workflow
@@ -170,7 +172,7 @@ or `_RUN_AGENT_PREFIX` (`__RUN__:`) + message (the REPL strips the prefix and ru
 case-insensitive; the argument keeps original case.
 
 Implemented commands: `/help /history /retry /undo /clear /compact /usage /model /file /run /plan
-/go /cancel /restart /auto /fix /copy /save /memory /init /exit /quit`. Every one is listed in
+/go /cancel /restart /auto /fix /copy /save /memory /init /selftest /exit /quit`. Every one is listed in
 `_HELP_TEXT` — keep that invariant.
 
 ### Plan mode vs auto mode (independent toggles)
