@@ -113,11 +113,11 @@ def main() -> None:
     jarvis_md = _find_jarvis_md()
     context = ContextManager(project_context=jarvis_md[0] if jarvis_md else None)
 
-    print_banner()
+    print_banner(model=client.current_deployment(), cwd=os.getcwd())
     if jarvis_md:
         console.print(f"[dim]  ✓ Project context loaded ({jarvis_md[1]})[/dim]")
     _init_mcp(mcp)
-    print_system("Type /help for available commands. Ctrl+D to exit.")
+    print_system("Type /help for available commands. Ctrl+C twice to exit.")
     console.print()
 
     import readline
@@ -146,29 +146,38 @@ def main() -> None:
         except Exception as e:
             print_error(f"Resume error: {e}")
 
+    interrupted_once = False
     try:
         while True:
             try:
-                console.rule(style="dim")
+                console.print()
                 cwd = Path.cwd()
                 try:
                     short = "~" / cwd.relative_to(Path.home())
                 except ValueError:
                     short = cwd
-                tags = f" [{context.token_estimate() / 1000:.1f}k]"
+                tags = f" · {context.token_estimate() / 1000:.1f}k tokens"
                 if is_plan_mode():
-                    tags += " [bold blue]PLAN[/bold blue]"
+                    tags += " · [bold blue]plan[/bold blue]"
                 if is_auto_mode():
-                    tags += " [bold yellow]AUTO[/bold yellow]"
-                user_input = console.input(f"[dim]{short}[/dim]{tags} [bold]>[/bold] ").strip()
+                    tags += " · [bold yellow]auto[/bold yellow]"
+                console.print(f"[bright_black]{short}{tags}[/bright_black]")
+                user_input = console.input("[bold]>[/bold] ").strip()
                 if user_input:
                     readline.add_history(user_input)
+                interrupted_once = False
             except EOFError:
                 print_system("\nGoodbye.")
                 break
             except KeyboardInterrupt:
-                print_system("\nGoodbye.")
-                break
+                # Claude-Code-style: first Ctrl+C warns, a second consecutive one exits.
+                if interrupted_once:
+                    print_system("\nGoodbye.")
+                    break
+                interrupted_once = True
+                console.print()
+                print_system("(Press Ctrl+C again to exit)")
+                continue
 
             if not user_input:
                 continue

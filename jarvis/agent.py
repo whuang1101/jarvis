@@ -8,8 +8,10 @@ from openai import BadRequestError, RateLimitError
 
 from .client import JarvisClient
 from .context import ContextManager, UsageTracker
-from rich.markdown import Markdown
-from .formatter import print_jarvis_header, make_live_markdown, console
+from .formatter import (
+    print_jarvis_header, make_live_markdown, render_markdown_block,
+    print_tool_use, print_tool_result, console,
+)
 from .logger import SessionLogger
 from .permissions import needs_permission, request_permission
 from .tools import get_all_tools, get_tool_by_name
@@ -69,35 +71,33 @@ def _stream_with_retry(client: JarvisClient, messages: list, tools: list):
         yield from stream
         return
 
+# Claude-Code-style display names: rendered as ⏺ Name(arg)
 _TOOL_VERBS = {
-    "read_file": "Reading",
-    "write_file": "Writing",
-    "edit_file": "Editing",
-    "list_dir": "Listing",
-    "search_files": "Searching",
-    "run_command": "Running",
-    "git_status": "git status",
-    "git_diff": "git diff",
-    "git_log": "git log",
-    "web_search": "Searching web",
-    "web_extract": "Extracting",
-    "fetch_url": "Fetching",
-    "find_symbol": "Finding",
-    "package_info": "Looking up",
+    "read_file": "Read",
+    "write_file": "Write",
+    "edit_file": "Edit",
+    "list_dir": "List",
+    "search_files": "Search",
+    "run_command": "Bash",
+    "git_status": "GitStatus",
+    "git_diff": "GitDiff",
+    "git_log": "GitLog",
+    "web_search": "WebSearch",
+    "web_extract": "WebExtract",
+    "fetch_url": "Fetch",
+    "find_symbol": "FindSymbol",
+    "package_info": "PackageInfo",
 }
 
 
 def _tool_status_label(tool_name: str, args: dict[str, Any]) -> str:
     verb = _TOOL_VERBS.get(tool_name, tool_name)
-    if "path" in args:
-        return f"{verb} {args['path']}"
-    if "command" in args:
-        cmd = args["command"]
-        return f"{verb}: {cmd[:60]}{'...' if len(cmd) > 60 else ''}"
-    if "pattern" in args:
-        return f"{verb}: {args['pattern']}"
+    for key in ("path", "command", "pattern", "symbol", "url", "query"):
+        if key in args:
+            val = str(args[key])
+            return f"{verb}({val[:80]}{'…' if len(val) > 80 else ''})"
     first_val = str(next(iter(args.values()), ""))
-    return f"{verb} {first_val[:60]}"
+    return f"{verb}({first_val[:80]})" if first_val else f"{verb}()"
 
 
 _CONTEXT_WARN_TOKENS = 20_000  # warn at ~20K estimated tokens in history
@@ -152,7 +152,7 @@ def _stream_turn(
                     state["live"] = make_live_markdown()
                     state["live"].start()
                 state["text"].append(delta.content)
-                state["live"].update(Markdown("".join(state["text"])))
+                state["live"].update(render_markdown_block("".join(state["text"])))
             if delta.tool_calls:
                 _accumulate_tool_calls(state["tools"], delta.tool_calls)
 
@@ -250,9 +250,10 @@ def run_agent(user_message: str, client: JarvisClient, context: ContextManager, 
 
                 if result is None:
                     tool = get_tool_by_name(tool_name)
+                    print_tool_use(label)
                     if tool is None:
                         result = f"Error: unknown tool '{tool_name}'"
-                        console.print(f"[dim]  ✗ {label}[/dim]")
+                        print_tool_result(result, error=True)
                     else:
                         with console.status(f"[dim]{label}[/dim]", spinner="dots"):
                             try:
@@ -260,7 +261,7 @@ def run_agent(user_message: str, client: JarvisClient, context: ContextManager, 
                             except Exception as e:
                                 result = f"Error executing {tool_name}: {e}"
                         result = truncate_tool_result(result)
-                        console.print(f"[dim]  ✓ {label}[/dim]")
+                        print_tool_result(result, error=result.startswith("Error"))
 
                 if logger:
                     logger.tool_result(tool_name, result)

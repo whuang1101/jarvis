@@ -95,7 +95,9 @@ git checkout main && git pull
 jarvis/
 ├── cli.py           Entry point. main(): load Config → build client/tracker/MCP/logger → load
 │                    JARVIS.md → connect MCP → run resume.json (if any) → REPL loop (try/finally
-│                    calls logger.end on exit). Prompt shows cwd, token tag, PLAN/AUTO badges.
+│                    calls logger.end on exit). A dim status line (cwd · tokens · plan/auto)
+│                    precedes a bare `> ` prompt. Ctrl+C once warns, twice in a row exits
+│                    (Ctrl+D still exits immediately).
 ├── agent.py         Streaming tool-use loop. run_agent() + _stream_turn() (renders live) +
 │                    _stream_with_retry() (lazy generator) + _accumulate_tool_calls().
 ├── client.py        Only file importing openai for requests. stream() (lazy, include_usage),
@@ -107,9 +109,11 @@ jarvis/
 │                    _RUN_AGENT_PREFIX+msg.
 ├── permissions.py   Auto-mode globals; needs_permission/request_permission; arrow-key Yes/No
 │                    selector; unified-diff preview for write_file/edit_file.
-├── formatter.py     Shared Rich `console` + helpers: print_banner, print_user_header,
-│                    print_jarvis_header, make_live_markdown, print_assistant_markdown,
-│                    print_system, print_error, print_command_output.
+├── formatter.py     Shared Rich `console` + Claude-Code-style helpers: print_banner (rounded
+│                    welcome panel w/ model+cwd), print_user_header (`> msg`), print_jarvis_header
+│                    (`⏺` bullet), render_markdown_block (indented under the bullet),
+│                    print_tool_use (`⏺ Read(path)`), print_tool_result (`⎿  summary +N lines`),
+│                    make_live_markdown, print_system/print_error/print_command_output.
 ├── logger.py        SessionLogger — JSONL to ~/.jarvis/logs/YYYY-MM-DD.jsonl (session_start,
 │                    user, assistant, tool_call, tool_result[≤500 chars], error, session_end).
 ├── mcp_manager.py   Daemon-thread asyncio loop. MCPManager.connect() launches a server, lists
