@@ -51,40 +51,40 @@ will eventually break itself and not notice.
 
 These are all small, independent, and already listed in TODO.md § Robustness.
 
-- [ ] **1.1 Universal tool-result truncation.**
+- [x] **1.1 Universal tool-result truncation.**
   In `agent.py`, after each `tool.execute()`, if the result exceeds 8,000 chars,
   keep the first 6,000 + last 1,500 and insert `\n[truncated — N chars omitted]\n`.
   Do it in ONE place (the agent loop), not per-tool.
   *Verify:* add a pytest for the truncation helper; run a command with huge output
   (`seq 1 100000`) and confirm the context doesn't blow up.
 
-- [ ] **1.2 `read_file` size guard.**
+- [x] **1.2 `read_file` size guard.**
   In `read_file.py`: if file > 100KB, return an error string suggesting
   `search_files`/offset instead of dumping content. Add `offset`/`limit` line
   parameters (like Claude Code's Read) so big files are still usable.
   *Verify:* pytest with a generated 200KB file.
 
-- [ ] **1.3 Tool timeouts.**
+- [x] **1.3 Tool timeouts.**
   Wrap `tool.execute()` in the agent loop with a timeout (default 60s; use
   `concurrent.futures.ThreadPoolExecutor` + `future.result(timeout=...)`). On timeout
   return `"Error: tool timed out after 60s"` as the tool result — never crash the turn.
   *Verify:* pytest with a fake tool that sleeps.
 
-- [ ] **1.4 Auto-compact.**
+- [x] **1.4 Auto-compact.**
   In `run_agent()` (agent.py), replace the 20K warning: when
   `context.token_estimate() > 25_000`, call `context.compact()` automatically and
   print a one-line notice. Keep the reactive compact-on-BadRequestError path.
   *Verify:* temporarily lower the threshold to 100, chat once, see it compact.
   Restore the threshold.
 
-- [ ] **1.5 Raise `_MAX_TOOL_ITERATIONS`.**
+- [x] **1.5 Raise `_MAX_TOOL_ITERATIONS`.**
   10 is far too low for real agentic work (Claude Code does dozens). Raise to 40 in
   `agent.py`; when the cap is hit, instead of stopping silently, inject a user-role
   message "You hit the iteration limit — summarize progress and what remains" and do
   one final stream.
   *Verify:* code review + selftest; constant referenced nowhere else.
 
-- [ ] **1.6 Ctrl+C interrupts the stream, not the turn.**
+- [x] **1.6 Ctrl+C interrupts the stream, not the turn.**
   In `agent.py:_stream_turn`, catch `KeyboardInterrupt` during streaming: stop the
   Live render, keep the partial assistant text in history with a
   `[interrupted by user]` marker, and return to the prompt. In `cli.py`, ensure a

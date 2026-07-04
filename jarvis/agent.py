@@ -14,8 +14,35 @@ from .logger import SessionLogger
 from .permissions import needs_permission, request_permission
 from .tools import get_all_tools, get_tool_by_name
 
-_MAX_TOOL_ITERATIONS = 10
+_MAX_TOOL_ITERATIONS = 40
 _RETRY_DELAYS = (5, 15, 30)  # seconds between attempts
+_TOOL_TIMEOUT_SECS = 60
+_MAX_TOOL_RESULT_CHARS = 8_000
+_AUTOCOMPACT_TOKENS = 25_000
+
+
+def truncate_tool_result(result: str, limit: int = _MAX_TOOL_RESULT_CHARS) -> str:
+    """Cap any tool result so one huge output can't blow up the context window."""
+    if len(result) <= limit:
+        return result
+    omitted = len(result) - 6_000 - 1_500
+    return (
+        result[:6_000]
+        + f"\n[truncated — {omitted:,} chars omitted]\n"
+        + result[-1_500:]
+    )
+
+
+def execute_with_timeout(tool: Any, args: dict[str, Any], timeout: int = _TOOL_TIMEOUT_SECS) -> str:
+    """Run tool.execute in a worker thread; return an error string on timeout."""
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(tool.execute, args)
+        try:
+            return future.result(timeout=timeout)
+        except FuturesTimeout:
+            future.cancel()
+            return f"Error: tool timed out after {timeout}s"
 
 
 def _is_context_length_error(e: BadRequestError) -> bool:
@@ -139,6 +166,15 @@ def _stream_turn(
     status.start()
     try:
         drain(_stream_with_retry(client, context.messages(), tool_schemas), status)
+    except KeyboardInterrupt:
+        # Keep the partial text; drop any half-received tool calls (they'd be
+        # incomplete JSON). The caller stores this as a normal assistant turn.
+        stop(status)
+        console.print("\n[yellow]⨯ Interrupted[/yellow]")
+        partial = "".join(state["text"])
+        if partial:
+            partial += "\n\n[interrupted by user]"
+        return partial, {}, "stop"
     except BadRequestError as e:
         stop(status)
         if not _is_context_length_error(e):
@@ -160,12 +196,17 @@ def _stream_turn(
 
 
 def run_agent(user_message: str, client: JarvisClient, context: ContextManager, tracker: UsageTracker, logger: SessionLogger | None = None) -> None:
+    # Compact BEFORE appending the new user message so it isn't folded into the summary.
+    if context.token_estimate() > _AUTOCOMPACT_TOKENS:
+        console.print(f"[yellow]⚠ Context is large (~{context.token_estimate():,} tokens) — auto-compacting...[/yellow]")
+        try:
+            context.compact(client, tracker)
+        except Exception as e:
+            console.print(f"[yellow]Auto-compact failed ({e}); continuing with full history.[/yellow]")
+
     context.append({"role": "user", "content": user_message})
     if logger:
         logger.user(user_message)
-
-    if context.token_estimate() > _CONTEXT_WARN_TOKENS:
-        console.print(f"[yellow]⚠ Context is large (~{context.token_estimate():,} tokens). Run /compact to shrink it.[/yellow]")
 
     for iteration in range(_MAX_TOOL_ITERATIONS):
         full_text, collected_tool_calls, finish_reason = _stream_turn(client, context, tracker)
@@ -215,9 +256,10 @@ def run_agent(user_message: str, client: JarvisClient, context: ContextManager, 
                     else:
                         with console.status(f"[dim]{label}[/dim]", spinner="dots"):
                             try:
-                                result = tool.execute(args)
+                                result = execute_with_timeout(tool, args)
                             except Exception as e:
                                 result = f"Error executing {tool_name}: {e}"
+                        result = truncate_tool_result(result)
                         console.print(f"[dim]  ✓ {label}[/dim]")
 
                 if logger:
@@ -229,5 +271,17 @@ def run_agent(user_message: str, client: JarvisClient, context: ContextManager, 
                     "content": result,
                 })
 
+    # Iteration cap hit — ask the model for a final progress summary instead of
+    # stopping silently.
     console.print()
-    console.print("[yellow]Warning: reached max tool iterations (10), stopping.[/yellow]")
+    console.print(f"[yellow]Reached max tool iterations ({_MAX_TOOL_ITERATIONS}) — asking for a progress summary.[/yellow]")
+    context.append({
+        "role": "user",
+        "content": "You hit the tool iteration limit. Do not call any more tools. "
+                   "Summarize what you accomplished and what remains to be done.",
+    })
+    full_text, _, _ = _stream_turn(client, context, tracker)
+    console.print()
+    context.append({"role": "assistant", "content": full_text})
+    if logger:
+        logger.assistant(full_text)

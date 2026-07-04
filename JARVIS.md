@@ -117,7 +117,8 @@ jarvis/
 └── tools/
     ├── __init__.py      _REGISTRY (14 built-ins) + get_all_tools/get_tool_by_name/register_tool.
     ├── base.py          BaseTool(ABC): name/description/parameters/execute + to_openai_schema().
-    ├── read_file.py     Read a file; truncates at 10,000 chars.
+    ├── read_file.py     Read a file; truncates at 10,000 chars; files >100KB require
+    │                    offset/limit (1-based line slice, output prefixed "N: line").
     ├── write_file.py    Write a file (through permission gate).
     ├── edit_file.py     Replace old_string→new_string; old_string must appear exactly once.
     ├── run_command.py   Run a shell command; intercepts `cd`/`cd <path>` via os.chdir().
@@ -135,8 +136,13 @@ jarvis/
 
 ### Streaming agent loop (`agent.py`)
 
-`run_agent()` appends the user message, warns (does **not** auto-compact) if
-`token_estimate() > 20_000`, then loops up to `_MAX_TOOL_ITERATIONS = 10`. Each iteration:
+`run_agent()` auto-compacts if `token_estimate() > 25_000` (**before** appending the new user
+message so it isn't folded into the summary), then loops up to `_MAX_TOOL_ITERATIONS = 40`.
+If the cap is hit, it injects a user message asking for a progress summary and streams one
+final response. Each tool result is capped by `truncate_tool_result()` (8K chars → first 6K +
+last 1.5K) and each `tool.execute()` runs through `execute_with_timeout()` (60s, worker
+thread → `"Error: tool timed out"` instead of a crash). Ctrl+C mid-stream keeps the partial
+text (marked `[interrupted by user]`) and returns to the prompt. Each iteration:
 
 1. `_stream_turn(client, context, tracker)` streams one model response **live**: chunks arrive
    lazily from `_stream_with_retry` (a generator — it does **not** buffer with `list()`), and on
