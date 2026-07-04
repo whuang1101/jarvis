@@ -11,6 +11,12 @@
 # SAFETY: this uses --dangerously-skip-permissions. Only run it on a
 # disposable, isolated VM. Never on your workstation.
 set -u
+
+# Single-instance lock: two loops sharing one checkout corrupt each other's
+# git state. Extra invocations (cron overlap, manual) exit quietly.
+exec 9>/tmp/improve-jarvis.lock
+flock -n 9 || exit 0
+
 LOG=~/jarvis-improve.log
 exec >> "$LOG" 2>&1
 echo "=== run started $(date -u) ==="
