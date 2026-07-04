@@ -12,6 +12,38 @@
 > 4. If a step fails twice, write what went wrong under the step and move to the next one.
 > 5. Never edit `build/` or `.venv/`. Live source is `jarvis/`.
 
+## Status & handoff
+
+**Phases 0 and 1 are complete** (test suite + `/selftest`, tool-result truncation,
+timeouts, auto-compact, 40-iteration cap with summary, `read_file` offset/limit,
+Ctrl+C stream interrupt). **From Phase 2 onward, Jarvis executes this roadmap itself.**
+
+To kick it off, the user starts Jarvis inside this repo and says:
+
+```
+/auto
+Work through ROADMAP.md autonomously. Do one step at a time, in order.
+```
+
+Per-step loop (this is the contract — do not shortcut it):
+
+1. Open ROADMAP.md, find the first `- [ ]` step. Re-read the files it names before editing.
+2. Implement the step exactly as written. If it says "add a pytest", the step is not
+   done until that test exists and passes.
+3. Run the suite: `python3 -m pytest jarvis/tests -q` (or `/selftest`). Red → fix
+   before anything else. Never reinstall on red.
+4. Mark the step `[x]` here; update JARVIS.md (tool table / command list / key flows)
+   in the same turn.
+5. Write `~/.jarvis/resume.json` with
+   `{"message": "Continue the next unchecked ROADMAP.md step.", "auto": true, "plan": false}`,
+   then `python3 -m pipx reinstall jarvis` — it restarts you and resumes automatically.
+6. Every 3–5 steps: branch → commit → push → `gh pr create` → `gh pr merge --squash
+   --delete-branch` (details in JARVIS.md). Commit messages name the roadmap steps.
+
+Steps marked *Verify: manual* need a human at the keyboard — implement them, note
+"needs manual verification" under the step, and let the user confirm later rather
+than blocking on it.
+
 ---
 
 ## Phase 0 — Safety net (do this FIRST; everything else depends on it)
