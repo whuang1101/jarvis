@@ -103,6 +103,9 @@ jarvis/
 ├── client.py        Only file importing openai for requests. stream() (lazy, include_usage),
 │                    complete(), current_deployment(), set_deployment().
 ├── config.py        Frozen Config dataclass. load() searches _ENV_CANDIDATES, validates 4 Azure vars.
+├── settings.py      Frozen Settings dataclass (auto_mode, max_tool_iterations, autocompact_tokens,
+│                    tool_timeout_secs, theme). load() reads ~/.jarvis/config.toml (tomllib);
+│                    missing file = defaults, malformed file = stderr warning + defaults.
 ├── context.py       ContextManager (history + system prompt), UsageTracker (tokens+cost),
 │                    _PRICING table, plan-mode globals, _clean_history, compact().
 ├── commands.py      handle_command(): all slash commands. Returns None / _EXIT_SENTINEL /

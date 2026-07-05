@@ -14,13 +14,16 @@ from .formatter import (
 )
 from .logger import SessionLogger
 from .permissions import needs_permission, request_permission
+from .settings import Settings
 from .tools import get_all_tools, get_tool_by_name
 
-_MAX_TOOL_ITERATIONS = 40
+_settings = Settings.load()
+
+_MAX_TOOL_ITERATIONS = _settings.max_tool_iterations
 _RETRY_DELAYS = (5, 15, 30)  # seconds between attempts
-_TOOL_TIMEOUT_SECS = 60
+_TOOL_TIMEOUT_SECS = _settings.tool_timeout_secs
 _MAX_TOOL_RESULT_CHARS = 8_000
-_AUTOCOMPACT_TOKENS = 25_000
+_AUTOCOMPACT_TOKENS = _settings.autocompact_tokens
 
 
 def truncate_tool_result(result: str, limit: int = _MAX_TOOL_RESULT_CHARS) -> str:

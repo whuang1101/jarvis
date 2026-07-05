@@ -133,7 +133,7 @@ These are all small, independent, and already listed in TODO.md § Robustness.
 
 ## Phase 2 — Configuration & permission rules (Claude Code's settings.json equivalent)
 
-- [ ] **2.1 `~/.jarvis/config.toml`.**
+- [x] **2.1 `~/.jarvis/config.toml`.**
   New file `jarvis/settings.py`: load TOML (stdlib `tomllib`) from `~/.jarvis/config.toml`,
   with a frozen dataclass of defaults: `auto_mode: bool = false`,
   `max_tool_iterations: int = 40`, `autocompact_tokens: int = 25000`,
