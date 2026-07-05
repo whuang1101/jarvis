@@ -82,5 +82,9 @@ jobs:
             git checkout main -q && git pull -q
             .venv/bin/pip install -q -e ".[dev]"
             .venv/bin/python -m pytest jarvis/tests -q
+            # Keep `jarvis` runnable from any directory in login shells
+            mkdir -p ~/.local/bin
+            ln -sf ~/jarvis/.venv/bin/jarvis ~/.local/bin/jarvis
+            ~/.local/bin/jarvis --help >/dev/null 2>&1 || true
             echo "deployed $(git rev-parse --short HEAD)"
           '
