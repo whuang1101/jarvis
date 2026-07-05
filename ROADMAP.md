@@ -141,7 +141,7 @@ These are all small, independent, and already listed in TODO.md § Robustness.
   Phase 1 to read from it. Missing file = all defaults; malformed file = warn + defaults.
   *Verify:* pytest for the loader (missing, partial, malformed files).
 
-- [ ] **2.2 Per-project `.jarvis.toml` overrides.**
+- [x] **2.2 Per-project `.jarvis.toml` overrides.**
   In `settings.py`, after loading the global config, look for `.jarvis.toml` in cwd and
   up to 4 parents (same walk as `_find_jarvis_md`) and overlay its values.
   *Verify:* pytest.

@@ -104,8 +104,10 @@ jarvis/
 │                    complete(), current_deployment(), set_deployment().
 ├── config.py        Frozen Config dataclass. load() searches _ENV_CANDIDATES, validates 4 Azure vars.
 ├── settings.py      Frozen Settings dataclass (auto_mode, max_tool_iterations, autocompact_tokens,
-│                    tool_timeout_secs, theme). load() reads ~/.jarvis/config.toml (tomllib);
-│                    missing file = defaults, malformed file = stderr warning + defaults.
+│                    tool_timeout_secs, theme). load() reads ~/.jarvis/config.toml (tomllib),
+│                    then overlays a per-project `.jarvis.toml` found by walking cwd + up to 4
+│                    parents (same walk as _find_jarvis_md) — project values win. Missing files =
+│                    defaults; malformed file = stderr warning + that file skipped.
 ├── context.py       ContextManager (history + system prompt), UsageTracker (tokens+cost),
 │                    _PRICING table, plan-mode globals, _clean_history, compact().
 ├── commands.py      handle_command(): all slash commands. Returns None / _EXIT_SENTINEL /
@@ -252,6 +254,24 @@ BRAVE_API_KEY=...           # optional — enables Brave Search MCP
 
 `.env` search order (first existing wins, `override=False`): `cwd/.env` → `~/.jarvis.env` →
 `~/jarvis/.env` → package-root `.env`. All four `AZURE_OPENAI_*` vars are required or `load()` raises.
+
+## Runtime settings (`~/.jarvis/config.toml` + per-project `.jarvis.toml`, both optional)
+
+```toml
+auto_mode = false
+max_tool_iterations = 40
+autocompact_tokens = 25000
+tool_timeout_secs = 60
+theme = "monokai"
+```
+
+`Settings.load()` reads the global file first, then walks up from cwd (through up to 4 parents,
+same walk as `_find_jarvis_md`) looking for a project `.jarvis.toml` and overlays any keys it
+sets — project values win over global values, both win over the dataclass defaults above. Missing
+files fall back silently; a malformed file prints a stderr warning and that file's values are
+skipped (the other file/defaults still apply). Unknown keys are ignored. Currently informs
+`agent.py`'s iteration cap / tool timeout / autocompact threshold and `permissions.py`'s
+`auto_mode` default; nothing consumes `theme` yet.
 
 ## Common commands
 
