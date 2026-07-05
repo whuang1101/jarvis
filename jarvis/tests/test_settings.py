@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from jarvis.settings import Settings
+from jarvis.settings import Settings, persist_allow_pattern
 
 
 class TestSettingsLoad:
@@ -129,3 +129,42 @@ class TestPermissionRules:
         settings = Settings.load(path)
         assert settings.permission_allow == ()
         assert settings.permission_deny == ()
+
+
+class TestPersistAllowPattern:
+    def test_creates_file_with_pattern(self, tmp_path):
+        path = tmp_path / "config.toml"
+        persist_allow_pattern("run_command(git *)", path)
+
+        settings = Settings.load(path)
+        assert settings.permission_allow == ("run_command(git *)",)
+
+    def test_appends_to_existing_allow_list_without_dropping_other_keys(self, tmp_path):
+        path = tmp_path / "config.toml"
+        path.write_text(
+            'theme = "dracula"\n'
+            "\n"
+            "[permissions]\n"
+            'allow = ["write_file(*)"]\n'
+            'deny = ["run_command(rm *)"]\n'
+        )
+
+        persist_allow_pattern("run_command(git *)", path)
+
+        settings = Settings.load(path)
+        assert settings.theme == "dracula"
+        assert settings.permission_allow == ("write_file(*)", "run_command(git *)")
+        assert settings.permission_deny == ("run_command(rm *)",)
+
+    def test_duplicate_pattern_is_not_added_twice(self, tmp_path):
+        path = tmp_path / "config.toml"
+        persist_allow_pattern("run_command(git *)", path)
+        persist_allow_pattern("run_command(git *)", path)
+
+        settings = Settings.load(path)
+        assert settings.permission_allow == ("run_command(git *)",)
+
+    def test_creates_parent_directory(self, tmp_path):
+        path = tmp_path / "nested" / "config.toml"
+        persist_allow_pattern("write_file(*)", path)
+        assert path.exists()

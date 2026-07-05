@@ -104,17 +104,21 @@ jarvis/
 │                    complete(), current_deployment(), set_deployment().
 ├── config.py        Frozen Config dataclass. load() searches _ENV_CANDIDATES, validates 4 Azure vars.
 ├── settings.py      Frozen Settings dataclass (auto_mode, max_tool_iterations, autocompact_tokens,
-│                    tool_timeout_secs, theme). load() reads ~/.jarvis/config.toml (tomllib),
-│                    then overlays a per-project `.jarvis.toml` found by walking cwd + up to 4
-│                    parents (same walk as _find_jarvis_md) — project values win. Missing files =
-│                    defaults; malformed file = stderr warning + that file skipped.
+│                    tool_timeout_secs, theme, permission_allow/permission_deny glob-pattern
+│                    tuples). load() reads ~/.jarvis/config.toml (tomllib), then overlays a
+│                    per-project `.jarvis.toml` found by walking cwd + up to 4 parents (same walk
+│                    as _find_jarvis_md) — project values win. Missing files = defaults; malformed
+│                    file = stderr warning + that file skipped. persist_allow_pattern() appends to
+│                    the global config's `[permissions] allow` list on disk (hand-rolled
+│                    _dump_toml — tomllib has no writer).
 ├── context.py       ContextManager (history + system prompt), UsageTracker (tokens+cost),
 │                    _PRICING table, plan-mode globals, _clean_history, compact().
 ├── commands.py      handle_command(): all slash commands. Returns None / _EXIT_SENTINEL /
 │                    _RUN_AGENT_PREFIX+msg.
 ├── permissions.py   Auto-mode globals; needs_permission (checks config `[permissions]`
-│                    allow/deny glob patterns before tool-specific logic) /request_permission;
-│                    arrow-key Yes/No selector; unified-diff preview for write_file/edit_file.
+│                    allow/deny glob patterns before tool-specific logic) / request_permission;
+│                    arrow-key Yes/Always/No selector (Always adds a pattern to the allow list
+│                    and persists it); unified-diff preview for write_file/edit_file.
 ├── formatter.py     Shared Rich `console` + Claude-Code-style helpers: print_banner (rounded
 │                    welcome panel w/ model+cwd), print_user_header (`> msg`), print_jarvis_header
 │                    (`⏺` bullet), render_markdown_block (indented under the bullet),
@@ -169,16 +173,24 @@ text (marked `[interrupted by user]`) and returns to the prompt. Each iteration:
 
 ### Permission gate (`permissions.py`)
 
-- `needs_permission(tool, args)`: `run_command` → True only if it matches `_DESTRUCTIVE_RE`
+- `needs_permission(tool, args, settings=None)`: first checks `settings.permission_deny` glob
+  patterns (`tool_name(glob)`, e.g. `run_command(git push*)`) → True if matched (always gated);
+  then `settings.permission_allow` → False if matched (never gated), deny wins on overlap. Falls
+  back to the built-in logic: `run_command` → True only if it matches `_DESTRUCTIVE_RE`
   (`rm `, `rmdir`, `sudo`, `kill`/`pkill`/`killall`, `git reset --hard`, `git clean -fdx`,
   `DROP TABLE/DATABASE`, `TRUNCATE`, `mkfs`, `fdisk`). **Auto mode never bypasses this.**
   `write_file`/`edit_file` → **always True** (so the diff is shown); in auto mode
   `request_permission` renders the diff then auto-applies, otherwise it prompts.
 - `request_permission` prints a unified-diff preview (Rich `Syntax`, "diff") then asks via
-  `_arrow_confirm()` — an **arrow-key Yes/No selector** (raw termios; default **No**; Enter
-  confirms; y/n jump directly). Returns `None` if approved, else a cancellation string injected
-  as the tool result. The edit preview enforces the same uniqueness rule as `edit_file`, so it
-  never shows a diff the tool would reject.
+  `_arrow_confirm()` — an **arrow-key Yes/Always/No selector** (raw termios; default **No**;
+  left/right or up/down cycle; Enter confirms; y/a/n jump directly). Returns `None` if approved,
+  else a cancellation string injected as the tool result. Choosing **Always** derives a glob
+  pattern via `_suggest_pattern` (`run_command` scopes to the invoked program, e.g.
+  `run_command(git *)`; file ops scope to the whole tool, e.g. `write_file(*)`), adds it to the
+  in-memory `_settings.permission_allow` for the rest of the process, and persists it to
+  `~/.jarvis/config.toml` via `settings.persist_allow_pattern` (hand-rolled TOML writer —
+  `tomllib` is read-only — that preserves the rest of the file). The edit preview enforces the
+  same uniqueness rule as `edit_file`, so it never shows a diff the tool would reject.
 
 ### Slash commands (`commands.py`)
 
@@ -285,6 +297,12 @@ permission gate even for tools that wouldn't normally trigger it (e.g. gating a 
 `write_file(*)` to stop prompting for every file write). Deny is checked first, so it wins over
 an overlapping allow pattern. Patterns render as `run_command(<command>)`,
 `write_file(<path>)`/`edit_file(<path>)`, or `tool_name(<args joined by ", ">)` for anything else.
+
+The `allow` list also grows interactively: at any permission prompt, picking **Always**
+(the middle option of the Yes/Always/No selector) approves that call, adds a pattern for it
+to the in-memory settings, and writes it into `[permissions] allow` in `~/.jarvis/config.toml`
+via `settings.persist_allow_pattern` — so the same command/tool family is auto-approved for
+the rest of this run and every run after.
 
 ## Common commands
 
