@@ -26,6 +26,8 @@ gh auth status >/dev/null 2>&1 || { echo "gh not logged in — run: gh auth logi
 cd "$(dirname "$0")/.." || exit 1
 
 git checkout main -q && git pull -q
+# Self-deploy: refresh deps in case main changed pyproject since the last run
+.venv/bin/pip install -q -e ".[dev]" 2>/dev/null || true
 
 for i in $(seq 1 20); do
   echo "--- step attempt $i $(date -u) ---"

@@ -30,6 +30,22 @@ tail -f ~/jarvis-improve.log
 ( crontab -l 2>/dev/null; echo "0 */5 * * * /home/azureuser/jarvis/scripts/improve-jarvis.sh" ) | crontab -
 ```
 
+## Enable CI deploy (optional, one-time, run from your Mac)
+
+CI has a `deploy` job that pushes every green `main` build to the VM. It stays
+dormant until you create a dedicated deploy key and store it as repo secrets:
+
+```bash
+ssh-keygen -t ed25519 -f /tmp/jarvis_deploy_key -N "" -C "jarvis-ci-deploy"
+ssh learning-vm 'cat >> ~/.ssh/authorized_keys' < /tmp/jarvis_deploy_key.pub
+gh secret set VM_SSH_KEY --repo whuang1101/jarvis < /tmp/jarvis_deploy_key
+gh secret set VM_HOST --repo whuang1101/jarvis --body "172.206.26.66"
+rm /tmp/jarvis_deploy_key /tmp/jarvis_deploy_key.pub
+```
+
+After that, every push to main: tests (3 Python versions) → wheel build →
+SSH deploy to the VM (pull + dep refresh + remote test run).
+
 ## Operating notes
 
 - One roadmap step = one PR, squash-merged automatically when the test suite
