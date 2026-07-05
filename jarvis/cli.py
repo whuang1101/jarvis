@@ -25,7 +25,12 @@ def _find_jarvis_md() -> tuple[str, Path] | None:
 from .agent import run_agent
 from .client import JarvisClient
 from .commands import handle_command, _EXIT_SENTINEL, _RUN_AGENT_PREFIX
-from .permissions import is_auto_mode, set_auto_mode
+from .permissions import (
+    is_auto_mode,
+    is_dangerously_skip_permissions,
+    set_auto_mode,
+    set_dangerously_skip_permissions,
+)
 from .context import is_plan_mode, set_plan_mode
 from .config import Config
 from .context import ContextManager, UsageTracker
@@ -154,6 +159,9 @@ def main() -> None:
             if resume.get("auto"):
                 set_auto_mode(True)
                 console.print("[dim yellow]Auto mode restored from resume state.[/dim yellow]")
+            if resume.get("dangerously_skip_permissions"):
+                set_dangerously_skip_permissions(True)
+                console.print("[dim red]Dangerously skip permissions restored from resume state.[/dim red]")
             if resume.get("plan"):
                 set_plan_mode(True)
                 console.print("[dim blue]Plan mode restored from resume state.[/dim blue]")
@@ -183,6 +191,8 @@ def main() -> None:
                     status += " · PLAN"
                 if is_auto_mode():
                     status += " · AUTO"
+                if is_dangerously_skip_permissions():
+                    status += " · DANGER"
                 user_input = _read_input(status).strip()
                 if user_input:
                     readline.add_history(user_input)

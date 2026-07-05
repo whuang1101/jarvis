@@ -22,8 +22,11 @@ _DESTRUCTIVE_RE = re.compile(
     re.IGNORECASE,
 )
 
-# Auto mode: skip approval for file writes/edits; destructive commands always blocked.
-_auto_mode: bool = Settings.load().auto_mode
+# Auto mode: skip approval for file writes/edits; destructive commands still prompt.
+# Dangerous skip mode: skip all permission prompts, including destructive commands.
+_settings = Settings.load()
+_auto_mode: bool = _settings.auto_mode
+_dangerously_skip_permissions: bool = _settings.dangerously_skip_permissions
 
 
 def is_auto_mode() -> bool:
@@ -35,7 +38,18 @@ def set_auto_mode(enabled: bool) -> None:
     _auto_mode = enabled
 
 
+def is_dangerously_skip_permissions() -> bool:
+    return _dangerously_skip_permissions
+
+
+def set_dangerously_skip_permissions(enabled: bool) -> None:
+    global _dangerously_skip_permissions
+    _dangerously_skip_permissions = enabled
+
+
 def needs_permission(tool_name: str, args: dict[str, Any]) -> bool:
+    if _dangerously_skip_permissions:
+        return False
     if tool_name == "run_command":
         return bool(_DESTRUCTIVE_RE.search(args.get("command", "")))
     if tool_name in ("write_file", "edit_file"):

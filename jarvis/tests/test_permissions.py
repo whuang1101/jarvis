@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from jarvis.permissions import needs_permission
+from jarvis.permissions import needs_permission, set_dangerously_skip_permissions
 
 DESTRUCTIVE = [
     "rm -rf /tmp/x",
@@ -47,3 +47,13 @@ def test_file_ops_always_need_permission():
 def test_read_only_tools_skip_permission():
     assert not needs_permission("read_file", {"path": "x"})
     assert not needs_permission("search_files", {"pattern": "x"})
+
+
+def test_dangerously_skip_permissions_bypasses_all_permission_checks():
+    set_dangerously_skip_permissions(True)
+    try:
+        assert not needs_permission("run_command", {"command": "rm -rf /tmp/x"})
+        assert not needs_permission("write_file", {"path": "x", "content": ""})
+        assert not needs_permission("edit_file", {"path": "x", "old_string": "a", "new_string": "b"})
+    finally:
+        set_dangerously_skip_permissions(False)

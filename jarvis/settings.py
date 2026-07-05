@@ -36,6 +36,7 @@ def _load_toml(path: Path) -> dict:
 @dataclass(frozen=True)
 class Settings:
     auto_mode: bool = False
+    dangerously_skip_permissions: bool = False
     max_tool_iterations: int = 40
     autocompact_tokens: int = 25_000
     tool_timeout_secs: int = 60
