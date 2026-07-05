@@ -36,8 +36,10 @@ feature, append a new properly-formatted phase to ROADMAP.md as its own PR.
 Use .venv/bin/python -m pytest jarvis/tests -q to run tests and never commit on
 red. Mark the step [x] and update JARVIS.md in the same change. Then:
 git checkout -b feat/roadmap-step-N (N = the step number), commit, push, open a
-PR with gh pr create, and if and ONLY if the full test suite passed, merge it:
-gh pr merge --squash --delete-branch. Finish with: git checkout main && git pull.
+PR with gh pr create, and if and ONLY if the full local test suite passed, wait
+for CI then merge: gh pr checks --watch && gh pr merge --squash --delete-branch.
+If CI fails, fix on the branch and push again instead of merging.
+Finish with: git checkout main && git pull.
 Do exactly one roadmap step, then stop." \
     --dangerously-skip-permissions \
     --max-turns 80 || { echo "claude exited nonzero (likely quota) — stopping"; break; }
