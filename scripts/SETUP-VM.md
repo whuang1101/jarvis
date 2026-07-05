@@ -32,8 +32,8 @@ tail -f ~/jarvis-improve.log
 
 ## Operating notes
 
-- One roadmap step = one PR. Review and squash-merge them from your machine;
-  the VM never merges.
+- One roadmap step = one PR, squash-merged automatically when the test suite
+  passes. Skim the merged PRs on GitHub to keep an eye on what changed.
 - `~/jarvis-improve.log` on the VM has every run's transcript.
 - The loop stops when Claude's quota runs dry and cron retries at the next
   5-hour boundary. Kick off `./scripts/improve-jarvis.sh` manually right after

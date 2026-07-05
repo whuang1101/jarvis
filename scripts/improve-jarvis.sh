@@ -32,12 +32,13 @@ for i in $(seq 1 20); do
   claude -p "Read ROADMAP.md. Follow its per-step contract exactly: implement the
 FIRST unchecked step only. If NO unchecked steps remain, instead follow the
 'Autonomy loop instruction' at the bottom of PARITY.md: pick the top feasible ❌
-feature, append a new properly-formatted phase to ROADMAP.md, commit that as its
-own PR, and stop — the next run will implement it. Use .venv/bin/python -m pytest jarvis/tests -q to run
-tests and never commit on red. Mark the step [x] and update JARVIS.md in the same
-change. Then: git checkout -b feat/roadmap-step-N (N = the step number), commit,
-push, and open a PR with gh pr create. Do NOT merge the PR. Finish by checking
-out main. Do exactly one roadmap step, then stop." \
+feature, append a new properly-formatted phase to ROADMAP.md as its own PR.
+Use .venv/bin/python -m pytest jarvis/tests -q to run tests and never commit on
+red. Mark the step [x] and update JARVIS.md in the same change. Then:
+git checkout -b feat/roadmap-step-N (N = the step number), commit, push, open a
+PR with gh pr create, and if and ONLY if the full test suite passed, merge it:
+gh pr merge --squash --delete-branch. Finish with: git checkout main && git pull.
+Do exactly one roadmap step, then stop." \
     --dangerously-skip-permissions \
     --max-turns 80 || { echo "claude exited nonzero (likely quota) — stopping"; break; }
   git checkout main -q && git pull -q
