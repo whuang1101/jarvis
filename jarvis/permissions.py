@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import difflib
+import fnmatch
 import re
 import sys
 import termios
@@ -22,8 +23,10 @@ _DESTRUCTIVE_RE = re.compile(
     re.IGNORECASE,
 )
 
+_settings: Settings = Settings.load()
+
 # Auto mode: skip approval for file writes/edits; destructive commands always blocked.
-_auto_mode: bool = Settings.load().auto_mode
+_auto_mode: bool = _settings.auto_mode
 
 
 def is_auto_mode() -> bool:
@@ -35,7 +38,33 @@ def set_auto_mode(enabled: bool) -> None:
     _auto_mode = enabled
 
 
-def needs_permission(tool_name: str, args: dict[str, Any]) -> bool:
+def _invocation_string(tool_name: str, args: dict[str, Any]) -> str:
+    """Render a tool call as `tool_name(args)` for matching against allow/deny patterns."""
+    if tool_name == "run_command":
+        arg_repr = args.get("command", "")
+    elif tool_name in ("write_file", "edit_file"):
+        arg_repr = args.get("path", "")
+    else:
+        arg_repr = ", ".join(str(v) for v in args.values())
+    return f"{tool_name}({arg_repr})"
+
+
+def _matches_any(invocation: str, patterns: tuple[str, ...]) -> bool:
+    return any(fnmatch.fnmatch(invocation, pattern) for pattern in patterns)
+
+
+def needs_permission(tool_name: str, args: dict[str, Any], settings: Settings | None = None) -> bool:
+    s = settings if settings is not None else _settings
+    invocation = _invocation_string(tool_name, args)
+
+    # Deny rules force the permission gate even for tools that wouldn't otherwise
+    # trigger it. Allow rules skip the gate even for tools that always would.
+    # Deny is checked first so it wins over an overlapping allow pattern.
+    if _matches_any(invocation, s.permission_deny):
+        return True
+    if _matches_any(invocation, s.permission_allow):
+        return False
+
     if tool_name == "run_command":
         return bool(_DESTRUCTIVE_RE.search(args.get("command", "")))
     if tool_name in ("write_file", "edit_file"):

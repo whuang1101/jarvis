@@ -112,8 +112,9 @@ jarvis/
 │                    _PRICING table, plan-mode globals, _clean_history, compact().
 ├── commands.py      handle_command(): all slash commands. Returns None / _EXIT_SENTINEL /
 │                    _RUN_AGENT_PREFIX+msg.
-├── permissions.py   Auto-mode globals; needs_permission/request_permission; arrow-key Yes/No
-│                    selector; unified-diff preview for write_file/edit_file.
+├── permissions.py   Auto-mode globals; needs_permission (checks config `[permissions]`
+│                    allow/deny glob patterns before tool-specific logic) /request_permission;
+│                    arrow-key Yes/No selector; unified-diff preview for write_file/edit_file.
 ├── formatter.py     Shared Rich `console` + Claude-Code-style helpers: print_banner (rounded
 │                    welcome panel w/ model+cwd), print_user_header (`> msg`), print_jarvis_header
 │                    (`⏺` bullet), render_markdown_block (indented under the bullet),
@@ -263,6 +264,10 @@ max_tool_iterations = 40
 autocompact_tokens = 25000
 tool_timeout_secs = 60
 theme = "monokai"
+
+[permissions]
+allow = ["write_file(*)"]          # glob patterns matched against "tool_name(args)"
+deny = ["run_command(git push*)"]
 ```
 
 `Settings.load()` reads the global file first, then walks up from cwd (through up to 4 parents,
@@ -272,6 +277,14 @@ files fall back silently; a malformed file prints a stderr warning and that file
 skipped (the other file/defaults still apply). Unknown keys are ignored. Currently informs
 `agent.py`'s iteration cap / tool timeout / autocompact threshold and `permissions.py`'s
 `auto_mode` default; nothing consumes `theme` yet.
+
+`[permissions] allow`/`deny` are glob-style pattern lists (`fnmatch`) checked in
+`permissions.py:needs_permission` before the tool-specific logic: a `deny` match forces the
+permission gate even for tools that wouldn't normally trigger it (e.g. gating a specific
+`run_command` pattern); an `allow` match skips the gate even for tools that always would (e.g.
+`write_file(*)` to stop prompting for every file write). Deny is checked first, so it wins over
+an overlapping allow pattern. Patterns render as `run_command(<command>)`,
+`write_file(<path>)`/`edit_file(<path>)`, or `tool_name(<args joined by ", ">)` for anything else.
 
 ## Common commands
 

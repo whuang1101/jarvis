@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from jarvis.permissions import needs_permission
+from jarvis.settings import Settings
 
 DESTRUCTIVE = [
     "rm -rf /tmp/x",
@@ -47,3 +48,32 @@ def test_file_ops_always_need_permission():
 def test_read_only_tools_skip_permission():
     assert not needs_permission("read_file", {"path": "x"})
     assert not needs_permission("search_files", {"pattern": "x"})
+
+
+class TestAllowDenyRules:
+    def test_allow_pattern_skips_normally_gated_write(self):
+        settings = Settings(permission_allow=("write_file(*)",))
+        assert not needs_permission("write_file", {"path": "x", "content": ""}, settings=settings)
+
+    def test_allow_pattern_is_scoped_to_its_glob(self):
+        settings = Settings(permission_allow=("write_file(/tmp/*)",))
+        assert needs_permission("write_file", {"path": "/etc/passwd", "content": ""}, settings=settings)
+
+    def test_deny_pattern_forces_permission_on_benign_command(self):
+        settings = Settings(permission_deny=("run_command(git push*)",))
+        assert needs_permission("run_command", {"command": "git push origin main"}, settings=settings)
+
+    def test_deny_wins_over_overlapping_allow(self):
+        settings = Settings(
+            permission_allow=("run_command(git *)",),
+            permission_deny=("run_command(git push*)",),
+        )
+        assert needs_permission("run_command", {"command": "git push origin main"}, settings=settings)
+        # Non-overlapping part of the allow pattern still skips the gate.
+        assert not needs_permission("run_command", {"command": "git status"}, settings=settings)
+
+    def test_no_rules_falls_back_to_existing_logic(self):
+        settings = Settings()
+        assert needs_permission("run_command", {"command": "rm -rf /tmp/x"}, settings=settings)
+        assert not needs_permission("run_command", {"command": "ls -la"}, settings=settings)
+        assert needs_permission("write_file", {"path": "x", "content": ""}, settings=settings)
