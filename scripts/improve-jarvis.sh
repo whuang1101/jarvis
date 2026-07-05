@@ -29,9 +29,24 @@ git checkout main -q && git pull -q
 # Self-deploy: refresh deps in case main changed pyproject since the last run
 .venv/bin/pip install -q -e ".[dev]" 2>/dev/null || true
 
-# Sonnet by default: ~5x more roadmap steps per quota batch than Opus, and the
-# steps are pre-specified so the harder "what to build" thinking is already done.
-MODEL="${JARVIS_LOOP_MODEL:-sonnet}"
+# Model tiering: implementation steps are fully pre-specified, so Sonnet first
+# (~5x more steps per quota batch); planning new roadmap phases is the hard
+# thinking, so Opus first. Each falls back to the other if unavailable/erroring;
+# only when the whole chain fails do we treat it as quota-exhausted and stop.
+BUILD_MODELS="${JARVIS_LOOP_BUILD_MODELS:-sonnet opus}"
+PLAN_MODELS="${JARVIS_LOOP_PLAN_MODELS:-opus sonnet}"
+
+run_claude() {  # $1 = prompt, rest = model preference order
+  local prompt="$1"; shift
+  local m
+  for m in "$@"; do
+    if claude -p "$prompt" --model "$m" --dangerously-skip-permissions --max-turns 80; then
+      return 0
+    fi
+    echo "model '$m' failed — trying next fallback"
+  done
+  return 1
+}
 
 for i in $(seq 1 20); do
   echo "--- step attempt $i $(date -u) ---"
@@ -61,10 +76,11 @@ append it to ROADMAP.md as a new properly-formatted phase (2-6 steps, files +
 checks, squash-merge, back to main). Do not implement the feature yet."
   fi
 
-  claude -p "$PROMPT" \
-    --model "$MODEL" \
-    --dangerously-skip-permissions \
-    --max-turns 80 || { echo "claude exited nonzero (likely quota) — stopping"; break; }
+  if [ -n "$STEP" ]; then
+    run_claude "$PROMPT" $BUILD_MODELS || { echo "all models failed (likely quota) — stopping"; break; }
+  else
+    run_claude "$PROMPT" $PLAN_MODELS || { echo "all models failed (likely quota) — stopping"; break; }
+  fi
   git checkout main -q && git pull -q
   sleep 30
 done
