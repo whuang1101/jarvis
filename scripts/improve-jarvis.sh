@@ -29,20 +29,40 @@ git checkout main -q && git pull -q
 # Self-deploy: refresh deps in case main changed pyproject since the last run
 .venv/bin/pip install -q -e ".[dev]" 2>/dev/null || true
 
+# Sonnet by default: ~5x more roadmap steps per quota batch than Opus, and the
+# steps are pre-specified so the harder "what to build" thinking is already done.
+MODEL="${JARVIS_LOOP_MODEL:-sonnet}"
+
 for i in $(seq 1 20); do
   echo "--- step attempt $i $(date -u) ---"
-  claude -p "Read ROADMAP.md. Follow its per-step contract exactly: implement the
-FIRST unchecked step only. If NO unchecked steps remain, instead follow the
-'Autonomy loop instruction' at the bottom of PARITY.md: pick the top feasible ❌
-feature, append a new properly-formatted phase to ROADMAP.md as its own PR.
-Use .venv/bin/python -m pytest jarvis/tests -q to run tests and never commit on
-red. Mark the step [x] and update JARVIS.md in the same change. Then:
-git checkout -b feat/roadmap-step-N (N = the step number), commit, push, open a
-PR with gh pr create, and if and ONLY if the full local test suite passed, wait
-for CI then merge: gh pr checks --watch && gh pr merge --squash --delete-branch.
-If CI fails, fix on the branch and push again instead of merging.
-Finish with: git checkout main && git pull.
-Do exactly one roadmap step, then stop." \
+
+  # Extract ONLY the next unchecked step so Claude never spends tokens reading
+  # the whole roadmap. A step block runs from its '- [ ]' line to the next blank.
+  STEP="$(awk '/^- \[ \] /{f=1} f && /^$/{exit} f{print}' ROADMAP.md)"
+
+  if [ -n "$STEP" ]; then
+    PROMPT="Repo conventions are in CLAUDE.md (already in your context — do not
+re-read docs). Implement this single ROADMAP.md step, exactly as specified:
+
+$STEP
+
+Contract: code + tests + the 1-3 line JARVIS.md update in one commit on branch
+feat/roadmap-step-N (N = step number). Mark the step [x] in ROADMAP.md in the
+same commit. Run .venv/bin/python -m pytest jarvis/tests -q; never commit on
+red. Then: push, gh pr create, gh pr checks --watch, and merge ONLY if CI is
+green: gh pr merge --squash --delete-branch (if CI fails, fix on the branch and
+push again). Finish with git checkout main && git pull. Do nothing beyond this
+one step."
+  else
+    PROMPT="ROADMAP.md has no unchecked steps. Follow the 'Autonomy loop
+instruction' at the bottom of PARITY.md: pick the top feasible ❌ feature,
+append it to ROADMAP.md as a new properly-formatted phase (2-6 steps, files +
+*Verify:* line each), and ship that roadmap edit as its own PR (create, watch
+checks, squash-merge, back to main). Do not implement the feature yet."
+  fi
+
+  claude -p "$PROMPT" \
+    --model "$MODEL" \
     --dangerously-skip-permissions \
     --max-turns 80 || { echo "claude exited nonzero (likely quota) — stopping"; break; }
   git checkout main -q && git pull -q
