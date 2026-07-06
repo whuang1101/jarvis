@@ -34,7 +34,7 @@ Legend: ✅ Jarvis has it · 🟡 partial · ❌ missing
 | Bash with persistent cwd | ✅ | os.chdir on `cd` |
 | Bash background tasks (run_in_background, task output tool) | ❌ | ROADMAP 4.4 |
 | Streaming command output while running | ❌ | ROADMAP 4.3 |
-| Glob (find files by pattern) | ❌ | add a glob tool — cheaper than list_dir for lookups |
+| Glob (find files by pattern) | ✅ | `glob_files.py` |
 | Grep (regex, context lines, filters by type/glob) | 🟡 | search_files is plain grep -rn; no -A/-B/type filters |
 | WebSearch | ✅ | DuckDuckGo |
 | WebFetch (URL → markdown extraction) | ✅ | trafilatura |
