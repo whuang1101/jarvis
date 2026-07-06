@@ -452,7 +452,7 @@ append a memory quickly: `/memory add …` and `~/.jarvis/memory.md` already exi
 but there is no one-keystroke `#text` path at the prompt, so quick notes force the
 user through the full slash command.*
 
-- [ ] **11.1 `append_memory` helper.**
+- [x] **11.1 `append_memory` helper.**
   In `jarvis/commands.py`, add a module-level function `append_memory(text: str) -> str`
   that resolves `Path("~/.jarvis/memory.md").expanduser()`, `mkdir(parents=True,
   exist_ok=True)` on its parent, appends `text.strip() + "\n"` to it, and returns
