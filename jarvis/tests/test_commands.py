@@ -1,11 +1,36 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import jarvis.commands as commands_module
 import jarvis.sessions as sessions_module
 import jarvis.settings as settings_module
-from jarvis.commands import handle_command
+from jarvis.commands import append_memory, handle_command
 from jarvis.context import ContextManager
 from jarvis.sessions import SessionStore
+
+
+class TestAppendMemory:
+    def test_appends_and_creates_parent_dirs(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        monkeypatch.setenv("HOME", str(tmp_path))
+
+        result = append_memory("recall this")
+
+        assert result == "Memory updated."
+        memory_path = tmp_path / ".jarvis" / "memory.md"
+        assert memory_path.read_text(encoding="utf-8") == "recall this\n"
+
+    def test_second_call_appends_second_line(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        monkeypatch.setenv("HOME", str(tmp_path))
+
+        append_memory("recall this")
+        append_memory("and this too")
+
+        memory_path = tmp_path / ".jarvis" / "memory.md"
+        content = memory_path.read_text(encoding="utf-8")
+        assert content == "recall this\nand this too\n"
 
 
 class TestConfigCommand:

@@ -153,6 +153,17 @@ def _format_session_date(session_id: str) -> str:
         return timestamp
 
 
+def append_memory(text: str) -> str:
+    memory_path = Path("~/.jarvis/memory.md").expanduser()
+    try:
+        memory_path.parent.mkdir(parents=True, exist_ok=True)
+        with memory_path.open("a", encoding="utf-8") as f:
+            f.write(text.strip() + "\n")
+        return "Memory updated."
+    except Exception as e:
+        return f"Error: failed to add to memory: {e}"
+
+
 def handle_command(
     raw: str,
     client: JarvisClient,
@@ -272,13 +283,11 @@ def handle_command(
 
         if arg.startswith("add "):
             text_to_add = arg[4:].strip()
-            try:
-                memory_path.parent.mkdir(parents=True, exist_ok=True)
-                with memory_path.open("a", encoding="utf-8") as f:
-                    f.write(text_to_add + "\n")
-                print_system("Memory updated.")
-            except Exception as e:
-                print_error(f"Failed to add to memory: {e}")
+            result = append_memory(text_to_add)
+            if result.startswith("Error"):
+                print_error(result)
+            else:
+                print_system(result)
             return None
 
         if arg.startswith("clear"):
