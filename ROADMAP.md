@@ -222,7 +222,7 @@ These are all small, independent, and already listed in TODO.md § Robustness.
 
 ## Phase 5 — Agent quality (what actually makes Claude Code feel good)
 
-- [ ] **5.1 Todo/progress display.**
+- [x] **5.1 Todo/progress display.**
   New `todo_write` tool: model maintains a task list (content + status:
   pending/in_progress/completed); render it as a Rich checklist panel whenever it
   changes. Add a system-prompt nudge to use it for multi-step work. This doubles as

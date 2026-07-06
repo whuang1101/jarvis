@@ -137,7 +137,7 @@ jarvis/
 ├── mcp_manager.py   Daemon-thread asyncio loop. MCPManager.connect() launches a server, lists
 │                    tools, parks the session alive; MCPTool wraps each as a BaseTool.
 └── tools/
-    ├── __init__.py      _REGISTRY (15 built-ins) + get_all_tools/get_tool_by_name/register_tool.
+    ├── __init__.py      _REGISTRY (16 built-ins) + get_all_tools/get_tool_by_name/register_tool.
     ├── base.py          BaseTool(ABC): name/description/parameters/execute + to_openai_schema().
     ├── read_file.py     Read a file; truncates at 10,000 chars; files >100KB require
     │                    offset/limit (1-based line slice, output prefixed "N: line").
@@ -158,7 +158,9 @@ jarvis/
     ├── web_extract.py   Fetch + extract clean text via trafilatura; truncates at 12,000 chars.
     ├── find_symbol.py   grep for definitions/references of a symbol (word-boundary matched).
     ├── package_info.py  npm / PyPI package metadata lookup.
-    └── git_tools.py     git_status, git_diff, git_log (shared _git() helper, 15s timeout).
+    ├── git_tools.py     git_status, git_diff, git_log (shared _git() helper, 15s timeout).
+    └── todo_write.py    Replaces the visible task list wholesale (content + pending/in_progress/
+                         completed) and re-renders it via formatter.print_todo_list.
 ```
 
 ## Key flows
