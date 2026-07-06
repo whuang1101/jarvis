@@ -39,7 +39,7 @@ _HELP_TEXT = """
   [cyan]/theme [name][/cyan]  Show or switch the Rich syntax highlighting theme
   [cyan]/diff[/cyan]          Show uncommitted changes (git diff HEAD)
   [cyan]/pin [text][/cyan]    Pin a note into the system prompt (survives /compact and /clear); no arg lists pins
-  [cyan]/file <path>[/cyan]   Load a file into context
+  [cyan]/file <path>[/cyan]   Load a file into context (or inline @path in any message to pull it in without the command)
   [cyan]/run <cmd>[/cyan]     Run a shell command and add output to context
   [cyan]/plan[/cyan]          Toggle plan mode (Jarvis drafts a plan before making changes)
   [cyan]/go[/cyan]            Approve the current plan and execute it

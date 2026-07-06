@@ -53,7 +53,7 @@ from .permissions import (
     set_auto_mode,
     set_dangerously_skip_permissions,
 )
-from .context import build_multimodal_content, is_plan_mode, set_plan_mode
+from .context import build_multimodal_content, expand_file_mentions, is_plan_mode, set_plan_mode
 from .config import Config
 from .context import ContextManager, UsageTracker
 from .formatter import print_banner, print_error, print_system, print_user_header, console, set_code_theme
@@ -351,7 +351,7 @@ def main() -> None:
 
             print_user_header(user_input)
             try:
-                run_agent(build_multimodal_content(user_input), client, context, tracker, logger, session)
+                run_agent(build_multimodal_content(expand_file_mentions(user_input)), client, context, tracker, logger, session)
             except KeyboardInterrupt:
                 console.print()
                 print_system("Cancelled.")

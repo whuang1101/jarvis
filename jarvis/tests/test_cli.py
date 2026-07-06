@@ -218,3 +218,43 @@ class TestHashMemoryShortcut:
         cli.main()
 
         assert "Error" not in capsys.readouterr().out
+
+
+class TestAtPathMention:
+    @pytest.fixture(autouse=True)
+    def _isolate(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(logger_module, "_LOG_DIR", tmp_path)
+        monkeypatch.setattr(cli, "Config", _FakeConfig)
+        monkeypatch.setattr(cli, "JarvisClient", _FakeClient)
+        monkeypatch.setattr(permissions_module, "_auto_mode", False)
+        monkeypatch.setattr(cli, "_init_mcp", lambda mcp: None)
+
+        import sys
+        monkeypatch.setattr(sys, "argv", ["jarvis"])
+
+    def _run_with_inputs(self, monkeypatch, inputs):
+        responses = iter(inputs)
+
+        def fake_read(status):
+            try:
+                return next(responses)
+            except StopIteration:
+                raise EOFError
+
+        monkeypatch.setattr(cli, "_read_full_input", fake_read)
+
+    def test_at_path_mention_is_expanded_before_dispatch(self, monkeypatch, tmp_path):
+        notes = tmp_path / "notes.txt"
+        notes.write_text("hello world")
+        calls = {}
+
+        def fake_run_agent(message, client, context, tracker, logger, session):
+            calls["message"] = message
+
+        monkeypatch.setattr(cli, "run_agent", fake_run_agent)
+        self._run_with_inputs(monkeypatch, [f"summarize @{notes} please"])
+
+        cli.main()
+
+        assert "[File:" in calls["message"]
+        assert "hello world" in calls["message"]

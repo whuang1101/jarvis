@@ -103,7 +103,8 @@ jarvis/
 │                    `--continue` loads the newest sessions.list_sessions() match for cwd into
 │                    ContextManager before the REPL starts. `--debug` sets SessionLogger level.
 │                    `_read_full_input` joins `\`-continued lines / ```-fenced blocks; input is
-│                    run through context.build_multimodal_content (image paths → vision parts).
+│                    run through context.expand_file_mentions (inline `@path` file contents) then
+│                    context.build_multimodal_content (image paths → vision parts).
 ├── agent.py         Streaming tool-use loop. run_agent() + _stream_turn() (renders live) +
 │                    _stream_with_retry() (lazy generator) + _accumulate_tool_calls().
 ├── client.py        Only file importing openai for requests. stream() (lazy, include_usage),
