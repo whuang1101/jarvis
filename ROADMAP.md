@@ -339,7 +339,7 @@ is small), and the existing `_TRUNCATE_AT` cap still applies to the result.
   in `ReadFileTool().execute`'s output; a non-PDF file passed with a `.pdf` name
   returns an `"Error:"` string rather than raising.
 
-- [ ] **8.3 Docs + parity flip.**
+- [x] **8.3 Docs + parity flip.**
   Update JARVIS.md's `read_file` tool-table row to note `.ipynb`/`.pdf` are
   auto-detected and rendered as text, and add `pypdf` to any dependency list in
   JARVIS.md. Flip PARITY.md's "Read PDFs / Jupyter notebooks" row from ❌ to ✅.

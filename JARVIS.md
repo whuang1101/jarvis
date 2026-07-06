@@ -87,6 +87,7 @@ git checkout main && git pull
   `rich.live.Live` + `rich.markdown.Markdown` (the streaming render mechanism)
 - MCP SDK (`mcp>=1.0`) for GitHub / Azure / Brave Search
 - `trafilatura` (web extraction), `ddgs` (DuckDuckGo search)
+- `pypdf` (PDF text extraction in `read_file`)
 - `pipx` for global CLI install from editable local source
 
 ## Architecture
@@ -145,6 +146,7 @@ jarvis/
     ├── base.py          BaseTool(ABC): name/description/parameters/execute + to_openai_schema().
     ├── read_file.py     Read a file; truncates at 10,000 chars; files >100KB require
     │                    offset/limit (1-based line slice, output prefixed "N: line").
+    │                    `.ipynb`/`.pdf` extensions are auto-detected and rendered as text:
     │                    `.ipynb` paths are dispatched to documents.render_notebook
     │                    (cell source + compact `# Out:` output text) before the size guard.
     │                    `.pdf` paths are dispatched to documents.extract_pdf_text likewise.
