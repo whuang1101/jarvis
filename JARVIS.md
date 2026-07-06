@@ -284,7 +284,7 @@ root. First hit is injected into the system prompt as project context. This file
 | `jarvis/agent.py` | Central loop + live streaming — start here for model-interaction changes |
 | `jarvis/tools/__init__.py` | Register new tools here |
 | `jarvis/commands.py` | Add new slash commands here (+ `_HELP_TEXT`) |
-| `jarvis/context.py` | System prompt, plan-mode prompt, pricing, history cleaning, compaction |
+| `jarvis/context.py` | System prompt (search-before-read, verify-after-edit, ask-before-destructive habits), plan-mode prompt, pricing, history cleaning, compaction |
 | `jarvis/permissions.py` | What requires approval; diff preview; auto-mode behavior |
 | `jarvis/client.py` | Only place that touches the OpenAI SDK for requests |
 | `pyproject.toml` | Dependencies and the `jarvis` entry point |
