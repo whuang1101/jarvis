@@ -84,3 +84,23 @@ def print_command_output(message: str) -> None:
 def print_streamed_line(line: str, stderr: bool = False) -> None:
     """One line of live `run_command` output; markup disabled since the line is arbitrary shell output."""
     console.print(line, style="yellow" if stderr else None, markup=False, highlight=False)
+
+
+_TODO_MARKERS = {
+    "completed": ("[green]✔[/green]", "dim strike"),
+    "in_progress": (f"[{ACCENT}]◐[/{ACCENT}]", "bold"),
+    "pending": ("☐", ""),
+}
+
+
+def print_todo_list(todos: list[dict[str, str]]) -> None:
+    """Rich checklist panel, re-rendered in full every time the todo list changes."""
+    if not todos:
+        console.print(Panel("[dim](no todos)[/dim]", title="Todos", border_style="bright_black", expand=False))
+        return
+    lines = []
+    for todo in todos:
+        marker, style = _TODO_MARKERS.get(todo["status"], _TODO_MARKERS["pending"])
+        text = todo["content"]
+        lines.append(f"{marker} [{style}]{text}[/{style}]" if style else f"{marker} {text}")
+    console.print(Panel("\n".join(lines), title="Todos", border_style="bright_black", expand=False, padding=(0, 2)))

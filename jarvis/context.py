@@ -54,7 +54,9 @@ _SYSTEM_PROMPT = (
     "Prefer small, focused changes over large rewrites. "
     "IMPORTANT: You are on a low token quota. Read only the specific files you need — never bulk-read "
     "an entire repo. Use search_files or find_symbol to locate what you need first, then read only "
-    "those files. Keep your responses short. If context is growing large, tell the user to run /compact."
+    "those files. Keep your responses short. If context is growing large, tell the user to run /compact. "
+    "For multi-step work, use the todo_write tool to keep a visible task list: create it up front with "
+    "one task in_progress, and update it (passing the full list) as you complete each step."
 )
 
 _PLAN_MODE_PROMPT = """
