@@ -5,10 +5,12 @@ import os
 import re
 import shutil
 import subprocess
+import threading
 from pathlib import Path
 from typing import Any
 
 from .base import BaseTool
+from ..formatter import print_streamed_line
 
 _TIMEOUT = 120
 # Matches `cd` alone (-> home) or `cd <path>`, but NOT commands merely prefixed
@@ -45,25 +47,57 @@ class RunCommandTool(BaseTool):
                 return f"Error: {e}"
 
         try:
-            result = subprocess.run(
+            proc = subprocess.Popen(
                 command,
                 shell=True,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                timeout=_TIMEOUT,
+                bufsize=1,
                 cwd=os.getcwd(),
             )
+
+            stdout_lines: list[str] = []
+            stderr_lines: list[str] = []
+
+            def _stream(pipe, sink: list[str], is_stderr: bool) -> None:
+                for line in pipe:
+                    sink.append(line)
+                    print_streamed_line(line.rstrip("\n"), stderr=is_stderr)
+                pipe.close()
+
+            t_out = threading.Thread(target=_stream, args=(proc.stdout, stdout_lines, False))
+            t_err = threading.Thread(target=_stream, args=(proc.stderr, stderr_lines, True))
+            t_out.start()
+            t_err.start()
+
+            try:
+                proc.wait(timeout=_TIMEOUT)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
+                t_out.join()
+                t_err.join()
+                return f"Error: command timed out after {_TIMEOUT}s"
+
+            t_out.join()
+            t_err.join()
+
+            stdout = "".join(stdout_lines)
+            stderr = "".join(stderr_lines)
+            returncode = proc.returncode
+
             parts: list[str] = []
-            if result.stdout:
-                parts.append(result.stdout)
-            if result.stderr:
-                parts.append(f"[stderr]\n{result.stderr}")
-            if result.returncode != 0:
-                parts.append(f"[exit code: {result.returncode}]")
+            if stdout:
+                parts.append(stdout)
+            if stderr:
+                parts.append(f"[stderr]\n{stderr}")
+            if returncode != 0:
+                parts.append(f"[exit code: {returncode}]")
             output = "\n".join(parts) if parts else "(no output)"
 
             # Auto-restart after a successful pipx reinstall jarvis
-            if _REINSTALL_RE.search(command) and result.returncode == 0:
+            if _REINSTALL_RE.search(command) and returncode == 0:
                 # If auto mode is on, write a resume state so the new session
                 # picks up where it left off without any user input
                 from ..permissions import is_auto_mode, is_dangerously_skip_permissions

@@ -79,3 +79,8 @@ def print_system(message: str) -> None:
 
 def print_command_output(message: str) -> None:
     console.print(f"[cyan]{message}[/cyan]")
+
+
+def print_streamed_line(line: str, stderr: bool = False) -> None:
+    """One line of live `run_command` output; markup disabled since the line is arbitrary shell output."""
+    console.print(line, style="yellow" if stderr else None, markup=False, highlight=False)
