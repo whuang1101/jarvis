@@ -357,7 +357,7 @@ The topmost genuinely-missing, self-contained tool is `Glob (find files by
 pattern)` — a name/path lookup that's cheaper than `list_dir` + `search_files`
 when you already know the filename shape.*
 
-- [ ] **9.1 Glob tool.**
+- [x] **9.1 Glob tool.**
   Add `jarvis/tools/glob_files.py` with `GlobFilesTool(BaseTool)`, `name = "glob"`.
   Parameters: `pattern` (required, a glob like `**/*.py` or `src/*.ts`) and optional
   `path` (root directory to search from, default `"."`). In `execute`, resolve the
