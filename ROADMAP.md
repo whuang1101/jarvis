@@ -728,7 +728,7 @@ payload builder, and an emitter writing to an in-memory stream — no Azure call
   `buf = io.StringIO()` writes exactly two lines that each `json.loads` cleanly, the
   first `type == "system"` and the second `type == "result"`. `/selftest` (pytest) green.
 
-- [ ] **15.3 Wire the formats into `_run_one_shot` and `main()`.**
+- [x] **15.3 Wire the formats into `_run_one_shot` and `main()`.**
   In `jarvis/cli.py`, give `_run_one_shot` an `output_format: str = "text"`
   parameter. When `output_format != "text"`, call
   `formatter.redirect_console(sys.stderr)` before running so all render goes to
