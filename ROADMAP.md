@@ -303,6 +303,51 @@ deployment emits no reasoning — nothing changes for non-reasoning models.
 
 ---
 
+## Phase 8 — Read PDFs / Jupyter notebooks
+
+PARITY.md "Read PDFs / Jupyter notebooks" (Tools). `read_file` currently only
+handles UTF-8 text; pointing it at a `.ipynb` yields raw JSON noise and a `.pdf`
+yields replaced binary bytes. Teach `read_file` to detect these two formats and
+return clean, model-readable text. Notebooks need no new dependency (they are
+JSON); PDFs add `pypdf`. In both cases the extraction happens BEFORE the
+`_MAX_FULL_READ_BYTES` guard (the raw file is binary/large but the extracted text
+is small), and the existing `_TRUNCATE_AT` cap still applies to the result.
+
+- [ ] **8.1 Jupyter notebook rendering.**
+  Add `jarvis/tools/documents.py` with `render_notebook(path: str) -> str`: parse
+  the `.ipynb` JSON and emit each cell as a labeled block — `# %% [markdown]` /
+  `# %% [code]` headers, the joined `source`, and for code cells a compact
+  `# Out:` section from `outputs` (stream `text`, `text/plain` data; skip images).
+  Return `"Error: ..."` strings on bad JSON / missing keys, never raise. In
+  `read_file.py`, dispatch to `render_notebook` when the path ends in `.ipynb`
+  (case-insensitive), before the size guard; apply `_TRUNCATE_AT` to the result.
+  *Verify:* pytest builds a tiny in-memory notebook dict, writes it to a tmp
+  `.ipynb`, and asserts `ReadFileTool().execute` returns markdown source, code
+  source, and the `# Out:` text while excluding the raw `"cell_type"` JSON keys;
+  a malformed `.ipynb` returns an `"Error:"` string.
+
+- [ ] **8.2 PDF text extraction.**
+  Add `pypdf>=4.0` to `dependencies` in `pyproject.toml`. In `documents.py` add
+  `extract_pdf_text(path: str) -> str`: open with `pypdf.PdfReader`, concatenate
+  `page.extract_text()` across pages with `\n\n--- page N ---\n\n` separators,
+  and return `"Error: ..."` on `pypdf`/OSError (import `pypdf` lazily inside the
+  function so a missing wheel degrades to an error string, not an import crash).
+  Dispatch in `read_file.py` for paths ending in `.pdf` (case-insensitive),
+  before the size guard, with `_TRUNCATE_AT` applied.
+  *Verify:* pytest generates a minimal one-page PDF (write a fixed byte string,
+  or build one with `pypdf` if available) and asserts the extracted text appears
+  in `ReadFileTool().execute`'s output; a non-PDF file passed with a `.pdf` name
+  returns an `"Error:"` string rather than raising.
+
+- [ ] **8.3 Docs + parity flip.**
+  Update JARVIS.md's `read_file` tool-table row to note `.ipynb`/`.pdf` are
+  auto-detected and rendered as text, and add `pypdf` to any dependency list in
+  JARVIS.md. Flip PARITY.md's "Read PDFs / Jupyter notebooks" row from ❌ to ✅.
+  *Verify:* `/selftest` (pytest) green; grep confirms the PARITY row is ✅ and
+  JARVIS.md mentions `.ipynb`.
+
+---
+
 ## Standing orders (apply to every step)
 
 - **Registration invariants:** new tool → `tools/__init__.py` `_REGISTRY` + JARVIS.md
