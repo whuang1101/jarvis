@@ -54,6 +54,14 @@ class TestParseArgs:
         args = cli._parse_args(["--debug"])
         assert args.debug is True
 
+    def test_max_turns_defaults_none(self):
+        args = cli._parse_args([])
+        assert args.max_turns is None
+
+    def test_max_turns_flag(self):
+        args = cli._parse_args(["--max-turns", "3"])
+        assert args.max_turns == 3
+
 
 class TestReadFullInput:
     def test_single_line_passthrough(self, monkeypatch):
@@ -155,7 +163,7 @@ class TestOneShotMode(object):
     def test_prints_answer_and_exits_zero(self, monkeypatch):
         calls = {}
 
-        def fake_run_agent(message, client, context, tracker, logger, session):
+        def fake_run_agent(message, client, context, tracker, logger, session, **kwargs):
             calls["message"] = message
             print("4")
 
@@ -170,6 +178,22 @@ class TestOneShotMode(object):
         assert exc.value.code == 0
         assert calls["message"] == "what is 2+2"
         assert cli.is_auto_mode() is True
+
+    def test_max_turns_passed_to_run_agent(self, monkeypatch):
+        calls = {}
+
+        def fake_run_agent(message, client, context, tracker, logger, session, **kwargs):
+            calls["max_iterations"] = kwargs.get("max_iterations")
+
+        monkeypatch.setattr(cli, "run_agent", fake_run_agent)
+        monkeypatch.setattr(cli, "_init_mcp", lambda mcp: pytest.fail("MCP should not connect without --mcp"))
+
+        import sys
+        monkeypatch.setattr(sys, "argv", ["jarvis", "-p", "what is 2+2", "--max-turns", "3"])
+        with pytest.raises(SystemExit):
+            cli.main()
+
+        assert calls["max_iterations"] == 3
 
     def test_connects_mcp_when_flag_passed(self, monkeypatch):
         mcp_connected = {"called": False}

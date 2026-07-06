@@ -628,7 +628,7 @@ is a frozen dataclass overridable via `dataclasses.replace`, so both flags are
 confined to `cli.py` argument dispatch and unit-testable through `_parse_args`
 (and a `Config.load` override) with no Azure call needed.
 
-- [ ] **14.1 `--max-turns` flag wired into the one-shot cap.**
+- [x] **14.1 `--max-turns` flag wired into the one-shot cap.**
   In `jarvis/cli.py`, add a `parser.add_argument("--max-turns", dest="max_turns",
   type=int, default=None, metavar="N", help=...)` to `_parse_args` (help: "Cap the
   tool-call iterations for a one-shot run; default uses the configured
