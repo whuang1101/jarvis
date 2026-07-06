@@ -18,7 +18,13 @@ from .logger import SessionLogger
 from .permissions import needs_permission, request_permission
 from .sessions import SessionStore
 from .settings import Settings
-from .tools import get_all_tools, get_tool_by_name
+from .tools import get_all_tools
+from .tools.base import BaseTool
+
+# Set at the top of every run_agent() call so spawn_agent (which has no direct
+# access to the active client/tracker) can start a subagent from inside a tool call.
+_current_client: JarvisClient | None = None
+_current_tracker: UsageTracker | None = None
 
 _settings = Settings.load()
 
@@ -133,12 +139,13 @@ _TOOL_VERBS = {
     "fetch_url": "Fetch",
     "find_symbol": "FindSymbol",
     "package_info": "PackageInfo",
+    "spawn_agent": "SpawnAgent",
 }
 
 
 def _tool_status_label(tool_name: str, args: dict[str, Any]) -> str:
     verb = _TOOL_VERBS.get(tool_name, tool_name)
-    for key in ("path", "command", "pattern", "symbol", "url", "query"):
+    for key in ("path", "command", "pattern", "symbol", "url", "query", "task"):
         if key in args:
             val = str(args[key])
             return f"{verb}({val[:80]}{'…' if len(val) > 80 else ''})"
@@ -169,7 +176,7 @@ def _accumulate_tool_calls(collected: dict[int, dict[str, Any]], tool_calls: Any
 
 
 def _stream_turn(
-    client: JarvisClient, context: ContextManager, tracker: UsageTracker
+    client: JarvisClient, context: ContextManager, tracker: UsageTracker, tools: list[BaseTool]
 ) -> tuple[str, dict[int, dict[str, Any]], str | None]:
     """Stream one model response, rendering tokens live as they arrive.
 
@@ -177,7 +184,7 @@ def _stream_turn(
     retried inside _stream_with_retry; a context_length_exceeded error triggers a
     one-time compaction and re-stream. Returns empty results if recovery fails.
     """
-    tool_schemas = [t.to_openai_schema() for t in get_all_tools()]
+    tool_schemas = [t.to_openai_schema() for t in tools]
     state: dict[str, Any] = {"text": [], "tools": {}, "finish": None, "started": False, "live": None}
 
     def drain(chunks: Any, status: Any) -> None:
@@ -248,7 +255,20 @@ def run_agent(
     tracker: UsageTracker,
     logger: SessionLogger | None = None,
     session: SessionStore | None = None,
-) -> None:
+    *,
+    tools: list[BaseTool] | None = None,
+    max_iterations: int | None = None,
+    allow_subagents: bool = True,
+) -> str:
+    global _current_client, _current_tracker
+    _current_client, _current_tracker = client, tracker
+
+    resolved_tools = list(tools) if tools is not None else get_all_tools()
+    if not allow_subagents:
+        resolved_tools = [t for t in resolved_tools if t.name != "spawn_agent"]
+    tools_by_name = {t.name: t for t in resolved_tools}
+    iteration_cap = max_iterations if max_iterations is not None else _MAX_TOOL_ITERATIONS
+
     # Compact BEFORE appending the new user message so it isn't folded into the summary.
     if context.token_estimate() > _AUTOCOMPACT_TOKENS:
         console.print(f"[yellow]⚠ Context is large (~{context.token_estimate():,} tokens) — auto-compacting...[/yellow]")
@@ -261,8 +281,8 @@ def run_agent(
     if logger:
         logger.user(user_message)
 
-    for iteration in range(_MAX_TOOL_ITERATIONS):
-        full_text, collected_tool_calls, finish_reason = _stream_turn(client, context, tracker)
+    for iteration in range(iteration_cap):
+        full_text, collected_tool_calls, finish_reason = _stream_turn(client, context, tracker, resolved_tools)
 
         if finish_reason == "stop" or (finish_reason != "tool_calls" and not collected_tool_calls):
             console.print()
@@ -271,7 +291,7 @@ def run_agent(
                 logger.assistant(full_text)
             if session:
                 session.save(context._history)
-            return
+            return full_text
 
         if collected_tool_calls:
             if full_text:
@@ -304,7 +324,7 @@ def run_agent(
                     result = request_permission(tool_name, args)
 
                 if result is None:
-                    tool = get_tool_by_name(tool_name)
+                    tool = tools_by_name.get(tool_name)
                     print_tool_use(label)
                     if tool is None:
                         result = f"Error: unknown tool '{tool_name}'"
@@ -336,16 +356,17 @@ def run_agent(
     # Iteration cap hit — ask the model for a final progress summary instead of
     # stopping silently.
     console.print()
-    console.print(f"[yellow]Reached max tool iterations ({_MAX_TOOL_ITERATIONS}) — asking for a progress summary.[/yellow]")
+    console.print(f"[yellow]Reached max tool iterations ({iteration_cap}) — asking for a progress summary.[/yellow]")
     context.append({
         "role": "user",
         "content": "You hit the tool iteration limit. Do not call any more tools. "
                    "Summarize what you accomplished and what remains to be done.",
     })
-    full_text, _, _ = _stream_turn(client, context, tracker)
+    full_text, _, _ = _stream_turn(client, context, tracker, resolved_tools)
     console.print()
     context.append({"role": "assistant", "content": full_text})
     if logger:
         logger.assistant(full_text)
     if session:
         session.save(context._history)
+    return full_text
