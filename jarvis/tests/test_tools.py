@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from jarvis.tools.edit_file import EditFileTool
 from jarvis.tools.read_file import ReadFileTool
 from jarvis.tools.list_dir import ListDirTool
@@ -73,6 +75,47 @@ class TestReadFile:
         result = ReadFileTool().execute({"path": str(f)})
         assert "truncated" in result
         assert len(result) < 20_000
+
+    def test_renders_notebook(self, tmp_path):
+        notebook = {
+            "cells": [
+                {"cell_type": "markdown", "source": ["# Title\n", "Some notes."]},
+                {
+                    "cell_type": "code",
+                    "source": ["print('hi')"],
+                    "outputs": [
+                        {"output_type": "stream", "text": ["hi\n"]},
+                        {
+                            "output_type": "execute_result",
+                            "data": {"text/plain": ["42"]},
+                        },
+                        {
+                            "output_type": "display_data",
+                            "data": {"image/png": "base64data"},
+                        },
+                    ],
+                },
+            ],
+        }
+        f = tmp_path / "nb.ipynb"
+        f.write_text(json.dumps(notebook))
+        result = ReadFileTool().execute({"path": str(f)})
+        assert "# %% [markdown]" in result
+        assert "# Title" in result
+        assert "Some notes." in result
+        assert "# %% [code]" in result
+        assert "print('hi')" in result
+        assert "# Out:" in result
+        assert "hi" in result
+        assert "42" in result
+        assert "cell_type" not in result
+        assert "base64data" not in result
+
+    def test_malformed_notebook_returns_error(self, tmp_path):
+        f = tmp_path / "bad.ipynb"
+        f.write_text("not json")
+        result = ReadFileTool().execute({"path": str(f)})
+        assert result.startswith("Error")
 
 
 class TestListDir:
