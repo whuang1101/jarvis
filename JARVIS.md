@@ -127,6 +127,8 @@ jarvis/
 ├── formatter.py     Shared Rich `console` + Claude-Code-style helpers: print_banner (rounded
 │                    welcome panel w/ model+cwd), print_user_header (`> msg`), print_jarvis_header
 │                    (`⏺` bullet), render_markdown_block (indented under the bullet),
+│                    print_thinking_header (`✻ Thinking...`), render_thinking_block (dimmed
+│                    italic markdown, own live block, closes before the answer's `⏺` prints),
 │                    print_tool_use (`⏺ Read(path)`), print_tool_result (`⎿  summary +N lines`),
 │                    make_live_markdown, print_system/print_error/print_command_output.
 ├── logger.py        SessionLogger — JSONL to ~/.jarvis/logs/YYYY-MM-DD.jsonl (session_start,
@@ -185,6 +187,10 @@ text (marked `[interrupted by user]`) and returns to the prompt. Each iteration:
    lazily from `_stream_with_retry` (a generator — it does **not** buffer with `list()`), and on
    the first content delta it prints the Jarvis header and renders an incrementally-updated
    `rich.live.Live` Markdown widget. A `Thinking…` spinner runs until the first chunk.
+   Reasoning deltas (`delta.reasoning_content` / `delta.reasoning`) accumulate into a separate
+   `state["thinking"]` buffer, gated on `settings.show_thinking`, and render in their own dimmed
+   italic live block (`print_thinking_header` + `render_thinking_block`) that closes as soon as
+   real content arrives — reasoning never enters `state["text"]`/`full_text`.
    - `RateLimitError` → retried with fixed delays `(5, 15, 30)` then give up (not exponential).
    - `BadRequestError` matching context-length → compact once and re-stream.
 2. Returns `(full_text, collected_tool_calls, finish_reason)`. Tool-call fragments are merged by
@@ -343,7 +349,8 @@ skipped (the other file/defaults still apply). Unknown keys are ignored. Current
 `agent.py`'s iteration cap / tool timeout / autocompact threshold and `permissions.py`'s
 `auto_mode` and `dangerously_skip_permissions` defaults; nothing consumes `theme` yet.
 `show_thinking` (default `true`) is read once by `JarvisClient.__init__` into
-`self._show_thinking` — not yet used to change request or render behavior (7.2).
+`self._show_thinking` (unused there); `agent.py._stream_turn` reads its own module-level
+`_settings.show_thinking` to gate whether reasoning deltas are rendered (7.2).
 
 `[permissions] allow`/`deny` are glob-style pattern lists (`fnmatch`) checked in
 `permissions.py:needs_permission` before the tool-specific logic: a `deny` match forces the

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import sys
 import time
+from dataclasses import replace
+from types import SimpleNamespace
 
 import jarvis.agent as agent_module
 from jarvis.agent import (
@@ -156,6 +158,73 @@ class TestRunAgentToolOverrides:
 
         # 2 iterations inside the loop + 1 final progress-summary turn after the cap.
         assert calls["n"] == 3
+
+
+class _FakeStreamClient:
+    """Fake JarvisClient: .stream() replays canned chunks, ignoring the request."""
+
+    def __init__(self, chunks):
+        self._chunks = chunks
+
+    def stream(self, messages, tools=None):
+        return iter(self._chunks)
+
+    def current_deployment(self):
+        return "fake-deployment"
+
+
+def _fake_chunk(content=None, reasoning_content=None, finish_reason=None):
+    delta = SimpleNamespace(content=content, tool_calls=None, reasoning_content=reasoning_content)
+    choice = SimpleNamespace(delta=delta, finish_reason=finish_reason)
+    return SimpleNamespace(choices=[choice], usage=None)
+
+
+class TestStreamTurnThinking:
+    def test_reasoning_excluded_from_full_text_and_captured_in_thinking_buffer(self, monkeypatch):
+        monkeypatch.setattr(agent_module, "_settings", replace(agent_module._settings, show_thinking=True))
+        captured_thinking = []
+        original_render = agent_module.render_thinking_block
+
+        def fake_render_thinking_block(text):
+            captured_thinking.append(text)
+            return original_render(text)
+
+        monkeypatch.setattr(agent_module, "render_thinking_block", fake_render_thinking_block)
+
+        chunks = [
+            _fake_chunk(reasoning_content="Let me "),
+            _fake_chunk(reasoning_content="think about this."),
+            _fake_chunk(content="The "),
+            _fake_chunk(content="answer.", finish_reason="stop"),
+        ]
+        client = _FakeStreamClient(chunks)
+
+        full_text, tool_calls, finish_reason = agent_module._stream_turn(
+            client, ContextManager(), UsageTracker(), []
+        )
+
+        assert full_text == "The answer."
+        assert "Let me" not in full_text
+        assert finish_reason == "stop"
+        assert tool_calls == {}
+        assert captured_thinking[-1] == "Let me think about this."
+
+    def test_reasoning_dropped_when_show_thinking_disabled(self, monkeypatch):
+        monkeypatch.setattr(agent_module, "_settings", replace(agent_module._settings, show_thinking=False))
+        thinking_calls = []
+        monkeypatch.setattr(agent_module, "print_thinking_header", lambda: thinking_calls.append("header"))
+        monkeypatch.setattr(agent_module, "render_thinking_block", lambda text: thinking_calls.append(text))
+
+        chunks = [
+            _fake_chunk(reasoning_content="secret reasoning"),
+            _fake_chunk(content="answer", finish_reason="stop"),
+        ]
+        client = _FakeStreamClient(chunks)
+
+        full_text, _, _ = agent_module._stream_turn(client, ContextManager(), UsageTracker(), [])
+
+        assert full_text == "answer"
+        assert thinking_calls == []
 
 
 class TestPostToolHooks:

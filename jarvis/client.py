@@ -7,9 +7,6 @@ from openai import AzureOpenAI
 from openai.types.chat import ChatCompletionChunk, ChatCompletionMessageParam
 
 from .config import Config
-from .settings import Settings
-
-_settings = Settings.load()
 
 
 class CompleteResult(NamedTuple):
@@ -26,10 +23,6 @@ class JarvisClient:
             api_version=config.api_version,
         )
         self._deployment = config.deployment
-        # Read once at construction; 7.2 will use this to decide whether reasoning
-        # deltas get rendered. The request itself is unaffected either way — the
-        # model sends reasoning content on the delta regardless of this toggle.
-        self._show_thinking = _settings.show_thinking
 
     def stream(
         self,

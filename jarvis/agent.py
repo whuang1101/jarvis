@@ -12,6 +12,7 @@ from .client import JarvisClient
 from .context import ContextManager, UsageTracker
 from .formatter import (
     print_jarvis_header, make_live_markdown, render_markdown_block,
+    print_thinking_header, render_thinking_block,
     print_tool_use, print_tool_result, console,
 )
 from .logger import SessionLogger
@@ -185,7 +186,10 @@ def _stream_turn(
     one-time compaction and re-stream. Returns empty results if recovery fails.
     """
     tool_schemas = [t.to_openai_schema() for t in tools]
-    state: dict[str, Any] = {"text": [], "tools": {}, "finish": None, "started": False, "live": None}
+    state: dict[str, Any] = {
+        "text": [], "tools": {}, "finish": None, "started": False, "live": None,
+        "thinking": [], "thinking_live": None,
+    }
 
     def drain(chunks: Any, status: Any) -> None:
         for chunk in chunks:
@@ -196,10 +200,22 @@ def _stream_turn(
                 continue
             state["finish"] = choice.finish_reason
             delta = choice.delta
-            if not state["started"] and (delta.content or delta.tool_calls):
+            reasoning = getattr(delta, "reasoning_content", None) or getattr(delta, "reasoning", None)
+            if not state["started"] and (delta.content or delta.tool_calls or reasoning):
                 status.stop()
                 state["started"] = True
+            if reasoning and _settings.show_thinking:
+                if state["thinking_live"] is None:
+                    print_thinking_header()
+                    thinking_live = make_live_markdown()
+                    state["thinking_live"] = thinking_live
+                    thinking_live.start()
+                state["thinking"].append(reasoning)
+                state["thinking_live"].update(render_thinking_block("".join(state["thinking"])))
             if delta.content:
+                if state["thinking_live"] is not None:
+                    state["thinking_live"].stop()
+                    state["thinking_live"] = None
                 if state["live"] is None:
                     print_jarvis_header()
                     live = make_live_markdown()
@@ -211,9 +227,11 @@ def _stream_turn(
                 _accumulate_tool_calls(state["tools"], delta.tool_calls)
 
     def stop(status: Any) -> None:
+        if state["thinking_live"]:
+            state["thinking_live"].stop()
         if state["live"]:
             state["live"].stop()
-        else:
+        elif not state["started"]:
             status.stop()
 
     status = console.status("[dim]Thinking...[/dim]", spinner="dots")
@@ -235,7 +253,10 @@ def _stream_turn(
             raise
         console.print("[yellow]⚠ Context window full — compacting and continuing...[/yellow]")
         context.compact(client, tracker)
-        state.update({"text": [], "tools": {}, "finish": None, "started": False, "live": None})
+        state.update({
+            "text": [], "tools": {}, "finish": None, "started": False, "live": None,
+            "thinking": [], "thinking_live": None,
+        })
         status = console.status("[dim]Thinking...[/dim]", spinner="dots")
         status.start()
         try:

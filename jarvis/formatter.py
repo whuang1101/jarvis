@@ -62,6 +62,15 @@ def render_markdown_block(text: str) -> Padding:
     return Padding(Markdown(text, code_theme=_code_theme), (0, 0, 0, 2))
 
 
+def print_thinking_header() -> None:
+    console.print("[dim]✻ Thinking...[/dim]")
+
+
+def render_thinking_block(text: str) -> Padding:
+    """Reasoning markdown, dimmed and italicized, indented under the thinking header."""
+    return Padding(Markdown(text, code_theme=_code_theme), (0, 0, 0, 2), style="dim italic")
+
+
 def print_assistant_markdown(text: str) -> None:
     print_jarvis_header()
     console.print(render_markdown_block(text))
