@@ -176,8 +176,16 @@ text (marked `[interrupted by user]`) and returns to the prompt. Each iteration:
    `tc.index` across chunks (`_accumulate_tool_calls`).
 3. **Terminate** when `finish_reason == "stop"` OR (`finish_reason != "tool_calls"` AND no tool
    calls collected): append the assistant message and return.
-4. Otherwise execute each collected tool call (permission gate → execute → append `role:tool`
-   result keyed by `tool_call_id`), then loop.
+4. Otherwise execute each collected tool call (permission gate → pre-tool hooks → execute →
+   post-tool hooks → append `role:tool` result keyed by `tool_call_id`), then loop.
+
+### Pre/post tool hooks (`agent.py:run_pre_tool_hooks`/`run_post_tool_hooks`)
+
+Configured via `[hooks] pre_tool`/`post_tool` (arrays of `{match, run}` tables; `match` is an
+`fnmatch` glob against the tool name). Each matching hook runs `run` via `subprocess.run(shell=True)`
+with `{"tool": tool_name, "args": args}` as JSON on stdin, 10s timeout. A pre-hook exiting with
+code 2 blocks the tool call — its stderr becomes the tool result. Post-hooks run after a
+successful `execute()` for side effects only; their output/exit code is ignored.
 
 ### Permission gate (`permissions.py`)
 
@@ -298,6 +306,10 @@ theme = "monokai"
 [permissions]
 allow = ["write_file(*)"]          # glob patterns matched against "tool_name(args)"
 deny = ["run_command(git push*)"]
+
+[hooks]
+pre_tool = [{match = "write_file", run = "./block_writes.sh"}]   # match is a glob on tool name
+post_tool = [{match = "*", run = "./notify.sh"}]
 ```
 
 `Settings.load()` reads the global file first, then walks up from cwd (through up to 4 parents,

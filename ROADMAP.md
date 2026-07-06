@@ -199,7 +199,7 @@ These are all small, independent, and already listed in TODO.md § Robustness.
   *Verify:* create `~/.jarvis/commands/explain.md` containing
   "Explain this code simply: $ARGUMENTS", run `/explain context.py`.
 
-- [ ] **4.2 Pre/post tool hooks.**
+- [x] **4.2 Pre/post tool hooks.**
   Config: `[hooks] pre_tool = [{match = "write_file", run = "..."}]`,
   `post_tool = [...]`. In the agent loop, before/after `execute()`, run matching hooks
   via subprocess with tool name + JSON args on stdin. Pre-hook exit code 2 blocks the
