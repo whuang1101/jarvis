@@ -106,7 +106,10 @@ jarvis/
 │                    run through context.expand_file_mentions (inline `@path` file contents) then
 │                    context.build_multimodal_content (image paths → vision parts).
 │                    `_read_piped_stdin` returns piped stdin text (None if stdin is a TTY, empty,
-│                    or unreadable) for `cat x | jarvis -p` support.
+│                    or unreadable) for `cat x | jarvis -p` support. `_compose_one_shot_prompt`
+│                    joins `-p` prompt + piped text (`"{prompt}\n\n{piped}"` when both present,
+│                    whichever exists alone otherwise, None if neither) so a bare `cat x | jarvis`
+│                    with no `-p` also runs one-shot mode.
 ├── agent.py         Streaming tool-use loop. run_agent() + _stream_turn() (renders live) +
 │                    _stream_with_retry() (lazy generator) + _accumulate_tool_calls().
 ├── client.py        Only file importing openai for requests. stream() (lazy, include_usage),

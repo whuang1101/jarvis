@@ -580,7 +580,7 @@ monkeypatching `sys.stdin`, with no Azure call needed.*
   `isatty()` → `False` with `"boom\n"` yields `"boom"`; `"   "` yields `None`.
   `/selftest` (pytest) green.
 
-- [ ] **13.2 Compose the effective one-shot prompt.**
+- [x] **13.2 Compose the effective one-shot prompt.**
   In `jarvis/cli.py`, add a pure helper
   `_compose_one_shot_prompt(prompt: str | None, piped: str | None) -> str | None`:
   return `None` when both are absent; return `prompt` alone when nothing is piped;

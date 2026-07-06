@@ -135,6 +135,18 @@ def _read_piped_stdin() -> str | None:
     return text or None
 
 
+def _compose_one_shot_prompt(prompt: str | None, piped: str | None) -> str | None:
+    """Combine the -p prompt and piped stdin into the effective one-shot prompt.
+
+    The instruction comes first so the model reads it before the piped payload.
+    """
+    if prompt is None:
+        return piped
+    if piped is None:
+        return prompt
+    return f"{prompt}\n\n{piped}"
+
+
 def _gh_token() -> str | None:
     """Get GitHub token from gh CLI, fall back to env var."""
     try:
@@ -232,8 +244,10 @@ def _run_one_shot(prompt: str, connect_mcp: bool, debug: bool = False) -> None:
 
 def main() -> None:
     args = _parse_args(sys.argv[1:])
-    if args.prompt is not None:
-        _run_one_shot(args.prompt, connect_mcp=args.mcp, debug=args.debug)
+    piped = _read_piped_stdin()
+    effective = _compose_one_shot_prompt(args.prompt, piped)
+    if effective is not None:
+        _run_one_shot(effective, connect_mcp=args.mcp, debug=args.debug)
 
     try:
         config = Config.load()
