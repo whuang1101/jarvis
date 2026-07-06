@@ -50,7 +50,7 @@ Legend: ✅ Jarvis has it · 🟡 partial · ❌ missing
 | "Yes, don't ask again" option that persists | ❌ | ROADMAP 2.4 |
 | Settings hierarchy (user / project / local overrides) | ❌ | ROADMAP 2.1–2.2 |
 | Sandboxed command execution | ❌ | ROADMAP Phase 6 / security section of TODO.md |
-| Sensitive-file protection (.env etc. excluded from reads) | ❌ | worth adding to read_file/search |
+| Sensitive-file protection (.env etc. excluded from reads) | ✅ | |
 
 ## Sessions & persistence
 
