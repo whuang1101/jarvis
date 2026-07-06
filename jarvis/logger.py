@@ -10,6 +10,11 @@ from typing import Any
 
 _LOG_DIR = Path.home() / ".jarvis" / "logs"
 
+# Structured logging levels, cheapest-first — an entry is written only if its
+# level is >= the logger's configured threshold (default "info", so per-chunk
+# "debug" entries stay out of the log unless --debug is passed).
+_LEVELS = {"debug": 10, "info": 20, "warning": 30, "error": 40}
+
 
 def _log_path() -> Path:
     _LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -21,17 +26,23 @@ def _now() -> str:
 
 
 class SessionLogger:
-    def __init__(self, cwd: str) -> None:
+    def __init__(self, cwd: str, level: str = "info") -> None:
         self.session_id = uuid.uuid4().hex[:8]
         self._path = _log_path()
-        self._write({"type": "session_start", "cwd": cwd})
+        self._threshold = _LEVELS.get(level, _LEVELS["info"])
+        self._write({"type": "session_start", "cwd": cwd}, level="info")
 
-    def _write(self, data: dict[str, Any]) -> None:
-        entry = {"ts": _now(), "session": self.session_id, **data}
+    def _write(self, data: dict[str, Any], level: str = "info") -> None:
+        if _LEVELS.get(level, _LEVELS["info"]) < self._threshold:
+            return
+        entry = {"ts": _now(), "session": self.session_id, "level": level, **data}
         with open(self._path, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry) + "\n")
 
-    def user(self, content: str) -> None:
+    def debug(self, message: str) -> None:
+        self._write({"type": "debug", "message": message}, level="debug")
+
+    def user(self, content: Any) -> None:
         self._write({"type": "user", "content": content})
 
     def assistant(self, content: str) -> None:
@@ -44,7 +55,7 @@ class SessionLogger:
         self._write({"type": "tool_result", "tool": tool, "result": result[:500]})
 
     def error(self, message: str) -> None:
-        self._write({"type": "error", "message": message})
+        self._write({"type": "error", "message": message}, level="error")
 
     def end(self, prompt_tokens: int, completion_tokens: int) -> None:
         self._write({

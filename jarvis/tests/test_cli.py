@@ -45,6 +45,47 @@ class TestParseArgs:
         args = cli._parse_args(["--continue"])
         assert args.continue_ is True
 
+    def test_debug_flag_defaults_false(self):
+        args = cli._parse_args([])
+        assert args.debug is False
+
+    def test_debug_flag(self):
+        args = cli._parse_args(["--debug"])
+        assert args.debug is True
+
+
+class TestReadFullInput:
+    def test_single_line_passthrough(self, monkeypatch):
+        monkeypatch.setattr(cli, "_read_input", lambda status: "hello")
+        assert cli._read_full_input("status") == "hello"
+
+    def test_backslash_continuation_joins_lines(self, monkeypatch):
+        monkeypatch.setattr(cli, "_read_input", lambda status: "line one\\")
+        responses = iter(["line two"])
+        monkeypatch.setattr("builtins.input", lambda prompt="": next(responses))
+        assert cli._read_full_input("status") == "line one\nline two"
+
+    def test_backslash_continuation_multiple_lines(self, monkeypatch):
+        monkeypatch.setattr(cli, "_read_input", lambda status: "one\\")
+        responses = iter(["two\\", "three"])
+        monkeypatch.setattr("builtins.input", lambda prompt="": next(responses))
+        assert cli._read_full_input("status") == "one\ntwo\nthree"
+
+    def test_triple_backtick_block_reads_until_closing_fence(self, monkeypatch):
+        monkeypatch.setattr(cli, "_read_input", lambda status: "```")
+        responses = iter(["def f():", "    pass", "```"])
+        monkeypatch.setattr("builtins.input", lambda prompt="": next(responses))
+        assert cli._read_full_input("status") == "def f():\n    pass"
+
+    def test_backslash_continuation_eof_returns_partial(self, monkeypatch):
+        monkeypatch.setattr(cli, "_read_input", lambda status: "only line\\")
+
+        def raise_eof(prompt=""):
+            raise EOFError
+
+        monkeypatch.setattr("builtins.input", raise_eof)
+        assert cli._read_full_input("status") == "only line"
+
 
 class TestOneShotMode(object):
     @pytest.fixture(autouse=True)
@@ -89,6 +130,26 @@ class TestOneShotMode(object):
 
         assert exc.value.code == 0
         assert mcp_connected["called"] is True
+
+    def test_debug_flag_sets_debug_level_logger(self, monkeypatch):
+        levels = {}
+        real_logger_cls = cli.SessionLogger
+
+        class _CapturingLogger(real_logger_cls):
+            def __init__(self, cwd, level="info"):
+                levels["level"] = level
+                super().__init__(cwd, level)
+
+        monkeypatch.setattr(cli, "SessionLogger", _CapturingLogger)
+        monkeypatch.setattr(cli, "run_agent", lambda *a, **k: None)
+        monkeypatch.setattr(cli, "_init_mcp", lambda mcp: None)
+
+        import sys
+        monkeypatch.setattr(sys, "argv", ["jarvis", "-p", "hi", "--debug"])
+        with pytest.raises(SystemExit):
+            cli.main()
+
+        assert levels["level"] == "debug"
 
     def test_exit_code_one_on_error(self, monkeypatch, capsys):
         def failing_run_agent(*a, **k):

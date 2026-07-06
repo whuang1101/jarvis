@@ -11,6 +11,20 @@ console = Console()
 # Claude-Code-style accent for the assistant/tool bullet
 ACCENT = "#d97757"
 
+# Pygments style used for fenced code blocks in rendered markdown. Set from
+# Settings.theme at startup (cli.py) and by `/theme`; an unknown pygments style
+# name degrades to Rich's default rather than raising.
+_code_theme = "monokai"
+
+
+def set_code_theme(name: str) -> None:
+    global _code_theme
+    _code_theme = name
+
+
+def get_code_theme() -> str:
+    return _code_theme
+
 
 def print_banner(model: str = "", cwd: str = "") -> None:
     lines = ["[bold]✻ Welcome to Jarvis![/bold]"]
@@ -36,7 +50,7 @@ def print_jarvis_header() -> None:
 
 def make_live_markdown() -> Live:
     return Live(
-        Markdown(""),
+        Markdown("", code_theme=_code_theme),
         console=console,
         refresh_per_second=15,
         vertical_overflow="visible",
@@ -45,7 +59,7 @@ def make_live_markdown() -> Live:
 
 def render_markdown_block(text: str) -> Padding:
     """Assistant markdown, indented under the ⏺ bullet."""
-    return Padding(Markdown(text), (0, 0, 0, 2))
+    return Padding(Markdown(text, code_theme=_code_theme), (0, 0, 0, 2))
 
 
 def print_assistant_markdown(text: str) -> None:

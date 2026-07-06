@@ -1,10 +1,43 @@
 from __future__ import annotations
 
+import base64
 from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .client import JarvisClient
+
+_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
+
+
+def _image_data_url(path: Path) -> str:
+    ext = path.suffix.lower().lstrip(".")
+    mime = "jpeg" if ext == "jpg" else ext
+    encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+    return f"data:image/{mime};base64,{encoded}"
+
+
+def build_multimodal_content(text: str) -> str | list[dict[str, Any]]:
+    """Scan whitespace-separated tokens in `text` for existing image file paths
+    and turn them into OpenAI vision content parts alongside the text. Returns
+    `text` unchanged if none of its tokens are image paths that exist on disk.
+    Trailing sentence punctuation (e.g. ``what's in shot.png?``) is stripped
+    before the path is tested so the token still resolves to a real file."""
+    image_paths = [
+        candidate
+        for word in text.split()
+        for candidate in (word.rstrip("?.,!:;)"),)
+        if Path(candidate).suffix.lower() in _IMAGE_EXTENSIONS and Path(candidate).is_file()
+    ]
+    if not image_paths:
+        return text
+    parts: list[dict[str, Any]] = [{"type": "text", "text": text}]
+    for image_path in image_paths:
+        parts.append({
+            "type": "image_url",
+            "image_url": {"url": _image_data_url(Path(image_path))},
+        })
+    return parts
 
 # Price per 1M tokens in USD (input, output)
 _PRICING: dict[str, tuple[float, float]] = {
@@ -110,6 +143,7 @@ class ContextManager:
     def __init__(self, project_context: str | None = None) -> None:
         self._history: list[dict[str, Any]] = []
         self._project_context = project_context
+        self._pinned: list[str] = []
 
     @property
     def system_message(self) -> dict[str, Any]:
@@ -121,9 +155,28 @@ class ContextManager:
             with open(memory_path, 'r') as f:
                 memory_content = f.read()
                 content += f"\n\n## Persistent Memory\n\n{memory_content}"
+        if self._pinned:
+            content += "\n\n## Pinned\n\n" + "\n".join(f"- {p}" for p in self._pinned)
         if _plan_mode:
             content += _PLAN_MODE_PROMPT
         return {"role": "system", "content": content}
+
+    def pin(self, text: str) -> None:
+        """Pin a note into the system prompt. Pinned notes survive `clear()` and
+        `compact()` — they live outside `_history` — so use them for instructions
+        that must not get summarized away or wiped."""
+        self._pinned.append(text)
+
+    @property
+    def pinned(self) -> list[str]:
+        return list(self._pinned)
+
+    def unpin(self, index: int) -> bool:
+        """Remove the pinned note at 1-based `index`. Returns False if out of range."""
+        if not (1 <= index <= len(self._pinned)):
+            return False
+        del self._pinned[index - 1]
+        return True
 
     def set_project_context(self, text: str) -> None:
         self._project_context = text

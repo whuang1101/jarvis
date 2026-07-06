@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, cast
 
 from openai import AzureOpenAI
-from openai.types.chat import ChatCompletionChunk
+from openai.types.chat import ChatCompletionChunk, ChatCompletionMessageParam
 
 from .config import Config
 
@@ -52,7 +52,7 @@ class JarvisClient:
     ) -> CompleteResult:
         response = self._client.chat.completions.create(
             model=self._deployment,
-            messages=messages,
+            messages=cast(list[ChatCompletionMessageParam], messages),
             stream=False,
         )
         usage = response.usage

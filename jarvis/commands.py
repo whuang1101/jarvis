@@ -8,7 +8,14 @@ from pathlib import Path
 
 from .client import JarvisClient
 from .context import ContextManager, UsageTracker, is_plan_mode, set_plan_mode
-from .formatter import print_command_output, print_system, print_error, console
+from .formatter import (
+    console,
+    get_code_theme,
+    print_command_output,
+    print_error,
+    print_system,
+    set_code_theme,
+)
 from .permissions import (
     is_auto_mode,
     is_dangerously_skip_permissions,
@@ -29,6 +36,9 @@ _HELP_TEXT = """
   [cyan]/compact[/cyan]       Summarize and compress conversation history
   [cyan]/usage[/cyan]         Show token usage and estimated cost for this session
   [cyan]/model [name][/cyan]  Show or switch the current model
+  [cyan]/theme [name][/cyan]  Show or switch the Rich syntax highlighting theme
+  [cyan]/diff[/cyan]          Show uncommitted changes (git diff HEAD)
+  [cyan]/pin [text][/cyan]    Pin a note into the system prompt (survives /compact and /clear); no arg lists pins
   [cyan]/file <path>[/cyan]   Load a file into context
   [cyan]/run <cmd>[/cyan]     Run a shell command and add output to context
   [cyan]/plan[/cyan]          Toggle plan mode (Jarvis drafts a plan before making changes)
@@ -48,7 +58,7 @@ _HELP_TEXT = """
   [cyan]/resume <n>[/cyan]    Load a session from /sessions into this conversation
   [cyan]/memory[/cyan]        Manage persistent memory (`~/.jarvis/memory.md`)
   [cyan]/init[/cyan]          Create a JARVIS.md project context file here
-  [cyan]/selftest[/cyan]      Run Jarvis's own test suite (pytest)
+  [cyan]/selftest[/cyan]      Run Jarvis's own test suite (pytest) and type-check it (mypy)
   [cyan]/commit[/cyan]        Stage changes and have Jarvis write and make the commit
   [cyan]/review [pr#][/cyan]  Review the diff against main, or a PR's diff if given
   [cyan]/exit[/cyan]          Exit Jarvis
@@ -176,6 +186,9 @@ def handle_command(
                 "/compact",
                 "/usage",
                 "/model",
+                "/theme",
+                "/diff",
+                "/pin",
                 "/config",
                 "/file",
                 "/run",
@@ -312,12 +325,61 @@ def handle_command(
             print_system(f"Switched to {arg}")
         return None
 
+    if cmd == "/theme":
+        if not arg:
+            print_command_output(f"Current theme: {get_code_theme()}")
+            return None
+        set_code_theme(arg)
+        try:
+            persist_setting("theme", arg)
+            print_system(f"Theme set to {arg}.")
+        except ValueError as e:
+            print_error(str(e))
+        return None
+
+    if cmd == "/diff":
+        try:
+            result = subprocess.run(
+                ["git", "diff", "HEAD"], capture_output=True, text=True, timeout=30
+            )
+        except subprocess.TimeoutExpired:
+            print_error("git diff timed out.")
+            return None
+        except Exception as e:
+            print_error(f"Failed to get diff: {e}")
+            return None
+        if result.returncode != 0:
+            print_error(f"git diff failed: {result.stderr.strip()}")
+            return None
+        diff_output = result.stdout.strip()
+        if not diff_output:
+            print_system("No uncommitted changes.")
+            return None
+        print_command_output(diff_output)
+        return None
+
+    if cmd == "/pin":
+        if context is None:
+            print_error("No active context to pin into.")
+            return None
+        if not arg:
+            if context.pinned:
+                console.print("\n[bold cyan]Pinned notes:[/bold cyan]")
+                for i, p in enumerate(context.pinned, start=1):
+                    console.print(f"  [cyan]{i}[/cyan]  {p}")
+            else:
+                print_error("No pinned notes. Usage: /pin <text>")
+            return None
+        context.pin(arg)
+        print_system("Pinned — this note survives /compact and /clear.")
+        return None
+
     if cmd == "/config":
         if not arg:
             settings, sources = Settings.load_with_sources()
             console.print("\n[bold cyan]Effective settings:[/bold cyan]")
-            for f in fields(Settings):
-                console.print(f"  [cyan]{f.name:<28}[/cyan] {getattr(settings, f.name)!r:<20} [dim]({sources[f.name]})[/dim]")
+            for fld in fields(Settings):
+                console.print(f"  [cyan]{fld.name:<28}[/cyan] {getattr(settings, fld.name)!r:<20} [dim]({sources[fld.name]})[/dim]")
             return None
 
         key_value = arg.split(None, 1)
@@ -513,6 +575,22 @@ def handle_command(
             print_error("pytest is not installed in this environment (pip install pytest).")
         except subprocess.TimeoutExpired:
             print_error("Test run timed out after 120s.")
+
+        print_system("Running mypy...")
+        try:
+            mypy_result = subprocess.run(
+                [sys.executable, "-m", "mypy", str(Path(__file__).parent)],
+                capture_output=True, text=True, timeout=120,
+            )
+            print_command_output(mypy_result.stdout.strip() or mypy_result.stderr.strip())
+            if mypy_result.returncode == 0:
+                print_system("✓ mypy found no type errors.")
+            else:
+                print_error("✗ mypy found type errors.")
+        except FileNotFoundError:
+            print_error("mypy is not installed in this environment (pip install mypy).")
+        except subprocess.TimeoutExpired:
+            print_error("mypy run timed out after 120s.")
         return None
 
     if cmd == "/init":

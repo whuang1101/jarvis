@@ -203,7 +203,7 @@ class _DiffError(str):
     """A diff-computation error message (distinct from a real diff string)."""
 
 
-def _edit_diff(path: str, old_string: str, new_string: str, replace_all: bool = False) -> str | None:
+def _edit_diff(path: str, old_string: str, new_string: str, replace_all: bool = False) -> str:
     try:
         original = Path(path).read_text(encoding="utf-8", errors="replace")
     except FileNotFoundError:
