@@ -489,6 +489,67 @@ user through the full slash command.*
 
 ---
 
+## Phase 12 — `@path` file mentions (inline a file into the prompt)
+
+*Re-surveying PARITY top-to-bottom, the ❌ rows above this one are either
+already-shipped-but-stale (todo list, subagents, vision image input, background &
+streamed command output, allow/deny + persistent "Always" rules, the settings
+overlay, and `--continue`/`/sessions`/`/resume` all live in the tree) or large
+non-self-contained phases the loop is allowed to skip: `Sandboxed command
+execution` needs OS-level tooling (bubblewrap / sandbox-exec) that the pytest CI
+can't exercise, and `/rewind` is an explicitly "big" multi-phase checkpoint-and-
+restore effort, not a single increment. The topmost genuinely-missing, self-
+contained, human-resource-free item is `@file` mentions: a `/file` command already
+loads a whole file into context, but there is no inline `@path` in an ordinary
+message, so referencing a file mid-sentence forces the user to break flow and run a
+command first. The scan mirrors the existing `build_multimodal_content` image
+helper, so it drops in beside it.*
+
+- [ ] **12.1 `expand_file_mentions` helper.**
+  In `jarvis/context.py`, next to `build_multimodal_content` (around
+  `context.py:20`), add `expand_file_mentions(text: str) -> str`. Split `text` on
+  whitespace; for every token starting with `@`, strip the leading `@` and any
+  trailing sentence punctuation (`text.rstrip("?.,!:;)")` on the remainder), and
+  keep the candidate if `Path(candidate).is_file()` **and** its suffix is NOT in the
+  existing `_IMAGE_EXTENSIONS` set (image `@mentions` are left untouched so
+  `build_multimodal_content` still routes them to vision). For each surviving path,
+  read it with `open(..., encoding="utf-8", errors="replace")` inside a
+  `try/except OSError` (on failure skip that mention silently, never raise) and
+  collect its content. If no mentions resolve, return `text` unchanged; otherwise
+  return `text` with, appended once per file, a block matching the `/file` command's
+  format (`commands.py:544`): `f"\n\n[File: {path}]\n\`\`\`\n{content}\n\`\`\`"`. The
+  original `@path` token stays in the message so the model sees the reference.
+  *Verify:* pytest writes a `notes.txt` containing `"hello world"` under `tmp_path`
+  and asserts `expand_file_mentions(f"summarize @{notes} please")` returns a string
+  containing both `"[File:"` and `"hello world"`; a `@missing.txt` token that has no
+  file returns the text unchanged; a `@shot.png` token pointing at a real image file
+  is returned unchanged (left for the vision path). Existing `test_context.py` tests
+  stay green.
+
+- [ ] **12.2 Wire `@path` expansion into the input loop.**
+  In `jarvis/cli.py`, extend the existing import at `cli.py:56` to also import
+  `expand_file_mentions` from `.context`, and at the agent dispatch (`cli.py:354`)
+  wrap the input so mentions expand before the multimodal/image scan:
+  `run_agent(build_multimodal_content(expand_file_mentions(user_input)), client,
+  context, tracker, logger, session)`. Add a line to the `/file` entry in
+  `commands.py:_HELP_TEXT` documenting that an inline `@path` in any message pulls
+  that file's contents in without the command (images still route to vision).
+  *Verify:* grep confirms `cli.py` imports `expand_file_mentions` and that
+  `cli.py:354` nests `expand_file_mentions(user_input)` inside
+  `build_multimodal_content(...)`, and that `_HELP_TEXT` mentions `@path`.
+  `/selftest` (pytest) green.
+
+- [ ] **12.3 Docs + parity flip.**
+  In JARVIS.md, note under the commands/input section that typing an inline `@path`
+  in a normal message attaches that file's contents (equivalent to `/file`, but
+  usable mid-sentence and stackable with the surrounding text); image `@mentions`
+  continue to route to vision. Flip PARITY.md's `@file mentions to pull files into a
+  message` row from ❌ to ✅.
+  *Verify:* `/selftest` (pytest) green; grep confirms the PARITY `@file mentions`
+  row is ✅ and JARVIS.md mentions the inline `@path` file syntax.
+
+---
+
 ## Standing orders (apply to every step)
 
 - **Registration invariants:** new tool → `tools/__init__.py` `_REGISTRY` + JARVIS.md
