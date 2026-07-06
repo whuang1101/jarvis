@@ -466,7 +466,7 @@ user through the full slash command.*
   `tmp_path/".jarvis/memory.md"` then contains `"recall this"`; a second call
   appends a second line (file has both). Existing `/memory` tests stay green.
 
-- [ ] **11.2 Wire the `#` shortcut into the input loop.**
+- [x] **11.2 Wire the `#` shortcut into the input loop.**
   In `jarvis/cli.py`, in the main REPL loop after the empty-input guard (around
   `cli.py:324`) and **before** the `if user_input.startswith("/")` dispatch, add a
   branch: `if user_input.startswith("#"):` extract `note = user_input[1:].strip()`,
