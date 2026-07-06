@@ -181,7 +181,7 @@ These are all small, independent, and already listed in TODO.md § Robustness.
   cwd and first user message as metadata). This is separate from the JSONL event log.
   *Verify:* pytest for save/load round-trip.
 
-- [ ] **3.3 `jarvis --continue` and `/resume`.**
+- [x] **3.3 `jarvis --continue` and `/resume`.**
   `--continue` loads the most recent session for the current cwd back into
   `ContextManager`. `/sessions` lists the last 10 (date, cwd, first message);
   `/resume <n>` loads one mid-REPL.

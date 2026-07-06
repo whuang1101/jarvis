@@ -18,6 +18,14 @@ class TestLookupPrice:
         assert _lookup_price("GPT-4O-MINI") == _PRICING["gpt-4o-mini"]
 
 
+class TestLoadHistory:
+    def test_replaces_existing_history(self):
+        ctx = ContextManager()
+        ctx.append({"role": "user", "content": "old"})
+        ctx.load_history([{"role": "user", "content": "restored"}])
+        assert ctx._history == [{"role": "user", "content": "restored"}]
+
+
 class TestCleanHistory:
     def _ctx(self, history):
         ctx = ContextManager()

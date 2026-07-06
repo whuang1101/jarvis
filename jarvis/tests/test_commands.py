@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import jarvis.sessions as sessions_module
 import jarvis.settings as settings_module
 from jarvis.commands import handle_command
+from jarvis.context import ContextManager
+from jarvis.sessions import SessionStore
 
 
 class TestConfigCommand:
@@ -52,6 +55,66 @@ class TestConfigCommand:
         monkeypatch.chdir(tmp_path)
 
         handle_command("/config theme", None, None, None)
+
+        out = capsys.readouterr().out
+        assert "Usage" in out
+
+
+class TestSessionsCommand:
+    def test_lists_no_sessions(self, tmp_path, monkeypatch, capsys):
+        monkeypatch.setattr(sessions_module, "_SESSIONS_DIR", tmp_path / "missing")
+
+        handle_command("/sessions", None, None, None)
+
+        out = capsys.readouterr().out
+        assert "No saved sessions" in out
+
+    def test_lists_recent_sessions(self, tmp_path, monkeypatch, capsys):
+        monkeypatch.setattr(sessions_module, "_SESSIONS_DIR", tmp_path)
+        SessionStore(cwd="/some/project", session_id="20260101-100000-aaaaaa").save(
+            [{"role": "user", "content": "hello there"}]
+        )
+
+        handle_command("/sessions", None, None, None)
+
+        out = capsys.readouterr().out
+        assert "2026-01-01 10:00" in out
+        assert "/some/project" in out
+        assert "hello there" in out
+
+
+class TestResumeCommand:
+    def test_resume_loads_history_into_context(self, tmp_path, monkeypatch, capsys):
+        monkeypatch.setattr(sessions_module, "_SESSIONS_DIR", tmp_path)
+        SessionStore(cwd="/some/project", session_id="20260101-100000-aaaaaa").save(
+            [{"role": "user", "content": "hello"}, {"role": "assistant", "content": "hi"}]
+        )
+        context = ContextManager()
+        session = SessionStore(cwd="/current/dir")
+
+        handle_command("/resume 1", None, context, None, session)
+
+        assert context._history == [
+            {"role": "user", "content": "hello"},
+            {"role": "assistant", "content": "hi"},
+        ]
+        assert session.session_id == "20260101-100000-aaaaaa"
+        assert session.cwd == "/some/project"
+        out = capsys.readouterr().out
+        assert "Resumed session" in out
+
+    def test_resume_out_of_range_reports_error(self, tmp_path, monkeypatch, capsys):
+        monkeypatch.setattr(sessions_module, "_SESSIONS_DIR", tmp_path)
+
+        handle_command("/resume 3", None, ContextManager(), None)
+
+        out = capsys.readouterr().out
+        assert "No session #3" in out
+
+    def test_resume_without_arg_reports_usage(self, tmp_path, monkeypatch, capsys):
+        monkeypatch.setattr(sessions_module, "_SESSIONS_DIR", tmp_path)
+
+        handle_command("/resume", None, ContextManager(), None)
 
         out = capsys.readouterr().out
         assert "Usage" in out
