@@ -4,6 +4,7 @@ import os
 from typing import Any
 
 from .base import BaseTool
+from .documents import render_notebook
 
 _TRUNCATE_AT = 10_000
 _MAX_FULL_READ_BYTES = 100_000  # over this, require offset/limit
@@ -36,6 +37,12 @@ class ReadFileTool(BaseTool):
             return f"Error: file not found: {path}"
         except OSError as e:
             return f"Error reading {path}: {e}"
+
+        if path.lower().endswith(".ipynb"):
+            content = render_notebook(path)
+            if len(content) > _TRUNCATE_AT:
+                return content[:_TRUNCATE_AT] + f"\n\n[... truncated — output is {len(content)} chars, showing first {_TRUNCATE_AT}]"
+            return content
 
         if size > _MAX_FULL_READ_BYTES and not (offset or limit):
             return (

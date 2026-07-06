@@ -313,7 +313,7 @@ JSON); PDFs add `pypdf`. In both cases the extraction happens BEFORE the
 `_MAX_FULL_READ_BYTES` guard (the raw file is binary/large but the extracted text
 is small), and the existing `_TRUNCATE_AT` cap still applies to the result.
 
-- [ ] **8.1 Jupyter notebook rendering.**
+- [x] **8.1 Jupyter notebook rendering.**
   Add `jarvis/tools/documents.py` with `render_notebook(path: str) -> str`: parse
   the `.ipynb` JSON and emit each cell as a labeled block — `# %% [markdown]` /
   `# %% [code]` headers, the joined `source`, and for code cells a compact
