@@ -439,6 +439,56 @@ the transcript.*
 
 ---
 
+## Phase 11 — Quick-memory `#` shortcut (append a memory from the prompt)
+
+*The remaining PARITY ❌ rows above the sensitive-file item that just shipped are
+either already-implemented-but-stale (todo/subagent/vision, background & streamed
+command output, allow/deny + persistent "Always" rules, the settings overlay, and
+`--continue`/session-listing all live in the tree) or earmarked big phases that
+need OS-level tooling and policy decisions (`Sandboxed command execution` is a
+whole Phase-6-scale security item, not a self-contained increment). The topmost
+genuinely-missing, self-contained, human-resource-free item is the `#` shortcut to
+append a memory quickly: `/memory add …` and `~/.jarvis/memory.md` already exist,
+but there is no one-keystroke `#text` path at the prompt, so quick notes force the
+user through the full slash command.*
+
+- [ ] **11.1 `append_memory` helper.**
+  In `jarvis/commands.py`, add a module-level function `append_memory(text: str) -> str`
+  that resolves `Path("~/.jarvis/memory.md").expanduser()`, `mkdir(parents=True,
+  exist_ok=True)` on its parent, appends `text.strip() + "\n"` to it, and returns
+  `"Memory updated."` on success or `f"Error: failed to add to memory: {e}"` on any
+  exception (wrap in try/except, never raise). Refactor the existing `/memory add `
+  branch (around `commands.py:274`) to call `append_memory(text_to_add)` and print
+  its return string via the existing formatter helper instead of duplicating the
+  open/write logic.
+  *Verify:* pytest monkeypatches `Path.home` to `tmp_path`, asserts
+  `append_memory("recall this")` returns `"Memory updated."` and that
+  `tmp_path/".jarvis/memory.md"` then contains `"recall this"`; a second call
+  appends a second line (file has both). Existing `/memory` tests stay green.
+
+- [ ] **11.2 Wire the `#` shortcut into the input loop.**
+  In `jarvis/cli.py`, in the main REPL loop after the empty-input guard (around
+  `cli.py:324`) and **before** the `if user_input.startswith("/")` dispatch, add a
+  branch: `if user_input.startswith("#"):` extract `note = user_input[1:].strip()`,
+  and if `note` is non-empty lazily `from .commands import append_memory` and print
+  its result through the existing `print_system`/formatter helper; then `continue`
+  the loop so the text is never sent to the agent (a bare `#` with no text is
+  swallowed with no error). Add a `#text` line to the `/memory` entry in
+  `commands.py:_HELP_TEXT` documenting the shortcut.
+  *Verify:* pytest reuses the 11.1 `append_memory` coverage; grep confirms
+  `cli.py` contains `user_input.startswith("#")` calling `append_memory` and that
+  `_HELP_TEXT` mentions the `#` shortcut. `/selftest` (pytest) green.
+
+- [ ] **11.3 Docs + parity flip.**
+  In JARVIS.md, note under the memory/commands section that a leading `#` at the
+  prompt appends the rest of the line to `~/.jarvis/memory.md` (equivalent to
+  `/memory add`). Flip PARITY.md's `# shortcut to append a memory quickly` row from
+  ❌ to ✅.
+  *Verify:* `/selftest` (pytest) green; grep confirms the PARITY `#` shortcut row is
+  ✅ and JARVIS.md mentions the `#` memory shortcut.
+
+---
+
 ## Standing orders (apply to every step)
 
 - **Registration invariants:** new tool → `tools/__init__.py` `_REGISTRY` + JARVIS.md
