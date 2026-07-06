@@ -172,6 +172,9 @@ jarvis/
     ├── find_symbol.py   grep for definitions/references of a symbol (word-boundary matched).
     ├── glob_files.py    root.glob(pattern), files only, hidden paths skipped, newest-first,
     │                    capped at 200.
+    ├── sensitive.py      is_sensitive_path(path)/sensitive_read_error(path) — glob-matches
+    │                    basenames against secret-file patterns (.env, *.pem, id_rsa, …); not
+    │                    yet wired into any tool.
     ├── package_info.py  npm / PyPI package metadata lookup.
     ├── git_tools.py     git_status, git_diff, git_log (shared _git() helper, 15s timeout).
     ├── todo_write.py    Replaces the visible task list wholesale (content + pending/in_progress/

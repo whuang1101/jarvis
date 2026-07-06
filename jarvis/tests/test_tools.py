@@ -9,6 +9,7 @@ from jarvis.tools.list_dir import ListDirTool
 from jarvis.tools.search_files import SearchFilesTool
 from jarvis.tools.find_symbol import FindSymbolTool
 from jarvis.tools.glob_files import GlobFilesTool
+from jarvis.tools.sensitive import is_sensitive_path, sensitive_read_error
 
 
 class TestEditFile:
@@ -224,3 +225,16 @@ class TestGlobFiles:
     def test_missing_path(self, tmp_path):
         result = GlobFilesTool().execute({"pattern": "*.py", "path": str(tmp_path / "nope")})
         assert result.startswith("Error")
+
+
+class TestSensitive:
+    def test_sensitive_paths(self):
+        for path in (".env", "/tmp/proj/.env.local", "key.pem", "id_rsa", "~/.netrc"):
+            assert is_sensitive_path(path) is True
+
+    def test_non_sensitive_paths(self):
+        for path in ("main.py", "README.env.md", "envvars.py"):
+            assert is_sensitive_path(path) is False
+
+    def test_read_error_message(self):
+        assert sensitive_read_error("x").startswith("Error:")

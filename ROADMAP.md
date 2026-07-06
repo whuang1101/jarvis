@@ -395,7 +395,7 @@ is `Sensitive-file protection (.env etc. excluded from reads)` — nothing in
 stray `read_file .env` or `search_files SECRET` leaks credentials straight into
 the transcript.*
 
-- [ ] **10.1 Sensitive-path helper.**
+- [x] **10.1 Sensitive-path helper.**
   Add `jarvis/tools/sensitive.py` with a module-level tuple
   `_SENSITIVE_GLOBS = (".env", ".env.*", "*.pem", "*.key", "id_rsa", "id_dsa",
   "id_ecdsa", "id_ed25519", "*.p12", "*.pfx", "credentials", ".netrc",
