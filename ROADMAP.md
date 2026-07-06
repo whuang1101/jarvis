@@ -526,7 +526,7 @@ helper, so it drops in beside it.*
   is returned unchanged (left for the vision path). Existing `test_context.py` tests
   stay green.
 
-- [ ] **12.2 Wire `@path` expansion into the input loop.**
+- [x] **12.2 Wire `@path` expansion into the input loop.**
   In `jarvis/cli.py`, extend the existing import at `cli.py:56` to also import
   `expand_file_mentions` from `.context`, and at the agent dispatch (`cli.py:354`)
   wrap the input so mentions expand before the multimodal/image scan:
