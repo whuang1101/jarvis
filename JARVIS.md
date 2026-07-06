@@ -113,7 +113,9 @@ jarvis/
 │                    tool-call iterations by passing `max_iterations=N` into run_agent
 │                    (default None uses the configured max_tool_iterations). `--model DEPLOYMENT`
 │                    overrides `config.deployment` via `dataclasses.replace` in both one-shot mode
-│                    and before the interactive REPL's client is built.
+│                    and before the interactive REPL's client is built. `--output-format
+│                    {text,json,stream-json}` (default `text`) selects headless -p rendering; parsed
+│                    into `args.output_format` (routing wired in a later step).
 ├── agent.py         Streaming tool-use loop. run_agent() + _stream_turn() (renders live) +
 │                    _stream_with_retry() (lazy generator) + _accumulate_tool_calls().
 ├── client.py        Only file importing openai for requests. stream() (lazy, include_usage),
@@ -143,6 +145,8 @@ jarvis/
 │                    italic markdown, own live block, closes before the answer's `⏺` prints),
 │                    print_tool_use (`⏺ Read(path)`), print_tool_result (`⎿  summary +N lines`),
 │                    make_live_markdown, print_system/print_error/print_command_output.
+│                    redirect_console(file) sets `console.file` so every print/status/Live call
+│                    diverts at once (used to send human render to stderr in headless modes).
 ├── logger.py        SessionLogger — JSONL to ~/.jarvis/logs/YYYY-MM-DD.jsonl (session_start,
 │                    user, assistant, tool_call, tool_result[≤500 chars], error, session_end).
 ├── sessions.py      SessionStore — dumps full ContextManager history (cwd + first user message

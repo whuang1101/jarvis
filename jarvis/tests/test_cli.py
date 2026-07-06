@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import dataclasses
+import sys
 
 import pytest
 
 import jarvis.cli as cli
 import jarvis.commands as commands_module
+import jarvis.formatter as formatter_module
 import jarvis.logger as logger_module
 import jarvis.permissions as permissions_module
 from jarvis.config import Config
@@ -72,6 +74,26 @@ class TestParseArgs:
     def test_model_flag(self):
         args = cli._parse_args(["--model", "gpt-4o"])
         assert args.model == "gpt-4o"
+
+    def test_output_format_defaults_text(self):
+        args = cli._parse_args([])
+        assert args.output_format == "text"
+
+    def test_output_format_flag(self):
+        args = cli._parse_args(["--output-format", "json"])
+        assert args.output_format == "json"
+
+    def test_output_format_rejects_bogus_value(self):
+        with pytest.raises(SystemExit):
+            cli._parse_args(["--output-format", "bogus"])
+
+    def test_redirect_console_diverts_to_given_file(self):
+        original_file = formatter_module.console._file
+        try:
+            formatter_module.redirect_console(sys.stderr)
+            assert formatter_module.console.file is sys.stderr
+        finally:
+            formatter_module.console._file = original_file
 
 
 class TestConfigModelOverride:

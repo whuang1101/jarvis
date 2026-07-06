@@ -8,6 +8,12 @@ from rich.panel import Panel
 
 console = Console()
 
+
+def redirect_console(file) -> None:
+    """Divert all console.print/status/Live rendering to `file` (e.g. sys.stderr)."""
+    console.file = file
+
+
 # Claude-Code-style accent for the assistant/tool bullet
 ACCENT = "#d97757"
 

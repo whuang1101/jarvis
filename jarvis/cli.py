@@ -38,6 +38,13 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         "--model", dest="model", default=None, metavar="DEPLOYMENT",
         help="Override the Azure deployment name for this run.",
     )
+    parser.add_argument(
+        "--output-format", dest="output_format",
+        choices=("text", "json", "stream-json"), default="text",
+        help="Headless output format for -p mode: text (default human render), "
+             "json (one result object), or stream-json (newline-delimited event "
+             "objects).",
+    )
     return parser.parse_args(argv)
 
 
