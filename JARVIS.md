@@ -147,8 +147,11 @@ jarvis/
     │                    offset/limit (1-based line slice, output prefixed "N: line").
     │                    `.ipynb` paths are dispatched to documents.render_notebook
     │                    (cell source + compact `# Out:` output text) before the size guard.
+    │                    `.pdf` paths are dispatched to documents.extract_pdf_text likewise.
     ├── documents.py      render_notebook(path) — renders a Jupyter notebook's cells as
     │                    `# %% [markdown]`/`# %% [code]` blocks with a `# Out:` section.
+    │                    extract_pdf_text(path) — concatenates pypdf page text with
+    │                    `--- page N ---` separators; returns "Error: ..." on bad PDFs.
     ├── write_file.py    Write a file (through permission gate).
     ├── edit_file.py     Replace old_string→new_string; old_string must appear exactly once.
     ├── run_command.py   Run a shell command via Popen, streaming stdout/stderr lines live to
