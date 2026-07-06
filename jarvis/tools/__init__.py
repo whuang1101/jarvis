@@ -4,6 +4,7 @@ from .base import BaseTool
 from .read_file import ReadFileTool
 from .write_file import WriteFileTool
 from .run_command import RunCommandTool
+from .task_output import TaskOutputTool
 from .list_dir import ListDirTool
 from .search_files import SearchFilesTool
 from .fetch_url import FetchUrlTool
@@ -19,6 +20,7 @@ _REGISTRY: list[BaseTool] = [
     WriteFileTool(),
     EditFileTool(),
     RunCommandTool(),
+    TaskOutputTool(),
     ListDirTool(),
     SearchFilesTool(),
     FetchUrlTool(),
