@@ -324,6 +324,13 @@ def main() -> None:
             if not user_input:
                 continue
 
+            if user_input.startswith("#"):
+                note = user_input[1:].strip()
+                if note:
+                    from .commands import append_memory
+                    print_system(append_memory(note))
+                continue
+
             if user_input.startswith("/"):
                 try:
                     result = handle_command(user_input, client, context, tracker, session)

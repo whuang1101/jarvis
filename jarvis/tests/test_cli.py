@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 import jarvis.cli as cli
+import jarvis.commands as commands_module
 import jarvis.logger as logger_module
 import jarvis.permissions as permissions_module
 
@@ -165,3 +166,55 @@ class TestOneShotMode(object):
 
         assert exc.value.code == 1
         assert "boom" in capsys.readouterr().out
+
+
+class TestHashMemoryShortcut:
+    @pytest.fixture(autouse=True)
+    def _isolate(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(logger_module, "_LOG_DIR", tmp_path)
+        monkeypatch.setattr(cli, "Config", _FakeConfig)
+        monkeypatch.setattr(cli, "JarvisClient", _FakeClient)
+        monkeypatch.setattr(permissions_module, "_auto_mode", False)
+        monkeypatch.setattr(cli, "_init_mcp", lambda mcp: None)
+        monkeypatch.setattr(cli, "run_agent", lambda *a, **k: pytest.fail("agent should not run for a # note"))
+
+        import sys
+        monkeypatch.setattr(sys, "argv", ["jarvis"])
+
+    def _run_with_inputs(self, monkeypatch, inputs):
+        responses = iter(inputs)
+
+        def fake_read(status):
+            try:
+                return next(responses)
+            except StopIteration:
+                raise EOFError
+
+        monkeypatch.setattr(cli, "_read_full_input", fake_read)
+
+    def test_note_is_appended_to_memory_and_not_sent_to_agent(self, monkeypatch, capsys):
+        calls = {}
+
+        def fake_append_memory(text):
+            calls["text"] = text
+            return "Memory updated."
+
+        monkeypatch.setattr(commands_module, "append_memory", fake_append_memory)
+        self._run_with_inputs(monkeypatch, ["# remember this thing"])
+
+        cli.main()
+
+        assert calls["text"] == "remember this thing"
+        assert "Memory updated." in capsys.readouterr().out
+
+    def test_bare_hash_is_swallowed_without_error(self, monkeypatch, capsys):
+        monkeypatch.setattr(
+            commands_module,
+            "append_memory",
+            lambda text: pytest.fail("append_memory should not be called"),
+        )
+        self._run_with_inputs(monkeypatch, ["#"])
+
+        cli.main()
+
+        assert "Error" not in capsys.readouterr().out

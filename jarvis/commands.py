@@ -57,6 +57,7 @@ _HELP_TEXT = """
   [cyan]/sessions[/cyan]      List the last 10 saved sessions (date, cwd, first message)
   [cyan]/resume <n>[/cyan]    Load a session from /sessions into this conversation
   [cyan]/memory[/cyan]        Manage persistent memory (`~/.jarvis/memory.md`)
+  [cyan]#text[/cyan]          Shortcut: append `text` to memory without sending it to the agent
   [cyan]/init[/cyan]          Create a JARVIS.md project context file here
   [cyan]/selftest[/cyan]      Run Jarvis's own test suite (pytest) and type-check it (mypy)
   [cyan]/commit[/cyan]        Stage changes and have Jarvis write and make the commit

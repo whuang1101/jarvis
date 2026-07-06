@@ -273,7 +273,10 @@ effective settings from `Settings.load_with_sources()` (default/global/project);
 `sessions.list_sessions(limit=10)`; `/resume <n>` loads that entry via `SessionStore.load` into
 `context.load_history()` and updates the REPL's live `SessionStore` in place so later autosaves
 keep writing to the resumed session file. `/memory add <text>` appends to `~/.jarvis/memory.md`
-via the module-level `append_memory(text)` helper (creates the parent dir, never raises).
+via the module-level `append_memory(text)` helper (creates the parent dir, never raises). The REPL
+loop also treats a bare `#text` line (checked before the `/` dispatch) as a shortcut for the same
+`append_memory` call, printing the result without sending the text to the agent; `#` with no text
+is a no-op.
 
 ### Plan mode vs auto mode (independent toggles)
 
