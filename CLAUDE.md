@@ -4,6 +4,15 @@ Python CLI coding agent (Azure OpenAI). Source in `jarvis/`, tests in `jarvis/te
 Ignore `build/` and `.venv/` (never edit). Full architecture docs live in JARVIS.md —
 do NOT read it unless a step requires it; the notes below cover the common cases.
 
+## You are running unattended
+
+This checkout is a disposable automation workspace and no human can answer you
+mid-run. NEVER stop to ask for confirmation — a question ends the run and wastes
+the quota batch. Make the call yourself: prefer `git stash -u` over discarding
+when unsure about tree state, prefer skipping a step (note why in the log output)
+over blocking on approval. The only unrecoverable mistake is pushing red to main,
+and branch protection + CI already prevent that.
+
 ## Working style (token budget)
 
 - Your quota is the constraint. Spend tokens editing and testing, not exploring:
