@@ -31,6 +31,12 @@ class ReadFileTool(BaseTool):
         offset = args.get("offset")
         limit = args.get("limit")
 
+        from .sensitive import is_sensitive_path, sensitive_read_error
+        from ..permissions import is_dangerously_skip_permissions
+
+        if is_sensitive_path(path) and not is_dangerously_skip_permissions():
+            return sensitive_read_error(path)
+
         try:
             size = os.path.getsize(path)
         except FileNotFoundError:

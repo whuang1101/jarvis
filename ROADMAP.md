@@ -410,7 +410,7 @@ the transcript.*
   `main.py`, `README.env.md`, and `envvars.py`; `sensitive_read_error("x")` returns
   a string starting with `"Error:"`.
 
-- [ ] **10.2 Wire the guard into read_file and search_files.**
+- [x] **10.2 Wire the guard into read_file and search_files.**
   In `read_file.py:execute`, before the `os.path.getsize` call, lazily import
   `from .sensitive import is_sensitive_path, sensitive_read_error` and
   `from ..permissions import is_dangerously_skip_permissions` (inside the method,
