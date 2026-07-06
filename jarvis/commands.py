@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+from dataclasses import fields
 from pathlib import Path
 
 from .client import JarvisClient
@@ -14,6 +15,7 @@ from .permissions import (
     set_auto_mode,
     set_dangerously_skip_permissions,
 )
+from .settings import Settings, persist_setting
 
 _HELP_TEXT = """
 [bold cyan]Available commands:[/bold cyan]
@@ -37,6 +39,9 @@ _HELP_TEXT = """
                   Toggle Claude-style permission bypass for all tool calls
   [cyan]/fix[/cyan]           Send clipboard contents as an error to fix
   [cyan]/copy[/cyan]          Copy the last assistant response to the clipboard
+  [cyan]/config[/cyan]        Show effective settings and their source
+  [cyan]/config <key> <value>[/cyan]
+                  Write a setting to the global config
   [cyan]/save <file>[/cyan]   Save conversation history to a markdown file.
   [cyan]/memory[/cyan]        Manage persistent memory (`~/.jarvis/memory.md`)
   [cyan]/init[/cyan]          Create a JARVIS.md project context file here
@@ -131,6 +136,7 @@ def handle_command(
                 "/compact",
                 "/usage",
                 "/model",
+                "/config",
                 "/file",
                 "/run",
                 "/plan",
@@ -259,6 +265,26 @@ def handle_command(
         else:
             client.set_deployment(arg)
             print_system(f"Switched to {arg}")
+        return None
+
+    if cmd == "/config":
+        if not arg:
+            settings, sources = Settings.load_with_sources()
+            console.print("\n[bold cyan]Effective settings:[/bold cyan]")
+            for f in fields(Settings):
+                console.print(f"  [cyan]{f.name:<28}[/cyan] {getattr(settings, f.name)!r:<20} [dim]({sources[f.name]})[/dim]")
+            return None
+
+        key_value = arg.split(None, 1)
+        if len(key_value) != 2:
+            print_error("Usage: /config <key> <value>")
+            return None
+        key, value = key_value
+        try:
+            persist_setting(key, value)
+            print_system(f"Set {key} = {value} in {Path.home() / '.jarvis' / 'config.toml'}")
+        except ValueError as e:
+            print_error(str(e))
         return None
 
     if cmd == "/restart":

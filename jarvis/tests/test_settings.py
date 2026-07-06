@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from jarvis.settings import Settings, persist_allow_pattern
+from jarvis.settings import Settings, persist_allow_pattern, persist_setting
 
 
 class TestSettingsLoad:
@@ -171,3 +171,71 @@ class TestPersistAllowPattern:
         path = tmp_path / "nested" / "config.toml"
         persist_allow_pattern("write_file(*)", path)
         assert path.exists()
+
+
+class TestLoadWithSources:
+    def test_all_defaults_when_no_files(self, tmp_path):
+        settings, sources = Settings.load_with_sources(tmp_path / "missing.toml", cwd=tmp_path)
+        assert settings == Settings()
+        assert all(s == "default" for s in sources.values())
+
+    def test_global_only_key_marked_global(self, tmp_path):
+        global_path = tmp_path / "config.toml"
+        global_path.write_text('theme = "dracula"\n')
+        settings, sources = Settings.load_with_sources(global_path, cwd=tmp_path)
+        assert settings.theme == "dracula"
+        assert sources["theme"] == "global"
+        assert sources["max_tool_iterations"] == "default"
+
+    def test_project_override_marked_project(self, tmp_path):
+        global_path = tmp_path / "config.toml"
+        global_path.write_text('theme = "dracula"\n')
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        (project_dir / ".jarvis.toml").write_text('theme = "solarized"\n')
+
+        settings, sources = Settings.load_with_sources(global_path, cwd=project_dir)
+        assert settings.theme == "solarized"
+        assert sources["theme"] == "project"
+
+
+class TestPersistSetting:
+    def test_writes_scalar_string(self, tmp_path):
+        path = tmp_path / "config.toml"
+        persist_setting("theme", "dracula", path)
+        assert Settings.load(path).theme == "dracula"
+
+    def test_writes_int(self, tmp_path):
+        path = tmp_path / "config.toml"
+        persist_setting("max_tool_iterations", "7", path)
+        assert Settings.load(path).max_tool_iterations == 7
+
+    def test_writes_bool(self, tmp_path):
+        path = tmp_path / "config.toml"
+        persist_setting("auto_mode", "true", path)
+        assert Settings.load(path).auto_mode is True
+
+    def test_preserves_other_keys(self, tmp_path):
+        path = tmp_path / "config.toml"
+        path.write_text('theme = "dracula"\n\n[permissions]\nallow = ["write_file(*)"]\n')
+        persist_setting("max_tool_iterations", "3", path)
+        settings = Settings.load(path)
+        assert settings.theme == "dracula"
+        assert settings.max_tool_iterations == 3
+        assert settings.permission_allow == ("write_file(*)",)
+
+    def test_unknown_key_raises(self, tmp_path):
+        path = tmp_path / "config.toml"
+        try:
+            persist_setting("made_up_key", "5", path)
+            assert False, "expected ValueError"
+        except ValueError as e:
+            assert "Unknown setting" in str(e)
+
+    def test_permission_keys_rejected(self, tmp_path):
+        path = tmp_path / "config.toml"
+        try:
+            persist_setting("permission_allow", "write_file(*)", path)
+            assert False, "expected ValueError"
+        except ValueError:
+            pass

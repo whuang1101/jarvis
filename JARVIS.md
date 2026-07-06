@@ -199,9 +199,11 @@ or `_RUN_AGENT_PREFIX` (`__RUN__:`) + message (the REPL strips the prefix and ru
 `run_agent`). `/retry`, `/fix`, `/go`, `/cancel` use the `_RUN_AGENT_PREFIX` path. Commands are
 case-insensitive; the argument keeps original case.
 
-Implemented commands: `/help /history /retry /undo /clear /compact /usage /model /file /run /plan
-/go /cancel /restart /auto /fix /copy /save /memory /init /selftest /exit /quit`. Every one is listed in
-`_HELP_TEXT` — keep that invariant.
+Implemented commands: `/help /history /retry /undo /clear /compact /usage /model /config /file /run
+/plan /go /cancel /restart /auto /fix /copy /save /memory /init /selftest /exit /quit`. Every one is
+listed in `_HELP_TEXT` — keep that invariant. `/config` (no args) prints effective settings from
+`Settings.load_with_sources()` (default/global/project); `/config <key> <value>` writes a scalar
+key to the global TOML via `settings.persist_setting`.
 
 ### Plan mode vs auto mode (independent toggles)
 

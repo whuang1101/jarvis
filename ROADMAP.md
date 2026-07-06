@@ -160,7 +160,7 @@ These are all small, independent, and already listed in TODO.md § Robustness.
   *Verify:* manual — approve a `git push` with "always", confirm no prompt the second time
   and the pattern appears in config.toml.
 
-- [ ] **2.5 `/config` command.**
+- [x] **2.5 `/config` command.**
   `commands.py`: `/config` prints effective settings and their source (default /
   global / project); `/config <key> <value>` writes to the global TOML.
   *Verify:* manual + `_HELP_TEXT` updated.
