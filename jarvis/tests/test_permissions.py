@@ -4,6 +4,8 @@ import pytest
 
 import jarvis.permissions as permissions
 from jarvis.permissions import (
+    _DiffError,
+    _edit_diff,
     _suggest_pattern,
     needs_permission,
     request_permission,
@@ -54,6 +56,22 @@ def test_file_ops_always_need_permission():
 def test_read_only_tools_skip_permission():
     assert not needs_permission("read_file", {"path": "x"})
     assert not needs_permission("search_files", {"pattern": "x"})
+
+
+def test_edit_diff_rejects_multiple_occurrences_with_line_numbers(tmp_path):
+    f = tmp_path / "f.txt"
+    f.write_text("aaa\nbbb\naaa\n")
+    result = _edit_diff(str(f), "aaa", "c")
+    assert isinstance(result, _DiffError)
+    assert "lines 1, 3" in result
+
+
+def test_edit_diff_allows_replace_all_for_multiple_occurrences(tmp_path):
+    f = tmp_path / "f.txt"
+    f.write_text("aaa\nbbb\naaa\n")
+    result = _edit_diff(str(f), "aaa", "c", replace_all=True)
+    assert not isinstance(result, _DiffError)
+    assert result is not None
 
 
 def test_dangerously_skip_permissions_bypasses_all_permission_checks():

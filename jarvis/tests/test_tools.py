@@ -32,6 +32,30 @@ class TestEditFile:
         assert "2 times" in result
         assert f.read_text() == "aaa bbb aaa"  # unchanged
 
+    def test_multiple_occurrences_error_includes_line_numbers(self, tmp_path):
+        f = tmp_path / "f.txt"
+        f.write_text("aaa\nbbb\naaa\n")
+        result = EditFileTool().execute({"path": str(f), "old_string": "aaa", "new_string": "c"})
+        assert "lines 1, 3" in result
+
+    def test_replace_all(self, tmp_path):
+        f = tmp_path / "f.txt"
+        f.write_text("aaa bbb aaa")
+        result = EditFileTool().execute(
+            {"path": str(f), "old_string": "aaa", "new_string": "c", "replace_all": True}
+        )
+        assert result == f"Edited {f} (2 replacements)"
+        assert f.read_text() == "c bbb c"
+
+    def test_replace_all_single_occurrence(self, tmp_path):
+        f = tmp_path / "f.txt"
+        f.write_text("hello world")
+        result = EditFileTool().execute(
+            {"path": str(f), "old_string": "world", "new_string": "jarvis", "replace_all": True}
+        )
+        assert result == f"Edited {f}"
+        assert f.read_text() == "hello jarvis"
+
 
 class TestReadFile:
     def test_reads_content(self, tmp_path):

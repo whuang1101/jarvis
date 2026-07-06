@@ -236,7 +236,7 @@ These are all small, independent, and already listed in TODO.md § Robustness.
   actions. Keep it under ~600 words.
   *Verify:* selftest passes; a smoke conversation feels right.
 
-- [ ] **5.3 Better edit tool: `replace_all` + clearer errors.**
+- [x] **5.3 Better edit tool: `replace_all` + clearer errors.**
   `edit_file` gains optional `replace_all: bool`. On the 2+-occurrence error, include
   line numbers of each occurrence so the model can disambiguate without re-reading.
   Keep the permission preview in sync (permissions.py enforces the same rule).
