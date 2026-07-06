@@ -229,7 +229,7 @@ These are all small, independent, and already listed in TODO.md § Robustness.
   the "plan display" TODO item.
   *Verify:* ask for a 3-step task; checklist renders and updates.
 
-- [ ] **5.2 System prompt tune-up.**
+- [x] **5.2 System prompt tune-up.**
   Rewrite the base system prompt in `context.py` borrowing Claude Code's proven habits:
   be concise; prefer search before read, read before edit; verify after editing; never
   fabricate file contents; use the todo tool for multi-step work; ask before destructive
