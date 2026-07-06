@@ -405,6 +405,8 @@ python3 -m pipx reinstall jarvis     # after any source change (auto-restarts in
 jarvis                                # run from a dir under this JARVIS.md
 pipx list                             # check what's installed
 cat ~/.jarvis/logs/$(date +%Y-%m-%d).jsonl | jq .   # view today's session log
+cat err.log | jarvis -p "fix this"   # piped text appended below the -p prompt
+git diff | jarvis                     # bare pipe: piped text is the whole prompt (TTY never read)
 ```
 
 ## How to add a new tool
