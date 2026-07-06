@@ -29,7 +29,7 @@ Legend: ✅ Jarvis has it · 🟡 partial · ❌ missing
 |---|---|---|
 | Read (with offset/limit, line numbers) | ✅ | |
 | Read images (vision input) | ❌ | paths/clipboard → vision content parts |
-| Read PDFs / Jupyter notebooks | ❌ | |
+| Read PDFs / Jupyter notebooks | ✅ | `read_file` auto-detects `.ipynb`/`.pdf` |
 | Write / Edit with unique-anchor + replace_all | 🟡 | no replace_all yet (ROADMAP 5.3) |
 | Bash with persistent cwd | ✅ | os.chdir on `cd` |
 | Bash background tasks (run_in_background, task output tool) | ❌ | ROADMAP 4.4 |
