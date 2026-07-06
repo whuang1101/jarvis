@@ -88,6 +88,48 @@ class TestReadFullInput:
         assert cli._read_full_input("status") == "only line"
 
 
+class TestReadPipedStdin:
+    class _FakeStdin:
+        def __init__(self, is_tty: bool, text: str = ""):
+            self._is_tty = is_tty
+            self._text = text
+            self.read_called = False
+
+        def isatty(self) -> bool:
+            return self._is_tty
+
+        def read(self) -> str:
+            self.read_called = True
+            return self._text
+
+    def test_tty_returns_none_without_reading(self, monkeypatch):
+        fake = self._FakeStdin(is_tty=True)
+        monkeypatch.setattr(cli.sys, "stdin", fake)
+        assert cli._read_piped_stdin() is None
+        assert fake.read_called is False
+
+    def test_piped_text_is_returned_stripped(self, monkeypatch):
+        fake = self._FakeStdin(is_tty=False, text="boom\n")
+        monkeypatch.setattr(cli.sys, "stdin", fake)
+        assert cli._read_piped_stdin() == "boom"
+
+    def test_whitespace_only_returns_none(self, monkeypatch):
+        fake = self._FakeStdin(is_tty=False, text="   ")
+        monkeypatch.setattr(cli.sys, "stdin", fake)
+        assert cli._read_piped_stdin() is None
+
+    def test_read_error_returns_none(self, monkeypatch):
+        class _BrokenStdin:
+            def isatty(self) -> bool:
+                return False
+
+            def read(self) -> str:
+                raise OSError("closed")
+
+        monkeypatch.setattr(cli.sys, "stdin", _BrokenStdin())
+        assert cli._read_piped_stdin() is None
+
+
 class TestOneShotMode(object):
     @pytest.fixture(autouse=True)
     def _isolate_logs(self, tmp_path, monkeypatch):

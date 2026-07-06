@@ -119,6 +119,22 @@ def _read_full_input(status_plain: str) -> str:
     return "\n".join(lines)
 
 
+def _read_piped_stdin() -> str | None:
+    """Read piped stdin (e.g. `cat x | jarvis -p`), or None if none is available.
+
+    Must check isatty() first: reading from an interactive terminal would block
+    waiting for EOF, hanging the REPL forever.
+    """
+    if sys.stdin.isatty():
+        return None
+    try:
+        text = sys.stdin.read()
+    except (OSError, ValueError):
+        return None
+    text = text.strip()
+    return text or None
+
+
 def _gh_token() -> str | None:
     """Get GitHub token from gh CLI, fall back to env var."""
     try:

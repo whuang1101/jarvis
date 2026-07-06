@@ -568,7 +568,7 @@ piped stdin, so the common `command | jarvis` shell idiom drops its input on the
 floor. The change is confined to `cli.py` argument dispatch and is unit-testable by
 monkeypatching `sys.stdin`, with no Azure call needed.*
 
-- [ ] **13.1 `_read_piped_stdin` helper.**
+- [x] **13.1 `_read_piped_stdin` helper.**
   In `jarvis/cli.py`, add `_read_piped_stdin() -> str | None`. Guard on
   `sys.stdin.isatty()` FIRST and return `None` when it is a TTY (interactive REPL —
   never read, or it would block). Otherwise `sys.stdin.read()`, and return the text
