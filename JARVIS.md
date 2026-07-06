@@ -119,6 +119,7 @@ jarvis/
 │                    _dump_toml — tomllib has no writer).
 ├── context.py       ContextManager (history + system prompt), UsageTracker (tokens+cost),
 │                    _PRICING table, plan-mode globals, _clean_history, compact().
+│                    expand_file_mentions() inlines `@path` file contents (non-image) into text.
 ├── commands.py      handle_command(): all slash commands. Returns None / _EXIT_SENTINEL /
 │                    _RUN_AGENT_PREFIX+msg.
 ├── permissions.py   Auto-mode globals; needs_permission (checks config `[permissions]`

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from jarvis.context import ContextManager, _lookup_price, _PRICING, build_multimodal_content
+from jarvis.context import ContextManager, _lookup_price, _PRICING, build_multimodal_content, expand_file_mentions
 
 
 class TestLookupPrice:
@@ -138,3 +138,25 @@ class TestBuildMultimodalContent:
         result = build_multimodal_content(str(image))
 
         assert result[1]["image_url"]["url"].startswith("data:image/jpeg;base64,")
+
+
+class TestExpandFileMentions:
+    def test_existing_file_mention_inlines_content(self, tmp_path):
+        notes = tmp_path / "notes.txt"
+        notes.write_text("hello world")
+
+        result = expand_file_mentions(f"summarize @{notes} please")
+
+        assert "[File:" in result
+        assert "hello world" in result
+
+    def test_missing_file_mention_returns_text_unchanged(self):
+        text = "summarize @missing.txt please"
+        assert expand_file_mentions(text) == text
+
+    def test_image_mention_left_unchanged_for_vision_path(self, tmp_path):
+        image = tmp_path / "shot.png"
+        image.write_bytes(b"\x89PNG\r\n\x1a\nfakepngdata")
+        text = f"what is in @{image}?"
+
+        assert expand_file_mentions(text) == text
