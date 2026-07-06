@@ -479,7 +479,7 @@ user through the full slash command.*
   `cli.py` contains `user_input.startswith("#")` calling `append_memory` and that
   `_HELP_TEXT` mentions the `#` shortcut. `/selftest` (pytest) green.
 
-- [ ] **11.3 Docs + parity flip.**
+- [x] **11.3 Docs + parity flip.**
   In JARVIS.md, note under the memory/commands section that a leading `#` at the
   prompt appends the rest of the line to `~/.jarvis/memory.md` (equivalent to
   `/memory add`). Flip PARITY.md's `# shortcut to append a memory quickly` row from
