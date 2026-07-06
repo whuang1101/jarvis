@@ -277,7 +277,7 @@ models surface their chain-of-thought as a separate stream field; render it
 distinctly (dimmed, above the answer) instead of dropping it. Graceful when the
 deployment emits no reasoning — nothing changes for non-reasoning models.
 
-- [ ] **7.1 Request + config toggle.**
+- [x] **7.1 Request + config toggle.**
   Add a `show_thinking: bool = True` field to the `Settings` dataclass in
   `settings.py` (documented in JARVIS.md config section). In `client.py:stream()`,
   keep the request unchanged for now — reasoning content arrives on the delta

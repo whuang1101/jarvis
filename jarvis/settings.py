@@ -63,6 +63,7 @@ class Settings:
     autocompact_tokens: int = 25_000
     tool_timeout_secs: int = 60
     theme: str = "monokai"
+    show_thinking: bool = True
     # Glob-style patterns matched against "tool_name(args)", e.g. "run_command(git *)".
     permission_allow: tuple[str, ...] = ()
     permission_deny: tuple[str, ...] = ()
