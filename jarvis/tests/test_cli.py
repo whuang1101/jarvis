@@ -49,7 +49,7 @@ class TestOneShotMode(object):
     def test_prints_answer_and_exits_zero(self, monkeypatch):
         calls = {}
 
-        def fake_run_agent(message, client, context, tracker, logger):
+        def fake_run_agent(message, client, context, tracker, logger, session):
             calls["message"] = message
             print("4")
 

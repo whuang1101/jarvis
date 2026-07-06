@@ -14,6 +14,7 @@ from .formatter import (
 )
 from .logger import SessionLogger
 from .permissions import needs_permission, request_permission
+from .sessions import SessionStore
 from .settings import Settings
 from .tools import get_all_tools, get_tool_by_name
 
@@ -198,7 +199,14 @@ def _stream_turn(
     return "".join(state["text"]), state["tools"], state["finish"]
 
 
-def run_agent(user_message: str, client: JarvisClient, context: ContextManager, tracker: UsageTracker, logger: SessionLogger | None = None) -> None:
+def run_agent(
+    user_message: str,
+    client: JarvisClient,
+    context: ContextManager,
+    tracker: UsageTracker,
+    logger: SessionLogger | None = None,
+    session: SessionStore | None = None,
+) -> None:
     # Compact BEFORE appending the new user message so it isn't folded into the summary.
     if context.token_estimate() > _AUTOCOMPACT_TOKENS:
         console.print(f"[yellow]⚠ Context is large (~{context.token_estimate():,} tokens) — auto-compacting...[/yellow]")
@@ -219,6 +227,8 @@ def run_agent(user_message: str, client: JarvisClient, context: ContextManager, 
             context.append({"role": "assistant", "content": full_text})
             if logger:
                 logger.assistant(full_text)
+            if session:
+                session.save(context._history)
             return
 
         if collected_tool_calls:
@@ -289,3 +299,5 @@ def run_agent(user_message: str, client: JarvisClient, context: ContextManager, 
     context.append({"role": "assistant", "content": full_text})
     if logger:
         logger.assistant(full_text)
+    if session:
+        session.save(context._history)
