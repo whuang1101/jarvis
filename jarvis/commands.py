@@ -49,6 +49,8 @@ _HELP_TEXT = """
   [cyan]/memory[/cyan]        Manage persistent memory (`~/.jarvis/memory.md`)
   [cyan]/init[/cyan]          Create a JARVIS.md project context file here
   [cyan]/selftest[/cyan]      Run Jarvis's own test suite (pytest)
+  [cyan]/commit[/cyan]        Stage changes and have Jarvis write and make the commit
+  [cyan]/review [pr#][/cyan]  Review the diff against main, or a PR's diff if given
   [cyan]/exit[/cyan]          Exit Jarvis
   [cyan]/quit[/cyan]          Exit Jarvis
 """
@@ -191,6 +193,8 @@ def handle_command(
                 "/memory",
                 "/init",
                 "/selftest",
+                "/commit",
+                "/review",
                 "/exit",
                 "/quit",
             ]
@@ -519,6 +523,65 @@ def handle_command(
         target.write_text(_JARVIS_MD_TEMPLATE, encoding="utf-8")
         print_system(f"Created {target} — fill it in to give Jarvis project context.")
         return None
+
+    if cmd == "/commit":
+        try:
+            add = subprocess.run(["git", "add", "-A"], capture_output=True, text=True, timeout=15)
+            if add.returncode != 0:
+                print_error(f"git add failed: {add.stderr.strip()}")
+                return None
+            diff = subprocess.run(
+                ["git", "diff", "--staged"], capture_output=True, text=True, timeout=15
+            )
+            staged_diff = diff.stdout.strip()
+        except subprocess.TimeoutExpired:
+            print_error("git timed out.")
+            return None
+        except Exception as e:
+            print_error(f"Failed to stage changes: {e}")
+            return None
+        if not staged_diff:
+            print_error("Nothing staged to commit.")
+            return None
+        message = (
+            "Changes have been staged with `git add -A`. Here is `git diff --staged`:\n"
+            f"```diff\n{staged_diff}\n```\n"
+            "Write a concise commit message (why, not just what) summarizing this diff, "
+            "then run `git commit -m \"<message>\"` to make the commit."
+        )
+        return f"{_RUN_AGENT_PREFIX}{message}"
+
+    if cmd == "/review":
+        pr = arg.strip()
+        try:
+            if pr:
+                result = subprocess.run(
+                    ["gh", "pr", "diff", pr], capture_output=True, text=True, timeout=30
+                )
+                source = f"PR #{pr}"
+            else:
+                result = subprocess.run(
+                    ["git", "diff", "main"], capture_output=True, text=True, timeout=30
+                )
+                source = "the diff against main"
+        except subprocess.TimeoutExpired:
+            print_error("Fetching the diff timed out.")
+            return None
+        except Exception as e:
+            print_error(f"Failed to fetch diff: {e}")
+            return None
+        if result.returncode != 0:
+            print_error(f"Failed to fetch diff: {result.stderr.strip()}")
+            return None
+        review_diff = result.stdout.strip()
+        if not review_diff:
+            print_error(f"No changes found in {source}.")
+            return None
+        message = (
+            f"Review {source}. Here is the diff:\n```diff\n{review_diff}\n```\n"
+            "Point out bugs, correctness issues, and risky changes. Be concise."
+        )
+        return f"{_RUN_AGENT_PREFIX}{message}"
 
     custom_template = _load_custom_command(cmd[1:])
     if custom_template is not None:

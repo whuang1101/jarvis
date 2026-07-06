@@ -137,12 +137,12 @@ class TestCustomCommands:
         monkeypatch.setattr(commands_module, "_CUSTOM_COMMANDS_GLOBAL_DIR", tmp_path / "missing")
         project_dir = tmp_path / ".jarvis" / "commands"
         project_dir.mkdir(parents=True)
-        (project_dir / "review.md").write_text("Review: $ARGUMENTS", encoding="utf-8")
+        (project_dir / "triage.md").write_text("Triage: $ARGUMENTS", encoding="utf-8")
         monkeypatch.chdir(tmp_path)
 
-        result = handle_command("/review foo.py", None, None, None)
+        result = handle_command("/triage foo.py", None, None, None)
 
-        assert result == f"{commands_module._RUN_AGENT_PREFIX}Review: foo.py"
+        assert result == f"{commands_module._RUN_AGENT_PREFIX}Triage: foo.py"
 
     def test_global_command_takes_precedence_over_project(self, tmp_path, monkeypatch):
         global_dir = tmp_path / "global"
@@ -179,3 +179,114 @@ class TestCustomCommands:
 
         out = capsys.readouterr().out
         assert "/explain" in out
+
+
+def _completed(stdout: str = "", stderr: str = "", returncode: int = 0):
+    import subprocess as sp
+
+    return sp.CompletedProcess(args=[], returncode=returncode, stdout=stdout, stderr=stderr)
+
+
+class TestCommitCommand:
+    def test_stages_and_prompts_agent_with_staged_diff(self, monkeypatch):
+        calls = []
+
+        def fake_run(cmd, **kwargs):
+            calls.append(cmd)
+            if cmd == ["git", "add", "-A"]:
+                return _completed()
+            if cmd == ["git", "diff", "--staged"]:
+                return _completed(stdout="diff --git a/foo.py b/foo.py\n+print(1)\n")
+            raise AssertionError(f"unexpected command: {cmd}")
+
+        monkeypatch.setattr(commands_module.subprocess, "run", fake_run)
+
+        result = handle_command("/commit", None, None, None)
+
+        assert calls == [["git", "add", "-A"], ["git", "diff", "--staged"]]
+        assert result.startswith(commands_module._RUN_AGENT_PREFIX)
+        assert "diff --git a/foo.py b/foo.py" in result
+        assert "git commit" in result
+
+    def test_add_failure_reports_error(self, monkeypatch, capsys):
+        def fake_run(cmd, **kwargs):
+            if cmd == ["git", "add", "-A"]:
+                return _completed(stderr="fatal: not a git repository", returncode=128)
+            raise AssertionError(f"unexpected command: {cmd}")
+
+        monkeypatch.setattr(commands_module.subprocess, "run", fake_run)
+
+        result = handle_command("/commit", None, None, None)
+
+        assert result is None
+        assert "git add failed" in capsys.readouterr().out
+
+    def test_nothing_staged_reports_error(self, monkeypatch, capsys):
+        def fake_run(cmd, **kwargs):
+            if cmd == ["git", "add", "-A"]:
+                return _completed()
+            if cmd == ["git", "diff", "--staged"]:
+                return _completed(stdout="")
+            raise AssertionError(f"unexpected command: {cmd}")
+
+        monkeypatch.setattr(commands_module.subprocess, "run", fake_run)
+
+        result = handle_command("/commit", None, None, None)
+
+        assert result is None
+        assert "Nothing staged" in capsys.readouterr().out
+
+
+class TestReviewCommand:
+    def test_no_arg_diffs_against_main(self, monkeypatch):
+        calls = []
+
+        def fake_run(cmd, **kwargs):
+            calls.append(cmd)
+            return _completed(stdout="diff --git a/bar.py b/bar.py\n+print(2)\n")
+
+        monkeypatch.setattr(commands_module.subprocess, "run", fake_run)
+
+        result = handle_command("/review", None, None, None)
+
+        assert calls == [["git", "diff", "main"]]
+        assert result.startswith(commands_module._RUN_AGENT_PREFIX)
+        assert "diff --git a/bar.py b/bar.py" in result
+        assert "the diff against main" in result
+
+    def test_pr_arg_uses_gh_pr_diff(self, monkeypatch):
+        calls = []
+
+        def fake_run(cmd, **kwargs):
+            calls.append(cmd)
+            return _completed(stdout="diff --git a/baz.py b/baz.py\n+print(3)\n")
+
+        monkeypatch.setattr(commands_module.subprocess, "run", fake_run)
+
+        result = handle_command("/review 42", None, None, None)
+
+        assert calls == [["gh", "pr", "diff", "42"]]
+        assert result.startswith(commands_module._RUN_AGENT_PREFIX)
+        assert "PR #42" in result
+
+    def test_fetch_failure_reports_error(self, monkeypatch, capsys):
+        def fake_run(cmd, **kwargs):
+            return _completed(stderr="fatal: bad revision 'main'", returncode=128)
+
+        monkeypatch.setattr(commands_module.subprocess, "run", fake_run)
+
+        result = handle_command("/review", None, None, None)
+
+        assert result is None
+        assert "Failed to fetch diff" in capsys.readouterr().out
+
+    def test_no_changes_reports_error(self, monkeypatch, capsys):
+        def fake_run(cmd, **kwargs):
+            return _completed(stdout="")
+
+        monkeypatch.setattr(commands_module.subprocess, "run", fake_run)
+
+        result = handle_command("/review", None, None, None)
+
+        assert result is None
+        assert "No changes found" in capsys.readouterr().out
