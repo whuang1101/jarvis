@@ -209,7 +209,11 @@ case-insensitive; the argument keeps original case.
 
 Implemented commands: `/help /history /retry /undo /clear /compact /usage /model /config /file /run
 /plan /go /cancel /restart /auto /fix /copy /save /sessions /resume /memory /init /selftest /exit
-/quit`. Every one is listed in `_HELP_TEXT` — keep that invariant. `/config` (no args) prints
+/quit`. Every one is listed in `_HELP_TEXT` — keep that invariant. Any other `/name` falls back to a
+custom command lookup: `_load_custom_command` checks `~/.jarvis/commands/<name>.md` then
+`.jarvis/commands/<name>.md` (project, global wins on conflict), substitutes `$ARGUMENTS` in the file
+content with the command's args, and returns it via `_RUN_AGENT_PREFIX`. `_discover_custom_commands`
+lists both dirs' `*.md` stems for the plain `/help` command list. `/config` (no args) prints
 effective settings from `Settings.load_with_sources()` (default/global/project); `/config <key>
 <value>` writes a scalar key to the global TOML via `settings.persist_setting`. `/sessions` lists
 `sessions.list_sessions(limit=10)`; `/resume <n>` loads that entry via `SessionStore.load` into
