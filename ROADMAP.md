@@ -640,7 +640,7 @@ confined to `cli.py` argument dispatch and unit-testable through `_parse_args`
   *Verify:* add `test_cli.py` cases asserting `_parse_args([]).max_turns is None`
   and `_parse_args(["--max-turns", "3"]).max_turns == 3`. `/selftest` (pytest) green.
 
-- [ ] **14.2 `--model` flag overrides the Azure deployment.**
+- [x] **14.2 `--model` flag overrides the Azure deployment.**
   In `jarvis/cli.py`, add `parser.add_argument("--model", dest="model",
   default=None, metavar="DEPLOYMENT", help="Override the Azure deployment name for
   this run.")`. In `_run_one_shot`, add a `model: str | None = None` parameter and,
