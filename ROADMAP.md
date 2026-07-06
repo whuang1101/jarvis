@@ -550,6 +550,62 @@ helper, so it drops in beside it.*
 
 ---
 
+## Phase 13 — Pipe stdin as the prompt in headless mode
+
+*Re-surveying PARITY top-to-bottom, the ❌ rows above this one are again either
+already-shipped-but-stale (todo list, subagents, vision input, background & streamed
+command output, allow/deny + persistent "Always" rules, the settings overlay,
+`--continue`/`/sessions`/`/resume`, `/commit`, `/review`, and the `@file` mentions
+Phase 12 just landed) or items the loop is allowed to skip. `Prompt caching / cost
+optimization` is flagged N/A on Azure and has nothing a pytest run can exercise;
+`--output-format json / stream-json` cannot go in cleanly because machine-readable
+stdout requires threading a quiet/no-render flag through the Rich `Live` streaming
+loop in `agent.py`, so it is not a single self-contained increment; `--model` is
+entangled with the Azure-deployment `Config`. That leaves the topmost genuinely-
+missing, self-contained, human-resource-free headless item: piping stdin as the
+prompt (`cat err.log | jarvis -p "fix"`). `-p` one-shot already exists but ignores a
+piped stdin, so the common `command | jarvis` shell idiom drops its input on the
+floor. The change is confined to `cli.py` argument dispatch and is unit-testable by
+monkeypatching `sys.stdin`, with no Azure call needed.*
+
+- [ ] **13.1 `_read_piped_stdin` helper.**
+  In `jarvis/cli.py`, add `_read_piped_stdin() -> str | None`. Guard on
+  `sys.stdin.isatty()` FIRST and return `None` when it is a TTY (interactive REPL —
+  never read, or it would block). Otherwise `sys.stdin.read()`, and return the text
+  with trailing newlines stripped, or `None` if it is empty/whitespace-only. Wrap the
+  read in `try/except (OSError, ValueError)` returning `None` on failure so a closed
+  or unreadable stdin never crashes startup.
+  *Verify:* add cases to `jarvis/tests/test_cli.py` that monkeypatch `sys.stdin` with
+  a fake object: `isatty()` → `True` yields `None` (and `.read` is never called);
+  `isatty()` → `False` with `"boom\n"` yields `"boom"`; `"   "` yields `None`.
+  `/selftest` (pytest) green.
+
+- [ ] **13.2 Compose the effective one-shot prompt.**
+  In `jarvis/cli.py`, add a pure helper
+  `_compose_one_shot_prompt(prompt: str | None, piped: str | None) -> str | None`:
+  return `None` when both are absent; return `prompt` alone when nothing is piped;
+  return `piped` alone when there is no `-p`; and when both exist join them as
+  `f"{prompt}\n\n{piped}"` so the model sees the instruction followed by the piped
+  payload. In `main()` (`cli.py:217`), compute `piped = _read_piped_stdin()` and
+  `effective = _compose_one_shot_prompt(args.prompt, piped)`; when `effective is not
+  None`, call `_run_one_shot(effective, connect_mcp=args.mcp, debug=args.debug)`
+  instead of gating one-shot solely on `args.prompt is not None`, so a bare
+  `cat x | jarvis` also runs headless.
+  *Verify:* `jarvis/tests/test_cli.py` asserts all four `_compose_one_shot_prompt`
+  branches (None/None → None; prompt-only → prompt; piped-only → piped; both →
+  `"p\n\nq"`). `/selftest` (pytest) green.
+
+- [ ] **13.3 Docs + parity flip.**
+  In JARVIS.md, note under the headless / CLI section that Jarvis reads piped stdin
+  in one-shot mode: `cat err.log | jarvis -p "fix this"` appends the piped text below
+  the `-p` prompt, and a bare `command | jarvis` uses the piped text as the whole
+  prompt (an interactive TTY is never read). Flip PARITY.md's `Pipe stdin as prompt`
+  row from ❌ to ✅.
+  *Verify:* `/selftest` (pytest) green; grep confirms the PARITY `Pipe stdin as
+  prompt` row is ✅ and JARVIS.md documents `| jarvis`.
+
+---
+
 ## Standing orders (apply to every step)
 
 - **Registration invariants:** new tool → `tools/__init__.py` `_REGISTRY` + JARVIS.md
