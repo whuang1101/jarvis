@@ -105,6 +105,8 @@ jarvis/
 │                    `_read_full_input` joins `\`-continued lines / ```-fenced blocks; input is
 │                    run through context.expand_file_mentions (inline `@path` file contents) then
 │                    context.build_multimodal_content (image paths → vision parts).
+│                    `_read_piped_stdin` returns piped stdin text (None if stdin is a TTY, empty,
+│                    or unreadable) for `cat x | jarvis -p` support.
 ├── agent.py         Streaming tool-use loop. run_agent() + _stream_turn() (renders live) +
 │                    _stream_with_retry() (lazy generator) + _accumulate_tool_calls().
 ├── client.py        Only file importing openai for requests. stream() (lazy, include_usage),
