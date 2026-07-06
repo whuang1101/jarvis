@@ -97,7 +97,8 @@ jarvis/
 │                    JARVIS.md → connect MCP → run resume.json (if any) → REPL loop (try/finally
 │                    calls logger.end on exit). A dim status line (cwd · tokens · plan/auto)
 │                    precedes a bare `> ` prompt. Ctrl+C once warns, twice in a row exits
-│                    (Ctrl+D still exits immediately).
+│                    (Ctrl+D still exits immediately). `-p/--print PROMPT` runs one_shot mode
+│                    (_run_one_shot): auto mode on, no banner, MCP skipped unless `--mcp`, exits 0/1.
 ├── agent.py         Streaming tool-use loop. run_agent() + _stream_turn() (renders live) +
 │                    _stream_with_retry() (lazy generator) + _accumulate_tool_calls().
 ├── client.py        Only file importing openai for requests. stream() (lazy, include_usage),
