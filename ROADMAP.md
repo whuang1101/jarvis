@@ -606,6 +606,66 @@ monkeypatching `sys.stdin`, with no Azure call needed.*
 
 ---
 
+## Phase 14 — `--max-turns` and `--model` headless flags
+
+*Re-surveying PARITY top-to-bottom, the ❌ rows above this one are again either
+already-shipped-but-stale (todo list, subagents, vision input, background &
+streamed command output, allow/deny + persistent "Always" rules, the settings
+overlay, `--continue`/`/sessions`/`/resume`, `/commit`, `/review`, `@file`
+mentions, and the piped-stdin one-shot Phase 13 just landed) or items the loop is
+allowed to skip: `Prompt caching / cost optimization` is flagged N/A on Azure and
+has nothing a pytest run can exercise; `Sandboxed command execution` is a whole
+Phase-6-scale OS-level security item (bubblewrap / sandbox-exec) the CI cannot
+drive; `/rewind` is explicitly "big"; and `--output-format json / stream-json`
+needs a quiet/no-render flag threaded through the Rich `Live` streaming loop in
+`agent.py`, so it is not a single self-contained increment. That leaves the
+topmost genuinely-missing, self-contained, human-resource-free headless item:
+`--max-turns, --model flags`. One-shot mode already exists but the tool-iteration
+cap is fixed at `Settings.max_tool_iterations` and the Azure deployment is fixed
+by `Config.load()`, so a caller cannot bound a headless run or point it at a
+different deployment. `run_agent` already accepts `max_iterations`, and `Config`
+is a frozen dataclass overridable via `dataclasses.replace`, so both flags are
+confined to `cli.py` argument dispatch and unit-testable through `_parse_args`
+(and a `Config.load` override) with no Azure call needed.
+
+- [ ] **14.1 `--max-turns` flag wired into the one-shot cap.**
+  In `jarvis/cli.py`, add a `parser.add_argument("--max-turns", dest="max_turns",
+  type=int, default=None, metavar="N", help=...)` to `_parse_args` (help: "Cap the
+  tool-call iterations for a one-shot run; default uses the configured
+  max_tool_iterations."). Thread it through: give `_run_one_shot` a new
+  `max_turns: int | None = None` parameter, pass it as
+  `run_agent(prompt, client, context, tracker, logger, session, max_iterations=max_turns)`
+  (keyword form; `run_agent` already accepts `max_iterations`), and in `main()`
+  update the `_run_one_shot(...)` call to pass `max_turns=args.max_turns`.
+  *Verify:* add `test_cli.py` cases asserting `_parse_args([]).max_turns is None`
+  and `_parse_args(["--max-turns", "3"]).max_turns == 3`. `/selftest` (pytest) green.
+
+- [ ] **14.2 `--model` flag overrides the Azure deployment.**
+  In `jarvis/cli.py`, add `parser.add_argument("--model", dest="model",
+  default=None, metavar="DEPLOYMENT", help="Override the Azure deployment name for
+  this run.")`. In `_run_one_shot`, add a `model: str | None = None` parameter and,
+  after `config = Config.load()`, do `if model: config = dataclasses.replace(config,
+  deployment=model)` (add `import dataclasses` at the top of `cli.py`) before
+  constructing `JarvisClient(config)`. In `main()`, pass `model=args.model` to
+  `_run_one_shot(...)`, and also apply the same `dataclasses.replace` override to the
+  interactive `config` right after its `Config.load()` so `jarvis --model X` works in
+  the REPL too.
+  *Verify:* add a `test_cli.py` case asserting `_parse_args(["--model", "gpt-4o"]).model
+  == "gpt-4o"` and `_parse_args([]).model is None`; add a test that
+  `dataclasses.replace(Config(endpoint="e", api_key="k", deployment="d",
+  api_version="v"), deployment="gpt-4o").deployment == "gpt-4o"` (constructs a Config
+  directly, no `.load()` / no env). `/selftest` (pytest) green.
+
+- [ ] **14.3 Docs + parity flip.**
+  In JARVIS.md, note under the headless / CLI section that `--max-turns N` caps a
+  one-shot run's tool iterations and `--model DEPLOYMENT` overrides the Azure
+  deployment for the run (both interactive and `-p`). Flip PARITY.md's
+  `--max-turns, --model flags` row from ❌ to ✅.
+  *Verify:* `/selftest` (pytest) green; grep confirms the PARITY `--max-turns` row is
+  ✅ and JARVIS.md documents `--max-turns` and `--model`.
+
+---
+
 ## Standing orders (apply to every step)
 
 - **Registration invariants:** new tool → `tools/__init__.py` `_REGISTRY` + JARVIS.md
