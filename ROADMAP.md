@@ -383,6 +383,62 @@ when you already know the filename shape.*
 
 ---
 
+## Phase 10 — Sensitive-file protection (secrets excluded from reads & searches)
+
+*Most of the upstream PARITY ❌ rows above this one are already stale: allow/deny
+pattern rules and the persistent "Always" option live in `permissions.py`
+(`permission_allow`/`permission_deny` + `_add_allow_pattern`), background and
+live-streamed command output live in `run_command.py`, and the todo/subagent/
+glob/vision rows all shipped. The topmost genuinely-missing, self-contained item
+is `Sensitive-file protection (.env etc. excluded from reads)` — nothing in
+`read_file.py`, `search_files.py`, or `list_dir.py` guards secret files, so a
+stray `read_file .env` or `search_files SECRET` leaks credentials straight into
+the transcript.*
+
+- [ ] **10.1 Sensitive-path helper.**
+  Add `jarvis/tools/sensitive.py` with a module-level tuple
+  `_SENSITIVE_GLOBS = (".env", ".env.*", "*.pem", "*.key", "id_rsa", "id_dsa",
+  "id_ecdsa", "id_ed25519", "*.p12", "*.pfx", "credentials", ".netrc",
+  ".pgpass", "*.keystore")` (all lowercase) and two functions. `is_sensitive_path(path: str) -> bool`:
+  take `os.path.basename(path.rstrip("/"))`, lowercase it, and return `True` when
+  `fnmatch.fnmatch(name, glob)` matches any entry; wrap in try/except and return
+  `False` on any error, never raise. `sensitive_read_error(path: str) -> str`:
+  return `f"Error: refusing to read sensitive file {path} — it matches a secret-file
+  pattern. Enable dangerously_skip_permissions to override."`.
+  *Verify:* pytest asserts `is_sensitive_path` is `True` for `.env`,
+  `/tmp/proj/.env.local`, `key.pem`, `id_rsa`, and `~/.netrc`, and `False` for
+  `main.py`, `README.env.md`, and `envvars.py`; `sensitive_read_error("x")` returns
+  a string starting with `"Error:"`.
+
+- [ ] **10.2 Wire the guard into read_file and search_files.**
+  In `read_file.py:execute`, before the `os.path.getsize` call, lazily import
+  `from .sensitive import is_sensitive_path, sensitive_read_error` and
+  `from ..permissions import is_dangerously_skip_permissions` (inside the method,
+  to avoid an import cycle), then
+  `if is_sensitive_path(path) and not is_dangerously_skip_permissions(): return sensitive_read_error(path)`.
+  In `search_files.py:execute`, import `_SENSITIVE_GLOBS` and `is_sensitive_path`
+  from `.sensitive`; unless `is_dangerously_skip_permissions()` is set, append a
+  `--exclude=<glob>` argument to the `grep` invocation for each entry in
+  `_SENSITIVE_GLOBS` and post-filter the result lines, dropping any whose file
+  path (the text before the first `:`) is sensitive per `is_sensitive_path`.
+  *Verify:* pytest writes a tmp `.env` containing `SECRET=abc123`;
+  `ReadFileTool().execute({"path": env_path})` returns a string containing
+  `"refusing to read sensitive file"` and NOT `abc123`, while a sibling `notes.txt`
+  still reads normally; `SearchFilesTool().execute({"pattern": "SECRET", "directory": tmp})`
+  (with `SECRET` present in both `.env` and `notes.txt`) returns the `notes.txt`
+  match but neither the `.env` path nor `abc123`.
+
+- [ ] **10.3 Docs + parity flip.**
+  Update JARVIS.md's `read_file` and `search_files` rows to note that secret-file
+  patterns (`.env`, `*.pem`, `id_rsa`, …) are blocked from reads/searches unless
+  `dangerously_skip_permissions` is enabled, and mention `sensitive.py` in the tool
+  tree. Flip PARITY.md's `Sensitive-file protection (.env etc. excluded from reads)`
+  row from ❌ to ✅.
+  *Verify:* `/selftest` (pytest) green; grep confirms the PARITY sensitive-file row
+  is ✅ and JARVIS.md mentions `sensitive.py`.
+
+---
+
 ## Standing orders (apply to every step)
 
 - **Registration invariants:** new tool → `tools/__init__.py` `_REGISTRY` + JARVIS.md
