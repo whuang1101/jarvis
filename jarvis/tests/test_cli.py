@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import dataclasses
+import io
+import json
 import sys
 
 import pytest
@@ -11,6 +13,7 @@ import jarvis.formatter as formatter_module
 import jarvis.logger as logger_module
 import jarvis.permissions as permissions_module
 from jarvis.config import Config
+from jarvis.context import UsageTracker
 
 
 class _FakeConfig:
@@ -100,6 +103,60 @@ class TestConfigModelOverride:
     def test_dataclasses_replace_overrides_deployment(self):
         config = Config(endpoint="e", api_key="k", deployment="d", api_version="v")
         assert dataclasses.replace(config, deployment="gpt-4o").deployment == "gpt-4o"
+
+
+class TestResultPayload:
+    def test_success_payload(self):
+        tracker = UsageTracker()
+        tracker.record(10, 20)
+        payload = cli._result_payload("hi", False, tracker)
+        assert payload["subtype"] == "success"
+        assert payload["is_error"] is False
+        assert payload["result"] == "hi"
+        assert payload["usage"] == {"input_tokens": 10, "output_tokens": 20}
+
+    def test_error_payload(self):
+        tracker = UsageTracker()
+        payload = cli._result_payload("boom", True, tracker)
+        assert payload["subtype"] == "error"
+        assert payload["is_error"] is True
+
+
+class TestEmitResult:
+    def test_stream_json_writes_two_valid_lines(self):
+        tracker = UsageTracker()
+        tracker.record(1, 2)
+        payload = cli._result_payload("hi", False, tracker)
+        buf = io.StringIO()
+
+        cli._emit_result("stream-json", payload, {"model": "d"}, buf)
+
+        lines = buf.getvalue().splitlines()
+        assert len(lines) == 2
+        first = json.loads(lines[0])
+        second = json.loads(lines[1])
+        assert first["type"] == "system"
+        assert second["type"] == "result"
+
+    def test_json_writes_one_line(self):
+        tracker = UsageTracker()
+        payload = cli._result_payload("hi", False, tracker)
+        buf = io.StringIO()
+
+        cli._emit_result("json", payload, {"model": "d"}, buf)
+
+        lines = buf.getvalue().splitlines()
+        assert len(lines) == 1
+        assert json.loads(lines[0]) == payload
+
+    def test_text_writes_nothing(self):
+        tracker = UsageTracker()
+        payload = cli._result_payload("hi", False, tracker)
+        buf = io.StringIO()
+
+        cli._emit_result("text", payload, {"model": "d"}, buf)
+
+        assert buf.getvalue() == ""
 
 
 class TestReadFullInput:
