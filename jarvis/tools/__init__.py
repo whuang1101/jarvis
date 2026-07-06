@@ -15,6 +15,7 @@ from .web_extract import WebExtractTool
 from .edit_file import EditFileTool
 from .git_tools import GitStatusTool, GitDiffTool, GitLogTool
 from .todo_write import TodoWriteTool
+from .spawn_agent import SpawnAgentTool
 
 _REGISTRY: list[BaseTool] = [
     ReadFileTool(),
@@ -33,6 +34,7 @@ _REGISTRY: list[BaseTool] = [
     GitDiffTool(),
     GitLogTool(),
     TodoWriteTool(),
+    SpawnAgentTool(),
 ]
 
 _BY_NAME: dict[str, BaseTool] = {t.name: t for t in _REGISTRY}

@@ -242,7 +242,7 @@ These are all small, independent, and already listed in TODO.md § Robustness.
   Keep the permission preview in sync (permissions.py enforces the same rule).
   *Verify:* pytest for both behaviors.
 
-- [ ] **5.4 Subagent tool.**
+- [x] **5.4 Subagent tool.**
   New `spawn_agent` tool: runs a fresh `run_agent` with its own `ContextManager`
   (same client/tracker), read-only tool set by default, up to 25 iterations, returns
   only the final text. Use it for "search the codebase for X" tasks so the main

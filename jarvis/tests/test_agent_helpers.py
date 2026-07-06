@@ -3,12 +3,15 @@ from __future__ import annotations
 import sys
 import time
 
+import jarvis.agent as agent_module
 from jarvis.agent import (
     truncate_tool_result,
     execute_with_timeout,
     run_pre_tool_hooks,
     run_post_tool_hooks,
 )
+from jarvis.context import ContextManager, UsageTracker
+from jarvis.tools import get_all_tools
 from jarvis.tools.base import BaseTool
 from jarvis.tools.read_file import ReadFileTool
 
@@ -99,6 +102,60 @@ class TestPreToolHooks:
         result = run_pre_tool_hooks(hooks, "write_file", {"path": "x"}, timeout=1)
         assert result is not None
         assert "timed out" in result
+
+
+class TestRunAgentToolOverrides:
+    def test_restricted_tool_set_rejects_tools_outside_it_and_returns_final_text(self, monkeypatch):
+        calls = {"n": 0}
+
+        def fake_stream_turn(client, context, tracker, tools):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                return "", {0: {"id": "call1", "name": "list_dir", "arguments": "{}"}}, "tool_calls"
+            return "done", {}, "stop"
+
+        monkeypatch.setattr(agent_module, "_stream_turn", fake_stream_turn)
+        context = ContextManager()
+        read_only = [t for t in get_all_tools() if t.name == "read_file"]
+
+        result = agent_module.run_agent(
+            "task", client=object(), context=context, tracker=UsageTracker(), tools=read_only
+        )
+
+        assert result == "done"
+        tool_msgs = [m for m in context._history if m.get("role") == "tool"]
+        assert "unknown tool" in tool_msgs[0]["content"]
+
+    def test_allow_subagents_false_strips_spawn_agent_from_default_tools(self, monkeypatch):
+        def fake_stream_turn(client, context, tracker, tools):
+            assert "spawn_agent" not in {t.name for t in tools}
+            return "ok", {}, "stop"
+
+        monkeypatch.setattr(agent_module, "_stream_turn", fake_stream_turn)
+        context = ContextManager()
+
+        result = agent_module.run_agent(
+            "task", client=object(), context=context, tracker=UsageTracker(), allow_subagents=False
+        )
+
+        assert result == "ok"
+
+    def test_max_iterations_override_caps_the_loop(self, monkeypatch):
+        calls = {"n": 0}
+
+        def fake_stream_turn(client, context, tracker, tools):
+            calls["n"] += 1
+            return "", {0: {"id": f"c{calls['n']}", "name": "read_file", "arguments": "{}"}}, "tool_calls"
+
+        monkeypatch.setattr(agent_module, "_stream_turn", fake_stream_turn)
+        context = ContextManager()
+
+        agent_module.run_agent(
+            "task", client=object(), context=context, tracker=UsageTracker(), max_iterations=2
+        )
+
+        # 2 iterations inside the loop + 1 final progress-summary turn after the cap.
+        assert calls["n"] == 3
 
 
 class TestPostToolHooks:
