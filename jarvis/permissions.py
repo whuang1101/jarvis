@@ -24,10 +24,11 @@ _DESTRUCTIVE_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Auto mode: skip approval for file writes/edits; destructive commands still prompt.
+# Dangerous skip mode: skip all permission prompts, including destructive commands.
 _settings: Settings = Settings.load()
-
-# Auto mode: skip approval for file writes/edits; destructive commands always blocked.
 _auto_mode: bool = _settings.auto_mode
+_dangerously_skip_permissions: bool = _settings.dangerously_skip_permissions
 
 
 def is_auto_mode() -> bool:
@@ -37,6 +38,15 @@ def is_auto_mode() -> bool:
 def set_auto_mode(enabled: bool) -> None:
     global _auto_mode
     _auto_mode = enabled
+
+
+def is_dangerously_skip_permissions() -> bool:
+    return _dangerously_skip_permissions
+
+
+def set_dangerously_skip_permissions(enabled: bool) -> None:
+    global _dangerously_skip_permissions
+    _dangerously_skip_permissions = enabled
 
 
 def _invocation_string(tool_name: str, args: dict[str, Any]) -> str:
@@ -77,6 +87,11 @@ def _add_allow_pattern(pattern: str) -> None:
 
 
 def needs_permission(tool_name: str, args: dict[str, Any], settings: Settings | None = None) -> bool:
+    # Full bypass wins over everything, including deny rules — it exists for
+    # sandboxed autonomous runs where no prompt can ever be answered.
+    if _dangerously_skip_permissions:
+        return False
+
     s = settings if settings is not None else _settings
     invocation = _invocation_string(tool_name, args)
 

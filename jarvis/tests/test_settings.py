@@ -16,6 +16,7 @@ class TestSettingsLoad:
         assert settings.theme == "solarized"
         # Untouched keys keep their defaults
         assert settings.auto_mode is False
+        assert settings.dangerously_skip_permissions is False
         assert settings.autocompact_tokens == 25_000
         assert settings.tool_timeout_secs == 60
 
@@ -23,6 +24,7 @@ class TestSettingsLoad:
         path = tmp_path / "config.toml"
         path.write_text(
             "auto_mode = true\n"
+            "dangerously_skip_permissions = true\n"
             "max_tool_iterations = 5\n"
             "autocompact_tokens = 1000\n"
             "tool_timeout_secs = 30\n"
@@ -31,6 +33,7 @@ class TestSettingsLoad:
         settings = Settings.load(path)
         assert settings == Settings(
             auto_mode=True,
+            dangerously_skip_permissions=True,
             max_tool_iterations=5,
             autocompact_tokens=1000,
             tool_timeout_secs=30,

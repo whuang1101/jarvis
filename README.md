@@ -31,9 +31,9 @@ Jarvis is designed to improve itself. The repo contains:
 |---|---|
 | Agentic loop | Streaming responses (Rich live Markdown), up to 40 tool iterations per turn, progress summary if the cap is hit |
 | Tools | read/write/edit file, run command, dir tree, grep search, symbol finder, git status/diff/log, web search/fetch/extract, package lookup |
-| Safety | Diff preview + arrow-key approval before file writes; destructive shell commands (`rm`, `sudo`, `git reset --hard`, …) always prompt, even in auto mode |
+| Safety | Diff preview + arrow-key approval before file writes; destructive shell commands (`rm`, `sudo`, `git reset --hard`, ...) always prompt, even in auto mode. `/dangerously-skip-permissions` bypasses every permission prompt when explicitly enabled |
 | Robustness | Tool results capped at 8K chars, 60s tool timeouts, auto-compaction at ~25K tokens, rate-limit retries, Ctrl+C keeps partial output |
-| Modes | `/plan` (draft a plan, wait for `/go`), `/auto` (apply file edits without prompting) |
+| Modes | `/plan` (draft a plan, wait for `/go`), `/auto` (apply file edits without prompting), `/dangerously-skip-permissions` (Claude-style full bypass) |
 | MCP | GitHub, Azure, and Brave Search MCP servers auto-connect at startup when credentials exist |
 | Sessions | JSONL event logs in `~/.jarvis/logs/`, `/usage` token + cost tracking, `/compact`, `/save`, `/memory` |
 | Self-hosting | `/restart` reinstalls via pipx and re-execs in place; in auto mode it writes a resume file and continues its task after restarting |

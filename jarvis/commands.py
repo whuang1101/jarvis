@@ -8,7 +8,12 @@ from pathlib import Path
 from .client import JarvisClient
 from .context import ContextManager, UsageTracker, is_plan_mode, set_plan_mode
 from .formatter import print_command_output, print_system, print_error, console
-from .permissions import is_auto_mode, set_auto_mode
+from .permissions import (
+    is_auto_mode,
+    is_dangerously_skip_permissions,
+    set_auto_mode,
+    set_dangerously_skip_permissions,
+)
 
 _HELP_TEXT = """
 [bold cyan]Available commands:[/bold cyan]
@@ -28,6 +33,8 @@ _HELP_TEXT = """
   [cyan]/cancel[/cyan]        Cancel the current plan
   [cyan]/restart[/cyan]       Reinstall and restart Jarvis in place
   [cyan]/auto[/cyan]          Toggle auto mode (approve file edits without prompting)
+  [cyan]/dangerously-skip-permissions[/cyan]
+                  Toggle Claude-style permission bypass for all tool calls
   [cyan]/fix[/cyan]           Send clipboard contents as an error to fix
   [cyan]/copy[/cyan]          Copy the last assistant response to the clipboard
   [cyan]/save <file>[/cyan]   Save conversation history to a markdown file.
@@ -131,6 +138,7 @@ def handle_command(
                 "/cancel",
                 "/restart",
                 "/auto",
+                "/dangerously-skip-permissions",
                 "/fix",
                 "/copy",
                 "/save",
@@ -290,6 +298,15 @@ def handle_command(
             print_system("Auto mode ON — file edits apply without prompting. Destructive commands still require approval.")
         else:
             print_system("Auto mode OFF — all changes require approval.")
+        return None
+
+    if cmd == "/dangerously-skip-permissions":
+        new_state = not is_dangerously_skip_permissions()
+        set_dangerously_skip_permissions(new_state)
+        if new_state:
+            print_system("Dangerously skip permissions ON — all tool permission prompts are bypassed.")
+        else:
+            print_system("Dangerously skip permissions OFF — normal permission gates restored.")
         return None
 
     if cmd == "/save":

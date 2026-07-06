@@ -26,20 +26,61 @@ gh auth status >/dev/null 2>&1 || { echo "gh not logged in — run: gh auth logi
 cd "$(dirname "$0")/.." || exit 1
 
 git checkout main -q && git pull -q
+# Self-deploy: refresh deps in case main changed pyproject since the last run
+.venv/bin/pip install -q -e ".[dev]" 2>/dev/null || true
+
+# Model tiering: implementation steps are fully pre-specified, so Sonnet first
+# (~5x more steps per quota batch); planning new roadmap phases is the hard
+# thinking, so Opus first. Each falls back to the other if unavailable/erroring;
+# only when the whole chain fails do we treat it as quota-exhausted and stop.
+BUILD_MODELS="${JARVIS_LOOP_BUILD_MODELS:-sonnet opus}"
+PLAN_MODELS="${JARVIS_LOOP_PLAN_MODELS:-opus sonnet}"
+
+run_claude() {  # $1 = prompt, rest = model preference order
+  local prompt="$1"; shift
+  local m
+  for m in "$@"; do
+    if claude -p "$prompt" --model "$m" --dangerously-skip-permissions --max-turns 80; then
+      return 0
+    fi
+    echo "model '$m' failed — trying next fallback"
+  done
+  return 1
+}
 
 for i in $(seq 1 20); do
   echo "--- step attempt $i $(date -u) ---"
-  claude -p "Read ROADMAP.md. Follow its per-step contract exactly: implement the
-FIRST unchecked step only. If NO unchecked steps remain, instead follow the
-'Autonomy loop instruction' at the bottom of PARITY.md: pick the top feasible ❌
-feature, append a new properly-formatted phase to ROADMAP.md, commit that as its
-own PR, and stop — the next run will implement it. Use .venv/bin/python -m pytest jarvis/tests -q to run
-tests and never commit on red. Mark the step [x] and update JARVIS.md in the same
-change. Then: git checkout -b feat/roadmap-step-N (N = the step number), commit,
-push, and open a PR with gh pr create. Do NOT merge the PR. Finish by checking
-out main. Do exactly one roadmap step, then stop." \
-    --dangerously-skip-permissions \
-    --max-turns 80 || { echo "claude exited nonzero (likely quota) — stopping"; break; }
+
+  # Extract ONLY the next unchecked step so Claude never spends tokens reading
+  # the whole roadmap. A step block runs from its '- [ ]' line to the next blank.
+  STEP="$(awk '/^- \[ \] /{f=1} f && /^$/{exit} f{print}' ROADMAP.md)"
+
+  if [ -n "$STEP" ]; then
+    PROMPT="Repo conventions are in CLAUDE.md (already in your context — do not
+re-read docs). Implement this single ROADMAP.md step, exactly as specified:
+
+$STEP
+
+Contract: code + tests + the 1-3 line JARVIS.md update in one commit on branch
+feat/roadmap-step-N (N = step number). Mark the step [x] in ROADMAP.md in the
+same commit. Run .venv/bin/python -m pytest jarvis/tests -q; never commit on
+red. Then: push, gh pr create, gh pr checks --watch, and merge ONLY if CI is
+green: gh pr merge --squash --delete-branch (if CI fails, fix on the branch and
+push again). Finish with git checkout main && git pull. Do nothing beyond this
+one step."
+  else
+    PROMPT="ROADMAP.md has no unchecked steps. Follow the 'Autonomy loop
+instruction' at the bottom of PARITY.md: pick the top feasible ❌ feature,
+append it to ROADMAP.md as a new properly-formatted phase (2-6 steps, files +
+*Verify:* line each), and ship that roadmap edit as its own PR (create, watch
+checks, squash-merge, back to main). Do not implement the feature yet."
+  fi
+
+  if [ -n "$STEP" ]; then
+    run_claude "$PROMPT" $BUILD_MODELS || { echo "all models failed (likely quota) — stopping"; break; }
+  else
+    run_claude "$PROMPT" $PLAN_MODELS || { echo "all models failed (likely quota) — stopping"; break; }
+  fi
   git checkout main -q && git pull -q
   sleep 30
 done

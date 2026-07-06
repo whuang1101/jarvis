@@ -272,6 +272,7 @@ BRAVE_API_KEY=...           # optional — enables Brave Search MCP
 
 ```toml
 auto_mode = false
+dangerously_skip_permissions = false
 max_tool_iterations = 40
 autocompact_tokens = 25000
 tool_timeout_secs = 60
@@ -288,7 +289,7 @@ sets — project values win over global values, both win over the dataclass defa
 files fall back silently; a malformed file prints a stderr warning and that file's values are
 skipped (the other file/defaults still apply). Unknown keys are ignored. Currently informs
 `agent.py`'s iteration cap / tool timeout / autocompact threshold and `permissions.py`'s
-`auto_mode` default; nothing consumes `theme` yet.
+`auto_mode` and `dangerously_skip_permissions` defaults; nothing consumes `theme` yet.
 
 `[permissions] allow`/`deny` are glob-style pattern lists (`fnmatch`) checked in
 `permissions.py:needs_permission` before the tool-specific logic: a `deny` match forces the
