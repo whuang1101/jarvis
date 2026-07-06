@@ -134,6 +134,41 @@ class TestPermissionRules:
         assert settings.permission_deny == ()
 
 
+class TestHooksConfig:
+    def test_defaults_are_empty(self):
+        assert Settings().hooks_pre_tool == ()
+        assert Settings().hooks_post_tool == ()
+
+    def test_hooks_table_is_parsed(self, tmp_path):
+        path = tmp_path / "config.toml"
+        path.write_text(
+            "[hooks]\n"
+            'pre_tool = [{match = "write_file", run = "./block.sh"}]\n'
+            'post_tool = [{match = "*", run = "./notify.sh"}]\n'
+        )
+        settings = Settings.load(path)
+        assert settings.hooks_pre_tool == ({"match": "write_file", "run": "./block.sh"},)
+        assert settings.hooks_post_tool == ({"match": "*", "run": "./notify.sh"},)
+
+    def test_project_hooks_overlay_global(self, tmp_path):
+        global_path = tmp_path / "global.toml"
+        global_path.write_text('[hooks]\npre_tool = [{match = "write_file", run = "./a.sh"}]\n')
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        (project_dir / ".jarvis.toml").write_text('[hooks]\npost_tool = [{match = "run_command", run = "./b.sh"}]\n')
+
+        settings = Settings.load(global_path, cwd=project_dir)
+        assert settings.hooks_pre_tool == ({"match": "write_file", "run": "./a.sh"},)
+        assert settings.hooks_post_tool == ({"match": "run_command", "run": "./b.sh"},)
+
+    def test_missing_hooks_table_keeps_defaults(self, tmp_path):
+        path = tmp_path / "config.toml"
+        path.write_text('theme = "dracula"\n')
+        settings = Settings.load(path)
+        assert settings.hooks_pre_tool == ()
+        assert settings.hooks_post_tool == ()
+
+
 class TestPersistAllowPattern:
     def test_creates_file_with_pattern(self, tmp_path):
         path = tmp_path / "config.toml"
@@ -171,6 +206,16 @@ class TestPersistAllowPattern:
         path = tmp_path / "nested" / "config.toml"
         persist_allow_pattern("write_file(*)", path)
         assert path.exists()
+
+    def test_preserves_existing_hooks_table(self, tmp_path):
+        path = tmp_path / "config.toml"
+        path.write_text('[hooks]\npre_tool = [{match = "write_file", run = "./block.sh"}]\n')
+
+        persist_allow_pattern("run_command(git *)", path)
+
+        settings = Settings.load(path)
+        assert settings.permission_allow == ("run_command(git *)",)
+        assert settings.hooks_pre_tool == ({"match": "write_file", "run": "./block.sh"},)
 
 
 class TestLoadWithSources:

@@ -9,6 +9,10 @@ _CONFIG_PATH = Path.home() / ".jarvis" / "config.toml"
 _PROJECT_CONFIG_NAME = ".jarvis.toml"
 _PROJECT_WALK_DEPTH = 5  # cwd + up to 4 parents, same walk as cli._find_jarvis_md
 
+# Settings fields sourced from a TOML table (not a top-level scalar) — excluded
+# from scalar key handling in load_with_sources/persist_setting.
+_TABLE_KEYS = {"permission_allow", "permission_deny", "hooks_pre_tool", "hooks_post_tool"}
+
 
 def _find_project_config(start: Path) -> Path | None:
     """Walk from `start` up to 4 parent directories looking for .jarvis.toml."""
@@ -34,7 +38,7 @@ def _load_toml(path: Path) -> dict:
 
 
 def _extract_overrides(data: dict, scalar_keys: set[str]) -> dict:
-    """Pull known top-level scalar keys, plus the [permissions] allow/deny table."""
+    """Pull known top-level scalar keys, plus the [permissions] and [hooks] tables."""
     overrides = {k: v for k, v in data.items() if k in scalar_keys}
     permissions = data.get("permissions")
     if isinstance(permissions, dict):
@@ -42,6 +46,12 @@ def _extract_overrides(data: dict, scalar_keys: set[str]) -> dict:
             overrides["permission_allow"] = tuple(permissions["allow"])
         if "deny" in permissions:
             overrides["permission_deny"] = tuple(permissions["deny"])
+    hooks = data.get("hooks")
+    if isinstance(hooks, dict):
+        if "pre_tool" in hooks:
+            overrides["hooks_pre_tool"] = tuple(hooks["pre_tool"])
+        if "post_tool" in hooks:
+            overrides["hooks_post_tool"] = tuple(hooks["post_tool"])
     return overrides
 
 
@@ -56,6 +66,9 @@ class Settings:
     # Glob-style patterns matched against "tool_name(args)", e.g. "run_command(git *)".
     permission_allow: tuple[str, ...] = ()
     permission_deny: tuple[str, ...] = ()
+    # Each entry: {"match": "<glob against tool name>", "run": "<shell command>"}.
+    hooks_pre_tool: tuple[dict, ...] = ()
+    hooks_post_tool: tuple[dict, ...] = ()
 
     @classmethod
     def load(cls, path: Path | None = None, cwd: Path | None = None) -> "Settings":
@@ -79,7 +92,7 @@ class Settings:
         Returns the merged Settings plus a dict mapping every field name to
         "default", "global", or "project" — whichever file last set it.
         """
-        scalar_keys = {f.name for f in fields(cls)} - {"permission_allow", "permission_deny"}
+        scalar_keys = {f.name for f in fields(cls)} - _TABLE_KEYS
         merged: dict = {}
         sources: dict[str, str] = {f.name: "default" for f in fields(cls)}
 
@@ -111,9 +124,15 @@ def _format_toml_value(value) -> str:
     raise TypeError(f"Unsupported TOML value type: {type(value)!r}")
 
 
+def _format_inline_table(table: dict) -> str:
+    items = ", ".join(f"{k} = {_format_toml_value(v)}" for k, v in table.items())
+    return f"{{{items}}}"
+
+
 def _dump_toml(data: dict) -> str:
-    """Serialize the small subset of TOML this config needs (scalars + a [permissions] table)."""
-    lines = [f"{k} = {_format_toml_value(v)}" for k, v in data.items() if k != "permissions"]
+    """Serialize the small subset of TOML this config needs: scalars, a [permissions]
+    table, and a [hooks] table (arrays of {match, run} inline tables)."""
+    lines = [f"{k} = {_format_toml_value(v)}" for k, v in data.items() if k not in ("permissions", "hooks")]
 
     permissions = data.get("permissions")
     if permissions:
@@ -123,6 +142,16 @@ def _dump_toml(data: dict) -> str:
             values = permissions.get(key)
             if values:
                 items = ", ".join(_format_toml_value(v) for v in values)
+                lines.append(f"{key} = [{items}]")
+
+    hooks = data.get("hooks")
+    if hooks:
+        lines.append("")
+        lines.append("[hooks]")
+        for key in ("pre_tool", "post_tool"):
+            values = hooks.get(key)
+            if values:
+                items = ", ".join(_format_inline_table(v) for v in values)
                 lines.append(f"{key} = [{items}]")
 
     return "\n".join(lines) + "\n"
@@ -157,7 +186,7 @@ def persist_setting(key: str, raw_value: str, path: Path | None = None) -> None:
     Raises ValueError if `key` isn't a known scalar setting (permission lists
     aren't settable this way — use `persist_allow_pattern`).
     """
-    scalar_keys = {f.name for f in fields(Settings)} - {"permission_allow", "permission_deny"}
+    scalar_keys = {f.name for f in fields(Settings)} - _TABLE_KEYS
     if key not in scalar_keys:
         raise ValueError(f"Unknown setting: {key!r}. Valid keys: {', '.join(sorted(scalar_keys))}")
 

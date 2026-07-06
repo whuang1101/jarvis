@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import fnmatch
 import json
+import subprocess
 import time
 from typing import Any
 
@@ -49,6 +51,46 @@ def execute_with_timeout(tool: Any, args: dict[str, Any], timeout: int = _TOOL_T
         except FuturesTimeout:
             future.cancel()
             return f"Error: tool timed out after {timeout}s"
+
+
+_HOOK_TIMEOUT_SECS = 10
+
+
+def _matching_hooks(hooks: tuple[dict[str, Any], ...], tool_name: str) -> list[dict[str, Any]]:
+    return [h for h in hooks if fnmatch.fnmatch(tool_name, h.get("match", ""))]
+
+
+def run_pre_tool_hooks(
+    hooks: tuple[dict[str, Any], ...], tool_name: str, args: dict[str, Any], timeout: int = _HOOK_TIMEOUT_SECS
+) -> str | None:
+    """Run pre-tool hooks whose `match` glob matches `tool_name`, each fed
+    `{"tool": tool_name, "args": args}` as JSON on stdin. Exit code 2 blocks the
+    tool — its stderr (or a timeout message) becomes the tool result. Returns
+    None if no hook blocks."""
+    payload = json.dumps({"tool": tool_name, "args": args})
+    for hook in _matching_hooks(hooks, tool_name):
+        run = hook.get("run", "")
+        try:
+            proc = subprocess.run(run, shell=True, input=payload, capture_output=True, text=True, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            return f"Error: pre-tool hook timed out after {timeout}s: {run}"
+        if proc.returncode == 2:
+            return proc.stderr.strip() or f"Error: blocked by pre-tool hook: {run}"
+    return None
+
+
+def run_post_tool_hooks(
+    hooks: tuple[dict[str, Any], ...], tool_name: str, args: dict[str, Any], timeout: int = _HOOK_TIMEOUT_SECS
+) -> None:
+    """Run post-tool hooks whose `match` glob matches `tool_name`, each fed
+    `{"tool": tool_name, "args": args}` as JSON on stdin. Side-effect only —
+    failures and timeouts are ignored."""
+    payload = json.dumps({"tool": tool_name, "args": args})
+    for hook in _matching_hooks(hooks, tool_name):
+        try:
+            subprocess.run(hook.get("run", ""), shell=True, input=payload, capture_output=True, text=True, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            pass
 
 
 def _is_context_length_error(e: BadRequestError) -> bool:
@@ -268,13 +310,19 @@ def run_agent(
                         result = f"Error: unknown tool '{tool_name}'"
                         print_tool_result(result, error=True)
                     else:
-                        with console.status(f"[dim]{label}[/dim]", spinner="dots"):
-                            try:
-                                result = execute_with_timeout(tool, args)
-                            except Exception as e:
-                                result = f"Error executing {tool_name}: {e}"
-                        result = truncate_tool_result(result)
-                        print_tool_result(result, error=result.startswith("Error"))
+                        blocked = run_pre_tool_hooks(_settings.hooks_pre_tool, tool_name, args)
+                        if blocked is not None:
+                            result = blocked
+                            print_tool_result(result, error=True)
+                        else:
+                            with console.status(f"[dim]{label}[/dim]", spinner="dots"):
+                                try:
+                                    result = execute_with_timeout(tool, args)
+                                except Exception as e:
+                                    result = f"Error executing {tool_name}: {e}"
+                            result = truncate_tool_result(result)
+                            print_tool_result(result, error=result.startswith("Error"))
+                            run_post_tool_hooks(_settings.hooks_post_tool, tool_name, args)
 
                 if logger:
                     logger.tool_result(tool_name, result)

@@ -1,8 +1,14 @@
 from __future__ import annotations
 
+import sys
 import time
 
-from jarvis.agent import truncate_tool_result, execute_with_timeout
+from jarvis.agent import (
+    truncate_tool_result,
+    execute_with_timeout,
+    run_pre_tool_hooks,
+    run_post_tool_hooks,
+)
 from jarvis.tools.base import BaseTool
 from jarvis.tools.read_file import ReadFileTool
 
@@ -57,3 +63,53 @@ class TestReadFileGuards:
         f.write_text("one\ntwo\n")
         result = ReadFileTool().execute({"path": str(f), "offset": 99, "limit": 5})
         assert result.startswith("Error")
+
+
+_BLOCK_SCRIPT = """
+import sys, json
+data = json.load(sys.stdin)
+if data["args"].get("path") == "blocked.txt":
+    print("blocked path", file=sys.stderr)
+    sys.exit(2)
+"""
+
+
+class TestPreToolHooks:
+    def test_blocks_on_exit_code_2(self, tmp_path):
+        script = tmp_path / "block.py"
+        script.write_text(_BLOCK_SCRIPT)
+        hooks = ({"match": "write_file", "run": f"{sys.executable} {script}"},)
+        result = run_pre_tool_hooks(hooks, "write_file", {"path": "blocked.txt"})
+        assert result == "blocked path"
+
+    def test_allows_when_hook_exits_zero(self, tmp_path):
+        script = tmp_path / "block.py"
+        script.write_text(_BLOCK_SCRIPT)
+        hooks = ({"match": "write_file", "run": f"{sys.executable} {script}"},)
+        result = run_pre_tool_hooks(hooks, "write_file", {"path": "ok.txt"})
+        assert result is None
+
+    def test_ignores_non_matching_tool(self):
+        hooks = ({"match": "read_file", "run": "exit 2"},)
+        result = run_pre_tool_hooks(hooks, "write_file", {"path": "blocked.txt"})
+        assert result is None
+
+    def test_timeout_blocks_with_message(self):
+        hooks = ({"match": "write_file", "run": "sleep 2"},)
+        result = run_pre_tool_hooks(hooks, "write_file", {"path": "x"}, timeout=1)
+        assert result is not None
+        assert "timed out" in result
+
+
+class TestPostToolHooks:
+    def test_runs_matching_hook_as_side_effect(self, tmp_path):
+        marker = tmp_path / "marker.txt"
+        hooks = ({"match": "write_file", "run": f"touch {marker}"},)
+        run_post_tool_hooks(hooks, "write_file", {"path": "x"})
+        assert marker.exists()
+
+    def test_skips_non_matching_tool(self, tmp_path):
+        marker = tmp_path / "marker.txt"
+        hooks = ({"match": "read_file", "run": f"touch {marker}"},)
+        run_post_tool_hooks(hooks, "write_file", {"path": "x"})
+        assert not marker.exists()
