@@ -656,7 +656,7 @@ confined to `cli.py` argument dispatch and unit-testable through `_parse_args`
   api_version="v"), deployment="gpt-4o").deployment == "gpt-4o"` (constructs a Config
   directly, no `.load()` / no env). `/selftest` (pytest) green.
 
-- [ ] **14.3 Docs + parity flip.**
+- [x] **14.3 Docs + parity flip.**
   In JARVIS.md, note under the headless / CLI section that `--max-turns N` caps a
   one-shot run's tool iterations and `--model DEPLOYMENT` overrides the Azure
   deployment for the run (both interactive and `-p`). Flip PARITY.md's

@@ -411,6 +411,8 @@ pipx list                             # check what's installed
 cat ~/.jarvis/logs/$(date +%Y-%m-%d).jsonl | jq .   # view today's session log
 cat err.log | jarvis -p "fix this"   # piped text appended below the -p prompt
 git diff | jarvis                     # bare pipe: piped text is the whole prompt (TTY never read)
+jarvis -p "..." --max-turns 3         # cap tool-call iterations for this one-shot run
+jarvis --model gpt-4o-mini            # override the Azure deployment (interactive or -p)
 ```
 
 ## How to add a new tool
