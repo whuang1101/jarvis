@@ -14,6 +14,7 @@ from rich.syntax import Syntax
 
 from .formatter import console
 from .settings import Settings, persist_allow_pattern
+from .tools.edit_file import multi_occurrence_error
 
 _DESTRUCTIVE_RE = re.compile(
     r"\brm\s|rmdir\b|sudo\s|kill\s|pkill\b|killall\b"
@@ -202,7 +203,7 @@ class _DiffError(str):
     """A diff-computation error message (distinct from a real diff string)."""
 
 
-def _edit_diff(path: str, old_string: str, new_string: str) -> str | None:
+def _edit_diff(path: str, old_string: str, new_string: str, replace_all: bool = False) -> str | None:
     try:
         original = Path(path).read_text(encoding="utf-8", errors="replace")
     except FileNotFoundError:
@@ -215,13 +216,14 @@ def _edit_diff(path: str, old_string: str, new_string: str) -> str | None:
             f"Error: old_string not found in {path}. Make sure the text matches "
             "exactly, including whitespace and indentation."
         )
-    if count > 1:
-        return _DiffError(
-            f"Error: old_string appears {count} times in {path}. Add more "
-            "surrounding context to make it unique."
-        )
+    if count > 1 and not replace_all:
+        return _DiffError(multi_occurrence_error(path, original, old_string, count))
 
-    new_content = original.replace(old_string, new_string, 1)
+    new_content = (
+        original.replace(old_string, new_string)
+        if replace_all
+        else original.replace(old_string, new_string, 1)
+    )
     lines = list(difflib.unified_diff(
         original.splitlines(keepends=True),
         new_content.splitlines(keepends=True),
@@ -249,7 +251,12 @@ def _show_diff(tool_name: str, args: dict[str, Any]) -> str | None:
 
     elif tool_name == "edit_file":
         path = args.get("path", "")
-        diff = _edit_diff(path, args.get("old_string", ""), args.get("new_string", ""))
+        diff = _edit_diff(
+            path,
+            args.get("old_string", ""),
+            args.get("new_string", ""),
+            bool(args.get("replace_all", False)),
+        )
         if isinstance(diff, _DiffError):
             return str(diff)  # forward edit_file's exact rejection message
         if diff == "":

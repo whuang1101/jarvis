@@ -371,8 +371,9 @@ cat ~/.jarvis/logs/$(date +%Y-%m-%d).jsonl | jq .   # view today's session log
   triggered by lookalikes like `cdiff`). The prompt's cwd updates on the next REPL iteration.
 - MCP servers connect at startup only — if one crashes, restart Jarvis.
 - `stream_options={"include_usage": True}` is required for real token counts from Azure.
-- `edit_file` needs `old_string` to appear **exactly once** (0 or 2+ → error). The permission
-  preview enforces the same rule.
+- `edit_file` needs `old_string` to appear **exactly once** (0 or 2+ → error, with the offending
+  line numbers listed), unless `replace_all=true` is passed. The permission preview enforces the
+  same rule.
 - `token_estimate()` is a chars÷4 approximation and ignores tool_call payloads + system prompt.
 - Cost figures use the hardcoded `_PRICING` table; real Azure pricing may differ.
 - `_history` holds raw message dicts (user/assistant/tool/tool_calls), so `/usage`'s
