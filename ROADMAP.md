@@ -374,7 +374,7 @@ when you already know the filename shape.*
   newest-first, returns the `"No files match"` string for a non-matching pattern,
   and returns an `"Error: ..."` string for a missing root path.
 
-- [ ] **9.2 Docs + parity flip.**
+- [x] **9.2 Docs + parity flip.**
   Add a `glob_files.py` row to the tool tree in JARVIS.md (one line: "Find files by
   glob pattern, newest-first, capped at 200"). Flip PARITY.md's
   `Glob (find files by pattern)` row from ❌ to ✅.
