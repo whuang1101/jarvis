@@ -4,7 +4,7 @@ import os
 from typing import Any
 
 from .base import BaseTool
-from .documents import render_notebook
+from .documents import extract_pdf_text, render_notebook
 
 _TRUNCATE_AT = 10_000
 _MAX_FULL_READ_BYTES = 100_000  # over this, require offset/limit
@@ -40,6 +40,12 @@ class ReadFileTool(BaseTool):
 
         if path.lower().endswith(".ipynb"):
             content = render_notebook(path)
+            if len(content) > _TRUNCATE_AT:
+                return content[:_TRUNCATE_AT] + f"\n\n[... truncated — output is {len(content)} chars, showing first {_TRUNCATE_AT}]"
+            return content
+
+        if path.lower().endswith(".pdf"):
+            content = extract_pdf_text(path)
             if len(content) > _TRUNCATE_AT:
                 return content[:_TRUNCATE_AT] + f"\n\n[... truncated — output is {len(content)} chars, showing first {_TRUNCATE_AT}]"
             return content

@@ -56,3 +56,23 @@ def render_notebook(path: str) -> str:
         blocks.append(block)
 
     return "\n\n".join(blocks)
+
+
+def extract_pdf_text(path: str) -> str:
+    try:
+        import pypdf
+    except ImportError:
+        return "Error: pypdf is not installed; run `pip install pypdf` to read PDF files."
+
+    try:
+        reader = pypdf.PdfReader(path)
+        pages = [page.extract_text() or "" for page in reader.pages]
+    except OSError as e:
+        return f"Error reading {path}: {e}"
+    except pypdf.errors.PyPdfError as e:
+        return f"Error: {path} could not be parsed as a PDF: {e}"
+
+    return "".join(
+        f"\n\n--- page {n} ---\n\n{text}" if n > 1 else text
+        for n, text in enumerate(pages, start=1)
+    )

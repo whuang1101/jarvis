@@ -13,6 +13,7 @@ dependencies = [
     "mcp>=1.0",
     "trafilatura>=1.6",
     "ddgs>=0.1",
+    "pypdf>=4.0",
 ]
 
 [project.optional-dependencies]

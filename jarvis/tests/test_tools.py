@@ -117,6 +117,39 @@ class TestReadFile:
         result = ReadFileTool().execute({"path": str(f)})
         assert result.startswith("Error")
 
+    def test_extracts_pdf_text(self, tmp_path):
+        import pypdf
+        from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
+
+        writer = pypdf.PdfWriter()
+        writer.add_blank_page(width=200, height=200)
+        page = writer.pages[0]
+
+        content = DecodedStreamObject()
+        content.set_data(b"BT /F1 24 Tf 10 100 Td (Hello PDF) Tj ET")
+        page[NameObject("/Contents")] = writer._add_object(content)
+
+        font = DictionaryObject()
+        font[NameObject("/Type")] = NameObject("/Font")
+        font[NameObject("/Subtype")] = NameObject("/Type1")
+        font[NameObject("/BaseFont")] = NameObject("/Helvetica")
+        resources = DictionaryObject()
+        resources[NameObject("/Font")] = DictionaryObject({NameObject("/F1"): writer._add_object(font)})
+        page[NameObject("/Resources")] = resources
+
+        f = tmp_path / "doc.pdf"
+        with open(f, "wb") as fh:
+            writer.write(fh)
+
+        result = ReadFileTool().execute({"path": str(f)})
+        assert "Hello PDF" in result
+
+    def test_non_pdf_with_pdf_extension_returns_error(self, tmp_path):
+        f = tmp_path / "fake.pdf"
+        f.write_text("this is not a pdf")
+        result = ReadFileTool().execute({"path": str(f)})
+        assert result.startswith("Error")
+
 
 class TestListDir:
     def test_lists_tree(self, tmp_path):

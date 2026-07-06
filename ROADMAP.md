@@ -326,7 +326,7 @@ is small), and the existing `_TRUNCATE_AT` cap still applies to the result.
   source, and the `# Out:` text while excluding the raw `"cell_type"` JSON keys;
   a malformed `.ipynb` returns an `"Error:"` string.
 
-- [ ] **8.2 PDF text extraction.**
+- [x] **8.2 PDF text extraction.**
   Add `pypdf>=4.0` to `dependencies` in `pyproject.toml`. In `documents.py` add
   `extract_pdf_text(path: str) -> str`: open with `pypdf.PdfReader`, concatenate
   `page.extract_text()` across pages with `\n\n--- page N ---\n\n` separators,
