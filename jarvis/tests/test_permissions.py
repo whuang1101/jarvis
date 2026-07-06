@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from jarvis.permissions import needs_permission
+import jarvis.permissions as permissions
+from jarvis.permissions import _suggest_pattern, needs_permission, request_permission
 from jarvis.settings import Settings
 
 DESTRUCTIVE = [
@@ -77,3 +78,52 @@ class TestAllowDenyRules:
         assert needs_permission("run_command", {"command": "rm -rf /tmp/x"}, settings=settings)
         assert not needs_permission("run_command", {"command": "ls -la"}, settings=settings)
         assert needs_permission("write_file", {"path": "x", "content": ""}, settings=settings)
+
+
+class TestSuggestPattern:
+    def test_run_command_scopes_to_the_program(self):
+        assert _suggest_pattern("run_command", {"command": "git push origin main"}) == "run_command(git *)"
+
+    def test_run_command_with_empty_command(self):
+        assert _suggest_pattern("run_command", {"command": ""}) == "run_command(*)"
+
+    def test_file_ops_scope_to_the_whole_tool(self):
+        assert _suggest_pattern("write_file", {"path": "/tmp/x", "content": ""}) == "write_file(*)"
+        assert _suggest_pattern("edit_file", {"path": "/tmp/x"}) == "edit_file(*)"
+
+
+class TestAlwaysAllow:
+    def test_always_choice_persists_pattern_and_approves(self, monkeypatch, tmp_path):
+        config_path = tmp_path / "config.toml"
+        monkeypatch.setattr(permissions, "_settings", Settings())
+        monkeypatch.setattr(permissions, "persist_allow_pattern", lambda pattern, path=None: config_path.write_text(f'[permissions]\nallow = ["{pattern}"]\n'))
+        monkeypatch.setattr(permissions, "_arrow_confirm", lambda: "always")
+
+        result = request_permission("run_command", {"command": "git push origin main"})
+
+        assert result is None
+        assert "run_command(git *)" in permissions._settings.permission_allow
+        assert "run_command(git *)" in config_path.read_text()
+
+    def test_always_allow_skips_prompt_on_next_matching_call(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(permissions, "_settings", Settings())
+        monkeypatch.setattr(permissions, "persist_allow_pattern", lambda pattern, path=None: None)
+        monkeypatch.setattr(permissions, "_arrow_confirm", lambda: "always")
+
+        request_permission("run_command", {"command": "git push origin main"})
+
+        assert not needs_permission(
+            "run_command", {"command": "git push origin feature"}, settings=permissions._settings
+        )
+
+    def test_yes_choice_approves_without_persisting(self, monkeypatch):
+        monkeypatch.setattr(permissions, "_arrow_confirm", lambda: "yes")
+        persisted = []
+        monkeypatch.setattr(permissions, "persist_allow_pattern", lambda pattern, path=None: persisted.append(pattern))
+
+        assert request_permission("run_command", {"command": "rm -rf /tmp/x"}) is None
+        assert persisted == []
+
+    def test_no_choice_cancels(self, monkeypatch):
+        monkeypatch.setattr(permissions, "_arrow_confirm", lambda: "no")
+        assert request_permission("run_command", {"command": "rm -rf /tmp/x"}) is not None

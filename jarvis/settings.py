@@ -78,3 +78,52 @@ class Settings:
             merged.update(_extract_overrides(_load_toml(project_path), scalar_keys))
 
         return cls(**{**cls().__dict__, **merged})
+
+
+def _format_toml_value(value) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, str):
+        escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+        return f'"{escaped}"'
+    raise TypeError(f"Unsupported TOML value type: {type(value)!r}")
+
+
+def _dump_toml(data: dict) -> str:
+    """Serialize the small subset of TOML this config needs (scalars + a [permissions] table)."""
+    lines = [f"{k} = {_format_toml_value(v)}" for k, v in data.items() if k != "permissions"]
+
+    permissions = data.get("permissions")
+    if permissions:
+        lines.append("")
+        lines.append("[permissions]")
+        for key in ("allow", "deny"):
+            values = permissions.get(key)
+            if values:
+                items = ", ".join(_format_toml_value(v) for v in values)
+                lines.append(f"{key} = [{items}]")
+
+    return "\n".join(lines) + "\n"
+
+
+def persist_allow_pattern(pattern: str, path: Path | None = None) -> None:
+    """Append `pattern` to the global config's `[permissions] allow` list on disk.
+
+    Preserves the rest of the file's contents (best-effort — a malformed existing
+    file is treated as empty rather than blocking the write). Creates
+    `~/.jarvis/` if needed.
+    """
+    target = path if path is not None else _CONFIG_PATH
+    data = _load_toml(target) if target.exists() else {}
+
+    permissions = dict(data.get("permissions") or {})
+    allow = list(permissions.get("allow") or [])
+    if pattern not in allow:
+        allow.append(pattern)
+    permissions["allow"] = allow
+    data["permissions"] = permissions
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(_dump_toml(data))

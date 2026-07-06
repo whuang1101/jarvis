@@ -6,13 +6,14 @@ import re
 import sys
 import termios
 import tty
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
 from rich.syntax import Syntax
 
 from .formatter import console
-from .settings import Settings
+from .settings import Settings, persist_allow_pattern
 
 _DESTRUCTIVE_RE = re.compile(
     r"\brm\s|rmdir\b|sudo\s|kill\s|pkill\b|killall\b"
@@ -53,6 +54,28 @@ def _matches_any(invocation: str, patterns: tuple[str, ...]) -> bool:
     return any(fnmatch.fnmatch(invocation, pattern) for pattern in patterns)
 
 
+def _suggest_pattern(tool_name: str, args: dict[str, Any]) -> str:
+    """A reasonable allow-list pattern for "always allow" this kind of call.
+
+    `run_command` is scoped to the invoked program (e.g. `git status` ->
+    `run_command(git *)`) so "always" covers that command family, not just the
+    exact invocation. File ops are scoped to the tool as a whole.
+    """
+    if tool_name == "run_command":
+        cmd = args.get("command", "").strip()
+        program = cmd.split()[0] if cmd else ""
+        return f"run_command({program} *)" if program else "run_command(*)"
+    return f"{tool_name}(*)"
+
+
+def _add_allow_pattern(pattern: str) -> None:
+    """Allow `pattern` for the rest of this process and persist it to the global config."""
+    global _settings
+    if pattern not in _settings.permission_allow:
+        _settings = replace(_settings, permission_allow=_settings.permission_allow + (pattern,))
+    persist_allow_pattern(pattern)
+
+
 def needs_permission(tool_name: str, args: dict[str, Any], settings: Settings | None = None) -> bool:
     s = settings if settings is not None else _settings
     invocation = _invocation_string(tool_name, args)
@@ -82,18 +105,24 @@ _DIM = "\033[2m"     # dim (unselected)
 _CLR = "\033[2K"     # clear line
 
 
-def _arrow_confirm() -> bool:
+_CONFIRM_OPTIONS = ("yes", "always", "no")
+_CONFIRM_LABELS = {"yes": "Yes", "always": "Always", "no": "No"}
+
+
+def _arrow_confirm() -> str:
     """
-    Interactive Yes / No selector.
-    Arrow keys (left/right/up/down) switch selection. Enter confirms. y/n jump directly.
-    Returns True if Yes was chosen.
+    Interactive Yes / Always / No selector.
+    Left/right (or up/down) arrows cycle the selection. Enter confirms. y/a/n jump
+    directly. Returns "yes", "always", or "no".
     """
-    selected = 1  # 0 = Yes, 1 = No (default No is the safer choice)
+    selected = 2  # No is the safer default
 
     def _render() -> None:
-        yes = f"{_HL} Yes {_R}" if selected == 0 else f"{_DIM} Yes {_R}"
-        no  = f"{_HL} No  {_R}" if selected == 1 else f"{_DIM} No  {_R}"
-        sys.stdout.write(f"\r{_CLR}  {yes}   {no}  ")
+        parts = []
+        for i, opt in enumerate(_CONFIRM_OPTIONS):
+            label = f" {_CONFIRM_LABELS[opt]} "
+            parts.append(f"{_HL}{label}{_R}" if i == selected else f"{_DIM}{label}{_R}")
+        sys.stdout.write(f"\r{_CLR}  " + "  ".join(parts) + "  ")
         sys.stdout.flush()
 
     fd = sys.stdin.fileno()
@@ -106,28 +135,33 @@ def _arrow_confirm() -> bool:
             if ch == b"\x1b":
                 ch2 = sys.stdin.buffer.read(1)
                 ch3 = sys.stdin.buffer.read(1)
-                if ch2 == b"[" and ch3 in (b"A", b"B", b"C", b"D"):
-                    # any arrow key toggles
-                    selected = 1 - selected
+                if ch2 == b"[" and ch3 in (b"C", b"B"):  # right / down
+                    selected = (selected + 1) % len(_CONFIRM_OPTIONS)
+                    _render()
+                elif ch2 == b"[" and ch3 in (b"D", b"A"):  # left / up
+                    selected = (selected - 1) % len(_CONFIRM_OPTIONS)
                     _render()
             elif ch in (b"\r", b"\n"):
                 break
             elif ch in (b"y", b"Y"):
                 selected = 0
                 break
-            elif ch in (b"n", b"N"):
+            elif ch in (b"a", b"A"):
                 selected = 1
                 break
+            elif ch in (b"n", b"N"):
+                selected = 2
+                break
             elif ch == b"\x03":  # Ctrl+C
-                selected = 1
+                selected = 2
                 break
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
-    label = "Yes" if selected == 0 else "No"
-    sys.stdout.write(f"\r{_CLR}  {label}\n")
+    choice = _CONFIRM_OPTIONS[selected]
+    sys.stdout.write(f"\r{_CLR}  {_CONFIRM_LABELS[choice]}\n")
     sys.stdout.flush()
-    return selected == 0
+    return choice
 
 
 def _write_diff(path: str, new_content: str) -> str | None:
@@ -213,9 +247,11 @@ def _show_diff(tool_name: str, args: dict[str, Any]) -> str | None:
 
 def request_permission(tool_name: str, args: dict[str, Any]) -> str | None:
     """
-    Show a preview and prompt with an arrow-key Yes/No selector.
+    Show a preview and prompt with an arrow-key Yes/Always/No selector.
     In auto mode, file writes/edits are approved automatically (diff still shown).
     Destructive commands always require explicit approval.
+    "Always" approves this call and adds a matching pattern to the allow list,
+    persisted to ~/.jarvis/config.toml so future matching calls skip the prompt.
     Returns None if approved, or a cancellation string if denied.
     """
     console.print()
@@ -235,9 +271,15 @@ def request_permission(tool_name: str, args: dict[str, Any]) -> str | None:
         cmd = args.get("command", "")
         console.print(f"  [yellow bold]⚠ Destructive command:[/yellow bold] {cmd}")
 
-    approved = _arrow_confirm()
+    choice = _arrow_confirm()
 
-    if approved:
+    if choice == "always":
+        pattern = _suggest_pattern(tool_name, args)
+        _add_allow_pattern(pattern)
+        console.print(f"  [dim green]✓ Always allowed: {pattern}[/dim green]")
+        return None
+
+    if choice == "yes":
         return None
 
     console.print("  [dim]✗ Skipped[/dim]")
