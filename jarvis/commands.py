@@ -15,6 +15,7 @@ from .permissions import (
     set_auto_mode,
     set_dangerously_skip_permissions,
 )
+from .sessions import SessionStore, list_sessions
 from .settings import Settings, persist_setting
 
 _HELP_TEXT = """
@@ -43,6 +44,8 @@ _HELP_TEXT = """
   [cyan]/config <key> <value>[/cyan]
                   Write a setting to the global config
   [cyan]/save <file>[/cyan]   Save conversation history to a markdown file.
+  [cyan]/sessions[/cyan]      List the last 10 saved sessions (date, cwd, first message)
+  [cyan]/resume <n>[/cyan]    Load a session from /sessions into this conversation
   [cyan]/memory[/cyan]        Manage persistent memory (`~/.jarvis/memory.md`)
   [cyan]/init[/cyan]          Create a JARVIS.md project context file here
   [cyan]/selftest[/cyan]      Run Jarvis's own test suite (pytest)
@@ -104,11 +107,23 @@ def _copy_to_clipboard(text: str) -> bool:
     return False
 
 
+def _format_session_date(session_id: str) -> str:
+    """session_id is '<YYYYMMDD-HHMMSS>-<suffix>'; render the timestamp part."""
+    from datetime import datetime
+
+    timestamp = session_id.rsplit("-", 1)[0]
+    try:
+        return datetime.strptime(timestamp, "%Y%m%d-%H%M%S").strftime("%Y-%m-%d %H:%M")
+    except ValueError:
+        return timestamp
+
+
 def handle_command(
     raw: str,
     client: JarvisClient,
     context: ContextManager,
     tracker: UsageTracker,
+    session: SessionStore | None = None,
 ) -> str | None:
     """
     Handle a slash command.
@@ -148,6 +163,8 @@ def handle_command(
                 "/fix",
                 "/copy",
                 "/save",
+                "/sessions",
+                "/resume",
                 "/memory",
                 "/init",
                 "/selftest",
@@ -347,6 +364,40 @@ def handle_command(
             print_system(f"Conversation saved to {arg}.")
         except Exception as e:
             print_error(f"Failed to save: {e}")
+        return None
+
+    if cmd == "/sessions":
+        sessions = list_sessions(limit=10)
+        if not sessions:
+            print_error("No saved sessions found.")
+            return None
+        console.print("\n[bold cyan]Recent sessions:[/bold cyan]")
+        for i, s in enumerate(sessions, start=1):
+            date = _format_session_date(s["session_id"])
+            preview = (s["first_message"] or "(no messages)")[:60]
+            console.print(f"  [cyan]{i:>2}[/cyan]  {date}  [dim]{s['cwd']}[/dim]  {preview}")
+        return None
+
+    if cmd == "/resume":
+        if not arg:
+            print_error("Usage: /resume <n>  (see /sessions for the list)")
+            return None
+        try:
+            n = int(arg)
+        except ValueError:
+            print_error("Usage: /resume <n>")
+            return None
+        sessions = list_sessions(limit=10)
+        if not (1 <= n <= len(sessions)):
+            print_error(f"No session #{n}. Run /sessions to see the list.")
+            return None
+        loaded_store, history = SessionStore.load(sessions[n - 1]["session_id"])
+        context.load_history(history)
+        if session is not None:
+            session.session_id = loaded_store.session_id
+            session.cwd = loaded_store.cwd
+            session.first_message = loaded_store.first_message
+        print_system(f"Resumed session {loaded_store.session_id} ({len(history)} messages).")
         return None
 
     if cmd == "/copy":

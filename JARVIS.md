@@ -99,6 +99,8 @@ jarvis/
 │                    precedes a bare `> ` prompt. Ctrl+C once warns, twice in a row exits
 │                    (Ctrl+D still exits immediately). `-p/--print PROMPT` runs one_shot mode
 │                    (_run_one_shot): auto mode on, no banner, MCP skipped unless `--mcp`, exits 0/1.
+│                    `--continue` loads the newest sessions.list_sessions() match for cwd into
+│                    ContextManager before the REPL starts.
 ├── agent.py         Streaming tool-use loop. run_agent() + _stream_turn() (renders live) +
 │                    _stream_with_retry() (lazy generator) + _accumulate_tool_calls().
 ├── client.py        Only file importing openai for requests. stream() (lazy, include_usage),
@@ -130,6 +132,8 @@ jarvis/
 ├── sessions.py      SessionStore — dumps full ContextManager history (cwd + first user message
 │                    as metadata) to ~/.jarvis/sessions/<timestamp-suffix>.json after every turn;
 │                    separate from the JSONL event log, meant for reload/continue.
+│                    list_sessions(cwd=None, limit=10) scans that dir, newest session_id first
+│                    (timestamp prefix sorts lexicographically), for `--continue`/`/sessions`/`/resume`.
 ├── mcp_manager.py   Daemon-thread asyncio loop. MCPManager.connect() launches a server, lists
 │                    tools, parks the session alive; MCPTool wraps each as a BaseTool.
 └── tools/
@@ -204,10 +208,13 @@ or `_RUN_AGENT_PREFIX` (`__RUN__:`) + message (the REPL strips the prefix and ru
 case-insensitive; the argument keeps original case.
 
 Implemented commands: `/help /history /retry /undo /clear /compact /usage /model /config /file /run
-/plan /go /cancel /restart /auto /fix /copy /save /memory /init /selftest /exit /quit`. Every one is
-listed in `_HELP_TEXT` — keep that invariant. `/config` (no args) prints effective settings from
-`Settings.load_with_sources()` (default/global/project); `/config <key> <value>` writes a scalar
-key to the global TOML via `settings.persist_setting`.
+/plan /go /cancel /restart /auto /fix /copy /save /sessions /resume /memory /init /selftest /exit
+/quit`. Every one is listed in `_HELP_TEXT` — keep that invariant. `/config` (no args) prints
+effective settings from `Settings.load_with_sources()` (default/global/project); `/config <key>
+<value>` writes a scalar key to the global TOML via `settings.persist_setting`. `/sessions` lists
+`sessions.list_sessions(limit=10)`; `/resume <n>` loads that entry via `SessionStore.load` into
+`context.load_history()` and updates the REPL's live `SessionStore` in place so later autosaves
+keep writing to the resumed session file.
 
 ### Plan mode vs auto mode (independent toggles)
 

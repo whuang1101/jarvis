@@ -20,6 +20,10 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         "--mcp", action="store_true",
         help="Connect configured MCP servers in one-shot mode (skipped by default for startup speed).",
     )
+    parser.add_argument(
+        "--continue", dest="continue_", action="store_true",
+        help="Resume the most recent session for the current directory.",
+    )
     return parser.parse_args(argv)
 
 
@@ -51,7 +55,7 @@ from .context import ContextManager, UsageTracker
 from .formatter import print_banner, print_error, print_system, print_user_header, console
 from .logger import SessionLogger
 from .mcp_manager import MCPManager
-from .sessions import SessionStore
+from .sessions import SessionStore, list_sessions
 from .tools import register_tool
 
 
@@ -193,9 +197,21 @@ def main() -> None:
     jarvis_md = _find_jarvis_md()
     context = ContextManager(project_context=jarvis_md[0] if jarvis_md else None)
 
+    continue_status: str | None = None
+    if args.continue_:
+        recent = list_sessions(cwd=os.getcwd(), limit=1)
+        if recent:
+            session, history = SessionStore.load(recent[0]["session_id"])
+            context.load_history(history)
+            continue_status = f"[dim]  ✓ Resumed session {session.session_id} ({len(history)} messages)[/dim]"
+        else:
+            continue_status = "[dim]  No previous session found for this directory — starting fresh.[/dim]"
+
     print_banner(model=client.current_deployment(), cwd=os.getcwd())
     if jarvis_md:
         console.print(f"[dim]  ✓ Project context loaded ({jarvis_md[1]})[/dim]")
+    if continue_status:
+        console.print(continue_status)
     _init_mcp(mcp)
     print_system("Type /help for available commands. Ctrl+C twice to exit.")
     console.print()
@@ -268,7 +284,7 @@ def main() -> None:
 
             if user_input.startswith("/"):
                 try:
-                    result = handle_command(user_input, client, context, tracker)
+                    result = handle_command(user_input, client, context, tracker, session)
                     if result == _EXIT_SENTINEL:
                         break
                     if result and result.startswith(_RUN_AGENT_PREFIX):

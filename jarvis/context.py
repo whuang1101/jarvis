@@ -166,6 +166,9 @@ class ContextManager:
     def clear(self) -> None:
         self._history = []
 
+    def load_history(self, history: list[dict[str, Any]]) -> None:
+        self._history = history
+
     def compact(self, client: "JarvisClient", tracker: "UsageTracker | None" = None) -> str:
         if not self._history:
             return "Nothing to compact."

@@ -52,3 +52,29 @@ class SessionStore:
         data = json.loads(path.read_text(encoding="utf-8"))
         store = cls(cwd=data["cwd"], first_message=data.get("first_message"), session_id=data["session_id"])
         return store, data.get("history", [])
+
+
+def list_sessions(cwd: str | None = None, limit: int = 10) -> list[dict[str, Any]]:
+    """Return metadata for the most recent sessions, newest first.
+
+    Each entry has session_id, cwd, first_message. Filters to `cwd` if given.
+    Sorting relies on the session_id's leading timestamp being lexicographically
+    ordered, so no need to parse it into a datetime.
+    """
+    if not _SESSIONS_DIR.is_dir():
+        return []
+    entries = []
+    for path in _SESSIONS_DIR.glob("*.json"):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            continue
+        if cwd is not None and data.get("cwd") != cwd:
+            continue
+        entries.append({
+            "session_id": data.get("session_id", path.stem),
+            "cwd": data.get("cwd"),
+            "first_message": data.get("first_message"),
+        })
+    entries.sort(key=lambda e: e["session_id"], reverse=True)
+    return entries[:limit]

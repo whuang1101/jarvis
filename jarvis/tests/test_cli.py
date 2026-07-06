@@ -37,6 +37,14 @@ class TestParseArgs:
         assert args.prompt == "hello"
         assert args.mcp is True
 
+    def test_continue_flag_defaults_false(self):
+        args = cli._parse_args([])
+        assert args.continue_ is False
+
+    def test_continue_flag(self):
+        args = cli._parse_args(["--continue"])
+        assert args.continue_ is True
+
 
 class TestOneShotMode(object):
     @pytest.fixture(autouse=True)
