@@ -143,7 +143,9 @@ jarvis/
     │                    offset/limit (1-based line slice, output prefixed "N: line").
     ├── write_file.py    Write a file (through permission gate).
     ├── edit_file.py     Replace old_string→new_string; old_string must appear exactly once.
-    ├── run_command.py   Run a shell command; intercepts `cd`/`cd <path>` via os.chdir().
+    ├── run_command.py   Run a shell command via Popen, streaming stdout/stderr lines live to
+    │                    the console as they arrive (result is still the captured, truncated
+    │                    text); intercepts `cd`/`cd <path>` via os.chdir().
     ├── list_dir.py      Directory tree to depth 2, honoring top-level .gitignore.
     ├── search_files.py  grep -rn for a pattern; caps output at 200 lines.
     ├── fetch_url.py     HTTP GET a URL; truncates at 8,000 chars.

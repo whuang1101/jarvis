@@ -206,7 +206,7 @@ These are all small, independent, and already listed in TODO.md § Robustness.
   tool (its stderr becomes the tool result). 10s timeout per hook.
   *Verify:* pytest with a hook script that blocks writes to a specific path.
 
-- [ ] **4.3 Streaming `run_command` output.**
+- [x] **4.3 Streaming `run_command` output.**
   Use `subprocess.Popen` and print lines live through the console as the command runs
   (still return the captured, truncated text as the tool result). Keeps long test runs
   from looking frozen.
