@@ -115,7 +115,10 @@ jarvis/
 │                    overrides `config.deployment` via `dataclasses.replace` in both one-shot mode
 │                    and before the interactive REPL's client is built. `--output-format
 │                    {text,json,stream-json}` (default `text`) selects headless -p rendering; parsed
-│                    into `args.output_format` (routing wired in a later step).
+│                    into `args.output_format`. `_result_payload(result, is_error, tracker) -> dict`
+│                    builds the `{"type":"result",...}` object; `_emit_result(fmt, payload,
+│                    init_meta, out)` writes it (plus a `system`/`init` line for `stream-json`) to
+│                    `out` — both pure, no I/O beyond the given stream (routing wired in a later step).
 ├── agent.py         Streaming tool-use loop. run_agent() + _stream_turn() (renders live) +
 │                    _stream_with_retry() (lazy generator) + _accumulate_tool_calls().
 ├── client.py        Only file importing openai for requests. stream() (lazy, include_usage),

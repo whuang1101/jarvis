@@ -708,7 +708,7 @@ payload builder, and an emitter writing to an in-memory stream — no Azure call
   `jarvis.formatter.console.file is sys.stderr` (reset to `sys.stdout` after).
   `/selftest` (pytest) green.
 
-- [ ] **15.2 Pure result-payload builder and stdout emitter.**
+- [x] **15.2 Pure result-payload builder and stdout emitter.**
   In `jarvis/cli.py`, add `def _result_payload(result: str, is_error: bool,
   tracker: UsageTracker) -> dict` returning
   `{"type": "result", "subtype": "error" if is_error else "success", "is_error":

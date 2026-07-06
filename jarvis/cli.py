@@ -226,6 +226,29 @@ def _init_mcp(mcp: MCPManager) -> None:
         )
 
 
+def _result_payload(result: str, is_error: bool, tracker: UsageTracker) -> dict:
+    """Build the headless `--output-format json`/`stream-json` result object."""
+    return {
+        "type": "result",
+        "subtype": "error" if is_error else "success",
+        "is_error": is_error,
+        "result": result,
+        "usage": {
+            "input_tokens": tracker.prompt_tokens,
+            "output_tokens": tracker.completion_tokens,
+        },
+    }
+
+
+def _emit_result(fmt: str, payload: dict, init_meta: dict, out) -> None:
+    """Write the headless result payload to `out` in the given format."""
+    if fmt == "json":
+        out.write(json.dumps(payload) + "\n")
+    elif fmt == "stream-json":
+        out.write(json.dumps({"type": "system", "subtype": "init", **init_meta}) + "\n")
+        out.write(json.dumps(payload) + "\n")
+
+
 def _run_one_shot(
     prompt: str, connect_mcp: bool, debug: bool = False, max_turns: int | None = None,
     model: str | None = None,
