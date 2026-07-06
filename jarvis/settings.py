@@ -67,18 +67,37 @@ class Settings:
         Missing files -> defaults. Malformed files -> warn on stderr and skip that
         file. Unknown keys are ignored.
         """
+        settings, _ = cls.load_with_sources(path, cwd)
+        return settings
+
+    @classmethod
+    def load_with_sources(
+        cls, path: Path | None = None, cwd: Path | None = None
+    ) -> tuple["Settings", dict[str, str]]:
+        """Like `load`, but also reports where each field's effective value came from.
+
+        Returns the merged Settings plus a dict mapping every field name to
+        "default", "global", or "project" — whichever file last set it.
+        """
         scalar_keys = {f.name for f in fields(cls)} - {"permission_allow", "permission_deny"}
         merged: dict = {}
+        sources: dict[str, str] = {f.name: "default" for f in fields(cls)}
 
         global_path = path if path is not None else _CONFIG_PATH
         if global_path.exists():
-            merged.update(_extract_overrides(_load_toml(global_path), scalar_keys))
+            global_overrides = _extract_overrides(_load_toml(global_path), scalar_keys)
+            merged.update(global_overrides)
+            for key in global_overrides:
+                sources[key] = "global"
 
         project_path = _find_project_config(cwd if cwd is not None else Path.cwd())
         if project_path is not None:
-            merged.update(_extract_overrides(_load_toml(project_path), scalar_keys))
+            project_overrides = _extract_overrides(_load_toml(project_path), scalar_keys)
+            merged.update(project_overrides)
+            for key in project_overrides:
+                sources[key] = "project"
 
-        return cls(**{**cls().__dict__, **merged})
+        return cls(**{**cls().__dict__, **merged}), sources
 
 
 def _format_toml_value(value) -> str:
@@ -125,6 +144,34 @@ def persist_allow_pattern(pattern: str, path: Path | None = None) -> None:
         allow.append(pattern)
     permissions["allow"] = allow
     data["permissions"] = permissions
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(_dump_toml(data))
+
+
+def persist_setting(key: str, raw_value: str, path: Path | None = None) -> None:
+    """Write a scalar setting to the global config, coercing `raw_value` to match
+    the field's default type (bool/int/str). Preserves the rest of the file's
+    contents, same best-effort semantics as `persist_allow_pattern`.
+
+    Raises ValueError if `key` isn't a known scalar setting (permission lists
+    aren't settable this way — use `persist_allow_pattern`).
+    """
+    scalar_keys = {f.name for f in fields(Settings)} - {"permission_allow", "permission_deny"}
+    if key not in scalar_keys:
+        raise ValueError(f"Unknown setting: {key!r}. Valid keys: {', '.join(sorted(scalar_keys))}")
+
+    default = getattr(Settings(), key)
+    if isinstance(default, bool):
+        value: bool | int | str = raw_value.strip().lower() in ("true", "1", "yes", "on")
+    elif isinstance(default, int):
+        value = int(raw_value)
+    else:
+        value = raw_value
+
+    target = path if path is not None else _CONFIG_PATH
+    data = _load_toml(target) if target.exists() else {}
+    data[key] = value
 
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(_dump_toml(data))
