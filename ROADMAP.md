@@ -285,7 +285,7 @@ deployment emits no reasoning — nothing changes for non-reasoning models.
   *Verify:* pytest asserts `Settings()` defaults `show_thinking` True and that a
   `.jarvis.toml` overlay can set it False.
 
-- [ ] **7.2 Render reasoning deltas distinctly.**
+- [x] **7.2 Render reasoning deltas distinctly.**
   In `agent.py:_stream_turn`'s `drain()`, accumulate `getattr(delta, "reasoning_content", None)`
   (Azure) / `delta.reasoning` into a separate `state["thinking"]` buffer, gated on
   `settings.show_thinking`. Add a `formatter.py` helper `print_thinking_header()` +
