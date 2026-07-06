@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0"]
+dev = ["pytest>=8.0", "mypy>=1.10"]
 
 [project.scripts]
 jarvis = "jarvis.cli:main"
@@ -24,3 +24,8 @@ jarvis = "jarvis.cli:main"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["jarvis*"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+exclude = ["^jarvis/tests/", "^build/"]

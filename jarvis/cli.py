@@ -24,6 +24,10 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         "--continue", dest="continue_", action="store_true",
         help="Resume the most recent session for the current directory.",
     )
+    parser.add_argument(
+        "--debug", action="store_true",
+        help="Log at debug level (verbose entries in ~/.jarvis/logs/*.jsonl) instead of info.",
+    )
     return parser.parse_args(argv)
 
 
@@ -49,13 +53,14 @@ from .permissions import (
     set_auto_mode,
     set_dangerously_skip_permissions,
 )
-from .context import is_plan_mode, set_plan_mode
+from .context import build_multimodal_content, is_plan_mode, set_plan_mode
 from .config import Config
 from .context import ContextManager, UsageTracker
-from .formatter import print_banner, print_error, print_system, print_user_header, console
+from .formatter import print_banner, print_error, print_system, print_user_header, console, set_code_theme
 from .logger import SessionLogger
 from .mcp_manager import MCPManager
 from .sessions import SessionStore, list_sessions
+from .settings import Settings
 from .tools import register_tool
 
 
@@ -79,6 +84,39 @@ def _read_input(status_plain: str) -> str:
         return input(prompt)
     finally:
         console.print("[bright_black]╰" + "─" * (width - 2) + "╯[/bright_black]")
+
+
+def _read_full_input(status_plain: str) -> str:
+    """Read one logical line of user input, joining continuation lines.
+
+    Two forms: a line ending in `\\` continues onto the next line (backslash
+    stripped, lines joined with `\\n`); a line that is exactly ``` opens a
+    fenced block that reads raw lines (no continuation prompt box) until a
+    closing ```. Continuation lines use a plain `... ` prompt like Python's
+    REPL, since redrawing the boxed prompt for each line would be noisy.
+    """
+    line = _read_input(status_plain)
+    if line.strip() == "```":
+        lines: list[str] = []
+        while True:
+            try:
+                cont = input("... ")
+            except EOFError:
+                break
+            if cont.strip() == "```":
+                break
+            lines.append(cont)
+        return "\n".join(lines)
+
+    lines = []
+    while line.endswith("\\"):
+        lines.append(line[:-1])
+        try:
+            line = input("... ")
+        except EOFError:
+            return "\n".join(lines)
+    lines.append(line)
+    return "\n".join(lines)
 
 
 def _gh_token() -> str | None:
@@ -143,7 +181,7 @@ def _init_mcp(mcp: MCPManager) -> None:
         )
 
 
-def _run_one_shot(prompt: str, connect_mcp: bool) -> None:
+def _run_one_shot(prompt: str, connect_mcp: bool, debug: bool = False) -> None:
     """Run a single agent turn non-interactively and exit 0/1 — no banner, no
     readline loop, and MCP servers only connect if the caller asked for them."""
     try:
@@ -154,7 +192,7 @@ def _run_one_shot(prompt: str, connect_mcp: bool) -> None:
 
     client = JarvisClient(config)
     tracker = UsageTracker()
-    logger = SessionLogger(cwd=os.getcwd())
+    logger = SessionLogger(cwd=os.getcwd(), level="debug" if debug else "info")
     session = SessionStore(cwd=os.getcwd())
     jarvis_md = _find_jarvis_md()
     context = ContextManager(project_context=jarvis_md[0] if jarvis_md else None)
@@ -179,7 +217,7 @@ def _run_one_shot(prompt: str, connect_mcp: bool) -> None:
 def main() -> None:
     args = _parse_args(sys.argv[1:])
     if args.prompt is not None:
-        _run_one_shot(args.prompt, connect_mcp=args.mcp)
+        _run_one_shot(args.prompt, connect_mcp=args.mcp, debug=args.debug)
 
     try:
         config = Config.load()
@@ -187,10 +225,12 @@ def main() -> None:
         print_error(str(e))
         sys.exit(1)
 
+    set_code_theme(Settings.load().theme)
+
     client = JarvisClient(config)
     tracker = UsageTracker()
     mcp = MCPManager()
-    logger = SessionLogger(cwd=os.getcwd())
+    logger = SessionLogger(cwd=os.getcwd(), level="debug" if args.debug else "info")
     session = SessionStore(cwd=os.getcwd())
 
     # Load JARVIS.md project context if present
@@ -214,6 +254,8 @@ def main() -> None:
         console.print(continue_status)
     _init_mcp(mcp)
     print_system("Type /help for available commands. Ctrl+C twice to exit.")
+    if args.debug:
+        print_system(f"Debug logging enabled — {logger.path}")
     console.print()
 
     import readline
@@ -262,7 +304,7 @@ def main() -> None:
                     status += " · AUTO"
                 if is_dangerously_skip_permissions():
                     status += " · DANGER"
-                user_input = _read_input(status).strip()
+                user_input = _read_full_input(status).strip()
                 if user_input:
                     readline.add_history(user_input)
                 interrupted_once = False
@@ -302,7 +344,7 @@ def main() -> None:
 
             print_user_header(user_input)
             try:
-                run_agent(user_input, client, context, tracker, logger, session)
+                run_agent(build_multimodal_content(user_input), client, context, tracker, logger, session)
             except KeyboardInterrupt:
                 console.print()
                 print_system("Cancelled.")

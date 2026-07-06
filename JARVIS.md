@@ -100,7 +100,9 @@ jarvis/
 │                    (Ctrl+D still exits immediately). `-p/--print PROMPT` runs one_shot mode
 │                    (_run_one_shot): auto mode on, no banner, MCP skipped unless `--mcp`, exits 0/1.
 │                    `--continue` loads the newest sessions.list_sessions() match for cwd into
-│                    ContextManager before the REPL starts.
+│                    ContextManager before the REPL starts. `--debug` sets SessionLogger level.
+│                    `_read_full_input` joins `\`-continued lines / ```-fenced blocks; input is
+│                    run through context.build_multimodal_content (image paths → vision parts).
 ├── agent.py         Streaming tool-use loop. run_agent() + _stream_turn() (renders live) +
 │                    _stream_with_retry() (lazy generator) + _accumulate_tool_calls().
 ├── client.py        Only file importing openai for requests. stream() (lazy, include_usage),
@@ -228,9 +230,12 @@ or `_RUN_AGENT_PREFIX` (`__RUN__:`) + message (the REPL strips the prefix and ru
 `run_agent`). `/retry`, `/fix`, `/go`, `/cancel` use the `_RUN_AGENT_PREFIX` path. Commands are
 case-insensitive; the argument keeps original case.
 
-Implemented commands: `/help /history /retry /undo /clear /compact /usage /model /config /file /run
-/plan /go /cancel /restart /auto /fix /copy /save /sessions /resume /memory /init /selftest /commit
-/review /exit /quit`. Every one is listed in `_HELP_TEXT` — keep that invariant. `/commit` stages
+Implemented commands: `/help /history /retry /undo /clear /compact /usage /model /theme /diff /pin
+/config /file /run /plan /go /cancel /restart /auto /fix /copy /save /sessions /resume /memory /init
+/selftest /commit /review /exit /quit`. Every one is listed in `_HELP_TEXT` — keep that invariant.
+`/theme` sets the Rich code-block Pygments style (persisted via `persist_setting`); `/diff` shows
+`git diff HEAD`; `/pin <text>` adds a note into `ContextManager._pinned`, which is rendered into the
+system prompt and survives `clear()`/`compact()`. `/selftest` runs pytest **and** mypy. `/commit` stages
 with `git add -A`, then hands `git diff --staged` to the agent to write the message and run `git
 commit` itself (so the commit goes through the normal tool permission gate). `/review [pr#]` fetches
 `git diff main` (or `gh pr diff <pr#>`) and hands it to the agent with a review prompt. Both return

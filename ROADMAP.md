@@ -260,13 +260,13 @@ These are all small, independent, and already listed in TODO.md § Robustness.
 
 ## Phase 6 — Polish (nice-to-haves; pick from TODO.md as desired)
 
-- [ ] 6.1 Multiline input (backslash continuation or triple-backtick blocks) — `cli.py`.
-- [ ] 6.2 `/theme` for Rich syntax theme, persisted to config — `commands.py`.
-- [ ] 6.3 `/diff` shows uncommitted changes — trivial `_RUN_AGENT_PREFIX` or direct git call.
-- [ ] 6.4 `/pin` messages that survive `/compact` and `/clear` — `context.py`.
-- [ ] 6.5 Image input support (paths → base64 vision content parts) — `context.py`, `cli.py`.
-- [ ] 6.6 mypy in dev deps + fix errors; add to `/selftest`.
-- [ ] 6.7 Structured logging levels + `--debug` flag.
+- [x] 6.1 Multiline input (backslash continuation or triple-backtick blocks) — `cli.py`.
+- [x] 6.2 `/theme` for Rich syntax theme, persisted to config — `commands.py`.
+- [x] 6.3 `/diff` shows uncommitted changes — trivial `_RUN_AGENT_PREFIX` or direct git call.
+- [x] 6.4 `/pin` messages that survive `/compact` and `/clear` — `context.py`.
+- [x] 6.5 Image input support (paths → base64 vision content parts) — `context.py`, `cli.py`.
+- [x] 6.6 mypy in dev deps + fix errors; add to `/selftest`.
+- [x] 6.7 Structured logging levels + `--debug` flag.
 
 ---
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from jarvis.context import ContextManager, _lookup_price, _PRICING
+from jarvis.context import ContextManager, _lookup_price, _PRICING, build_multimodal_content
 
 
 class TestLookupPrice:
@@ -71,3 +71,70 @@ class TestTokenEstimate:
         ctx = ContextManager()
         ctx.append({"role": "assistant", "content": None, "tool_calls": []})
         assert ctx.token_estimate() == 0
+
+
+class TestPin:
+    def test_pinned_notes_appear_in_system_message(self):
+        ctx = ContextManager()
+        ctx.pin("Always use tabs, never spaces.")
+        assert "Always use tabs, never spaces." in ctx.system_message["content"]
+
+    def test_pinned_notes_survive_clear(self):
+        ctx = ContextManager()
+        ctx.pin("Remember this.")
+        ctx.append({"role": "user", "content": "hi"})
+        ctx.clear()
+        assert ctx.pinned == ["Remember this."]
+        assert "Remember this." in ctx.system_message["content"]
+
+    def test_pinned_notes_survive_compact(self):
+        ctx = ContextManager()
+        ctx.pin("Remember this.")
+        ctx.append({"role": "user", "content": "hi"})
+
+        class _FakeClient:
+            def complete(self, messages):
+                from jarvis.client import CompleteResult
+                return CompleteResult(text="summary", prompt_tokens=1, completion_tokens=1)
+
+        ctx.compact(_FakeClient())
+        assert ctx.pinned == ["Remember this."]
+
+    def test_unpin_removes_by_index(self):
+        ctx = ContextManager()
+        ctx.pin("first")
+        ctx.pin("second")
+        assert ctx.unpin(1) is True
+        assert ctx.pinned == ["second"]
+
+    def test_unpin_out_of_range_returns_false(self):
+        ctx = ContextManager()
+        assert ctx.unpin(1) is False
+
+
+class TestBuildMultimodalContent:
+    def test_plain_text_unchanged(self):
+        assert build_multimodal_content("just some text") == "just some text"
+
+    def test_nonexistent_image_path_left_as_text(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        assert build_multimodal_content("look at missing.png") == "look at missing.png"
+
+    def test_existing_image_path_becomes_content_parts(self, tmp_path):
+        image = tmp_path / "screenshot.png"
+        image.write_bytes(b"\x89PNG\r\n\x1a\nfakepngdata")
+
+        result = build_multimodal_content(f"what is in {image}?")
+
+        assert isinstance(result, list)
+        assert result[0] == {"type": "text", "text": f"what is in {image}?"}
+        assert result[1]["type"] == "image_url"
+        assert result[1]["image_url"]["url"].startswith("data:image/png;base64,")
+
+    def test_jpg_extension_maps_to_jpeg_mime(self, tmp_path):
+        image = tmp_path / "photo.jpg"
+        image.write_bytes(b"fakejpegdata")
+
+        result = build_multimodal_content(str(image))
+
+        assert result[1]["image_url"]["url"].startswith("data:image/jpeg;base64,")

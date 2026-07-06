@@ -202,8 +202,9 @@ def _stream_turn(
             if delta.content:
                 if state["live"] is None:
                     print_jarvis_header()
-                    state["live"] = make_live_markdown()
-                    state["live"].start()
+                    live = make_live_markdown()
+                    state["live"] = live
+                    live.start()
                 state["text"].append(delta.content)
                 state["live"].update(render_markdown_block("".join(state["text"])))
             if delta.tool_calls:
@@ -249,7 +250,7 @@ def _stream_turn(
 
 
 def run_agent(
-    user_message: str,
+    user_message: str | list[dict[str, Any]],
     client: JarvisClient,
     context: ContextManager,
     tracker: UsageTracker,
@@ -272,6 +273,8 @@ def run_agent(
     # Compact BEFORE appending the new user message so it isn't folded into the summary.
     if context.token_estimate() > _AUTOCOMPACT_TOKENS:
         console.print(f"[yellow]⚠ Context is large (~{context.token_estimate():,} tokens) — auto-compacting...[/yellow]")
+        if logger:
+            logger.debug(f"Auto-compacting: ~{context.token_estimate():,} tokens > {_AUTOCOMPACT_TOKENS:,} threshold")
         try:
             context.compact(client, tracker)
         except Exception as e:
@@ -357,6 +360,8 @@ def run_agent(
     # stopping silently.
     console.print()
     console.print(f"[yellow]Reached max tool iterations ({iteration_cap}) — asking for a progress summary.[/yellow]")
+    if logger:
+        logger.debug(f"Hit iteration cap ({iteration_cap})")
     context.append({
         "role": "user",
         "content": "You hit the tool iteration limit. Do not call any more tools. "
