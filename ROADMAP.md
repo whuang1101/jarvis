@@ -296,7 +296,7 @@ deployment emits no reasoning — nothing changes for non-reasoning models.
   `reasoning_content` then `content`; assert returned `full_text` excludes the
   reasoning and the thinking buffer captured it.
 
-- [ ] **7.3 Docs + parity flip.**
+- [x] **7.3 Docs + parity flip.**
   Update JARVIS.md (settings table + a one-line note on reasoning rendering) and
   flip PARITY.md's "Extended thinking / reasoning display" row from ❌ to ✅.
   *Verify:* `/selftest` (pytest) green; grep confirms the PARITY row is ✅.
