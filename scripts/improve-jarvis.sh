@@ -66,8 +66,10 @@ feat/roadmap-step-N (N = step number). Mark the step [x] in ROADMAP.md in the
 same commit. Run .venv/bin/python -m pytest jarvis/tests -q; never commit on
 red. Then: push, gh pr create, gh pr checks --watch, and merge ONLY if CI is
 green: gh pr merge --squash --delete-branch (if CI fails, fix on the branch and
-push again). Finish with git checkout main && git pull. Do nothing beyond this
-one step."
+push again). If the merge is blocked by conflicts, run git fetch origin && git
+merge origin/main, resolve the conflicts preserving BOTH sides' features,
+re-run the tests, push, and merge once checks pass — do not leave the PR open.
+Finish with git checkout main && git pull. Do nothing beyond this one step."
   else
     PROMPT="ROADMAP.md has no unchecked steps. Follow the 'Autonomy loop
 instruction' at the bottom of PARITY.md: pick the top feasible ❌ feature,
