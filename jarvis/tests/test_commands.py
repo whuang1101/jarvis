@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import jarvis.commands as commands_module
 import jarvis.sessions as sessions_module
 import jarvis.settings as settings_module
 from jarvis.commands import handle_command
@@ -118,3 +119,63 @@ class TestResumeCommand:
 
         out = capsys.readouterr().out
         assert "Usage" in out
+
+
+class TestCustomCommands:
+    def test_global_command_renders_arguments_and_runs_agent(self, tmp_path, monkeypatch):
+        global_dir = tmp_path / "global"
+        global_dir.mkdir()
+        (global_dir / "explain.md").write_text("Explain this code simply: $ARGUMENTS", encoding="utf-8")
+        monkeypatch.setattr(commands_module, "_CUSTOM_COMMANDS_GLOBAL_DIR", global_dir)
+        monkeypatch.chdir(tmp_path)
+
+        result = handle_command("/explain context.py", None, None, None)
+
+        assert result == f"{commands_module._RUN_AGENT_PREFIX}Explain this code simply: context.py"
+
+    def test_project_command_used_when_no_global_match(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(commands_module, "_CUSTOM_COMMANDS_GLOBAL_DIR", tmp_path / "missing")
+        project_dir = tmp_path / ".jarvis" / "commands"
+        project_dir.mkdir(parents=True)
+        (project_dir / "review.md").write_text("Review: $ARGUMENTS", encoding="utf-8")
+        monkeypatch.chdir(tmp_path)
+
+        result = handle_command("/review foo.py", None, None, None)
+
+        assert result == f"{commands_module._RUN_AGENT_PREFIX}Review: foo.py"
+
+    def test_global_command_takes_precedence_over_project(self, tmp_path, monkeypatch):
+        global_dir = tmp_path / "global"
+        global_dir.mkdir()
+        (global_dir / "explain.md").write_text("Global: $ARGUMENTS", encoding="utf-8")
+        monkeypatch.setattr(commands_module, "_CUSTOM_COMMANDS_GLOBAL_DIR", global_dir)
+        project_dir = tmp_path / ".jarvis" / "commands"
+        project_dir.mkdir(parents=True)
+        (project_dir / "explain.md").write_text("Project: $ARGUMENTS", encoding="utf-8")
+        monkeypatch.chdir(tmp_path)
+
+        result = handle_command("/explain x", None, None, None)
+
+        assert result == f"{commands_module._RUN_AGENT_PREFIX}Global: x"
+
+    def test_unknown_command_with_no_matching_file_reports_error(self, tmp_path, monkeypatch, capsys):
+        monkeypatch.setattr(commands_module, "_CUSTOM_COMMANDS_GLOBAL_DIR", tmp_path / "missing")
+        monkeypatch.chdir(tmp_path)
+
+        result = handle_command("/nosuchcommand", None, None, None)
+
+        assert result is None
+        out = capsys.readouterr().out
+        assert "Unknown command" in out
+
+    def test_help_lists_discovered_custom_commands(self, tmp_path, monkeypatch, capsys):
+        global_dir = tmp_path / "global"
+        global_dir.mkdir()
+        (global_dir / "explain.md").write_text("Explain: $ARGUMENTS", encoding="utf-8")
+        monkeypatch.setattr(commands_module, "_CUSTOM_COMMANDS_GLOBAL_DIR", global_dir)
+        monkeypatch.chdir(tmp_path)
+
+        handle_command("/help", None, None, None)
+
+        out = capsys.readouterr().out
+        assert "/explain" in out

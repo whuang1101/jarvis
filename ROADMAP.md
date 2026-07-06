@@ -191,7 +191,7 @@ These are all small, independent, and already listed in TODO.md § Robustness.
 
 ## Phase 4 — Extensibility (hooks, custom commands — the Claude Code power features)
 
-- [ ] **4.1 Custom slash commands from markdown.**
+- [x] **4.1 Custom slash commands from markdown.**
   In `commands.py`: if `cmd` doesn't match a built-in, look for
   `~/.jarvis/commands/<name>.md` then `.jarvis/commands/<name>.md` (project). File
   content is a prompt template; substitute `$ARGUMENTS` with the args; return

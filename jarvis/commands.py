@@ -81,6 +81,29 @@ pytest             # run tests
 
 _EXIT_SENTINEL = "__EXIT__"
 _RUN_AGENT_PREFIX = "__RUN__:"
+_CUSTOM_COMMANDS_GLOBAL_DIR = Path.home() / ".jarvis" / "commands"
+_CUSTOM_COMMANDS_PROJECT_DIRNAME = Path(".jarvis") / "commands"
+
+
+def _custom_command_dirs() -> tuple[Path, Path]:
+    return (_CUSTOM_COMMANDS_GLOBAL_DIR, Path.cwd() / _CUSTOM_COMMANDS_PROJECT_DIRNAME)
+
+
+def _load_custom_command(name: str) -> str | None:
+    """Look up a user-defined slash command template: global dir first, then project dir."""
+    for base in _custom_command_dirs():
+        path = base / f"{name}.md"
+        if path.is_file():
+            return path.read_text(encoding="utf-8")
+    return None
+
+
+def _discover_custom_commands() -> list[str]:
+    names: set[str] = set()
+    for base in _custom_command_dirs():
+        if base.is_dir():
+            names.update(p.stem for p in base.glob("*.md"))
+    return sorted(names)
 
 
 def _get_clipboard() -> str | None:
@@ -171,6 +194,7 @@ def handle_command(
                 "/exit",
                 "/quit",
             ]
+            commands_list.extend(f"/{name}" for name in _discover_custom_commands())
 
             print("\n[bold cyan]Available commands:[/bold cyan]")
             for cmd in commands_list:
@@ -495,6 +519,10 @@ def handle_command(
         target.write_text(_JARVIS_MD_TEMPLATE, encoding="utf-8")
         print_system(f"Created {target} — fill it in to give Jarvis project context.")
         return None
+
+    custom_template = _load_custom_command(cmd[1:])
+    if custom_template is not None:
+        return f"{_RUN_AGENT_PREFIX}{custom_template.replace('$ARGUMENTS', arg)}"
 
     print_error(f"Unknown command: {cmd}  (type /help for available commands)")
     return None
