@@ -270,6 +270,39 @@ These are all small, independent, and already listed in TODO.md § Robustness.
 
 ---
 
+## Phase 7 — Extended thinking / reasoning display
+
+PARITY.md "Extended thinking / reasoning display" (Core agent loop). Reasoning
+models surface their chain-of-thought as a separate stream field; render it
+distinctly (dimmed, above the answer) instead of dropping it. Graceful when the
+deployment emits no reasoning — nothing changes for non-reasoning models.
+
+- [ ] **7.1 Request + config toggle.**
+  Add a `show_thinking: bool = True` field to the `Settings` dataclass in
+  `settings.py` (documented in JARVIS.md config section). In `client.py:stream()`,
+  keep the request unchanged for now — reasoning content arrives on the delta
+  regardless — but read the toggle so 7.2 can honor it.
+  *Verify:* pytest asserts `Settings()` defaults `show_thinking` True and that a
+  `.jarvis.toml` overlay can set it False.
+
+- [ ] **7.2 Render reasoning deltas distinctly.**
+  In `agent.py:_stream_turn`'s `drain()`, accumulate `getattr(delta, "reasoning_content", None)`
+  (Azure) / `delta.reasoning` into a separate `state["thinking"]` buffer, gated on
+  `settings.show_thinking`. Add a `formatter.py` helper `print_thinking_header()` +
+  render the reasoning as dimmed italic markdown in its own live block that closes
+  before the answer's `⏺` header prints. Never mix reasoning into `state["text"]`
+  (it must not be sent back as assistant content).
+  *Verify:* pytest drives `_stream_turn` with a fake stream whose chunks carry
+  `reasoning_content` then `content`; assert returned `full_text` excludes the
+  reasoning and the thinking buffer captured it.
+
+- [ ] **7.3 Docs + parity flip.**
+  Update JARVIS.md (settings table + a one-line note on reasoning rendering) and
+  flip PARITY.md's "Extended thinking / reasoning display" row from ❌ to ✅.
+  *Verify:* `/selftest` (pytest) green; grep confirms the PARITY row is ✅.
+
+---
+
 ## Standing orders (apply to every step)
 
 - **Registration invariants:** new tool → `tools/__init__.py` `_REGISTRY` + JARVIS.md
