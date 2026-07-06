@@ -109,8 +109,8 @@ jarvis/
 │                    complete(), current_deployment(), set_deployment().
 ├── config.py        Frozen Config dataclass. load() searches _ENV_CANDIDATES, validates 4 Azure vars.
 ├── settings.py      Frozen Settings dataclass (auto_mode, max_tool_iterations, autocompact_tokens,
-│                    tool_timeout_secs, theme, permission_allow/permission_deny glob-pattern
-│                    tuples). load() reads ~/.jarvis/config.toml (tomllib), then overlays a
+│                    tool_timeout_secs, theme, show_thinking, permission_allow/permission_deny
+│                    glob-pattern tuples). load() reads ~/.jarvis/config.toml (tomllib), then overlays a
 │                    per-project `.jarvis.toml` found by walking cwd + up to 4 parents (same walk
 │                    as _find_jarvis_md) — project values win. Missing files = defaults; malformed
 │                    file = stderr warning + that file skipped. persist_allow_pattern() appends to
@@ -324,6 +324,7 @@ max_tool_iterations = 40
 autocompact_tokens = 25000
 tool_timeout_secs = 60
 theme = "monokai"
+show_thinking = true
 
 [permissions]
 allow = ["write_file(*)"]          # glob patterns matched against "tool_name(args)"
@@ -341,6 +342,8 @@ files fall back silently; a malformed file prints a stderr warning and that file
 skipped (the other file/defaults still apply). Unknown keys are ignored. Currently informs
 `agent.py`'s iteration cap / tool timeout / autocompact threshold and `permissions.py`'s
 `auto_mode` and `dangerously_skip_permissions` defaults; nothing consumes `theme` yet.
+`show_thinking` (default `true`) is read once by `JarvisClient.__init__` into
+`self._show_thinking` — not yet used to change request or render behavior (7.2).
 
 `[permissions] allow`/`deny` are glob-style pattern lists (`fnmatch`) checked in
 `permissions.py:needs_permission` before the tool-specific logic: a `deny` match forces the

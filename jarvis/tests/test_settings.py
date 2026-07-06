@@ -19,6 +19,7 @@ class TestSettingsLoad:
         assert settings.dangerously_skip_permissions is False
         assert settings.autocompact_tokens == 25_000
         assert settings.tool_timeout_secs == 60
+        assert settings.show_thinking is True
 
     def test_full_file_overrides_all_defaults(self, tmp_path):
         path = tmp_path / "config.toml"
@@ -53,6 +54,19 @@ class TestSettingsLoad:
         path.write_text('made_up_key = "whatever"\ntheme = "monokai"\n')
         settings = Settings.load(path)
         assert settings == Settings(theme="monokai")
+
+
+class TestShowThinking:
+    def test_defaults_true(self):
+        assert Settings().show_thinking is True
+
+    def test_project_overlay_can_disable(self, tmp_path):
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        (project_dir / ".jarvis.toml").write_text("show_thinking = false\n")
+
+        settings = Settings.load(tmp_path / "no-global.toml", cwd=project_dir)
+        assert settings.show_thinking is False
 
 
 class TestProjectConfigOverlay:
