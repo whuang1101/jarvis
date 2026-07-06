@@ -428,7 +428,7 @@ the transcript.*
   (with `SECRET` present in both `.env` and `notes.txt`) returns the `notes.txt`
   match but neither the `.env` path nor `abc123`.
 
-- [ ] **10.3 Docs + parity flip.**
+- [x] **10.3 Docs + parity flip.**
   Update JARVIS.md's `read_file` and `search_files` rows to note that secret-file
   patterns (`.env`, `*.pem`, `id_rsa`, …) are blocked from reads/searches unless
   `dangerously_skip_permissions` is enabled, and mention `sensitive.py` in the tool
