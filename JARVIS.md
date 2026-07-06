@@ -150,6 +150,8 @@ jarvis/
     │                    `.ipynb` paths are dispatched to documents.render_notebook
     │                    (cell source + compact `# Out:` output text) before the size guard.
     │                    `.pdf` paths are dispatched to documents.extract_pdf_text likewise.
+    │                    Refuses to read secret-file patterns (sensitive.py) unless
+    │                    dangerously_skip_permissions is set.
     ├── documents.py      render_notebook(path) — renders a Jupyter notebook's cells as
     │                    `# %% [markdown]`/`# %% [code]` blocks with a `# Out:` section.
     │                    extract_pdf_text(path) — concatenates pypdf page text with
@@ -165,7 +167,9 @@ jarvis/
     │                    with `>> <id>.log`, exit code written to `<id>.status`, best-effort
     │                    `osascript` notification on completion).
     ├── list_dir.py      Directory tree to depth 2, honoring top-level .gitignore.
-    ├── search_files.py  grep -rn for a pattern; caps output at 200 lines.
+    ├── search_files.py  grep -rn for a pattern; caps output at 200 lines; excludes and
+    │                    post-filters secret-file patterns (sensitive.py) unless
+    │                    dangerously_skip_permissions is set.
     ├── fetch_url.py     HTTP GET a URL; truncates at 8,000 chars.
     ├── web_search.py    DuckDuckGo search via ddgs.
     ├── web_extract.py   Fetch + extract clean text via trafilatura; truncates at 12,000 chars.
@@ -173,8 +177,8 @@ jarvis/
     ├── glob_files.py    root.glob(pattern), files only, hidden paths skipped, newest-first,
     │                    capped at 200.
     ├── sensitive.py      is_sensitive_path(path)/sensitive_read_error(path) — glob-matches
-    │                    basenames against secret-file patterns (.env, *.pem, id_rsa, …); not
-    │                    yet wired into any tool.
+    │                    basenames against secret-file patterns (.env, *.pem, id_rsa, …);
+    │                    wired into read_file.py and search_files.py.
     ├── package_info.py  npm / PyPI package metadata lookup.
     ├── git_tools.py     git_status, git_diff, git_log (shared _git() helper, 15s timeout).
     ├── todo_write.py    Replaces the visible task list wholesale (content + pending/in_progress/

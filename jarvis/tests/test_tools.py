@@ -153,6 +153,31 @@ class TestReadFile:
         result = ReadFileTool().execute({"path": str(f)})
         assert result.startswith("Error")
 
+    def test_refuses_sensitive_file(self, tmp_path):
+        env_path = tmp_path / ".env"
+        env_path.write_text("SECRET=abc123")
+        notes_path = tmp_path / "notes.txt"
+        notes_path.write_text("SECRET=abc123")
+
+        result = ReadFileTool().execute({"path": str(env_path)})
+        assert "refusing to read sensitive file" in result
+        assert "abc123" not in result
+
+        assert "SECRET=abc123" in ReadFileTool().execute({"path": str(notes_path)})
+
+    def test_sensitive_file_read_allowed_with_skip_permissions(self, tmp_path):
+        import jarvis.permissions as permissions
+
+        env_path = tmp_path / ".env"
+        env_path.write_text("SECRET=abc123")
+
+        permissions.set_dangerously_skip_permissions(True)
+        try:
+            result = ReadFileTool().execute({"path": str(env_path)})
+        finally:
+            permissions.set_dangerously_skip_permissions(False)
+        assert "SECRET=abc123" in result
+
 
 class TestListDir:
     def test_lists_tree(self, tmp_path):
@@ -186,6 +211,26 @@ class TestSearchFiles:
         (tmp_path / "f.py").write_text("nothing here\n")
         result = SearchFilesTool().execute({"pattern": "zzz_absent", "directory": str(tmp_path)})
         assert "No matches" in result
+
+    def test_excludes_sensitive_files(self, tmp_path):
+        (tmp_path / ".env").write_text("SECRET=abc123\n")
+        (tmp_path / "notes.txt").write_text("SECRET=abc123\n")
+        result = SearchFilesTool().execute({"pattern": "SECRET", "directory": str(tmp_path)})
+        assert "notes.txt" in result
+        assert ".env" not in result
+        assert "abc123" in result  # from notes.txt, not leaked from .env
+
+    def test_sensitive_files_included_with_skip_permissions(self, tmp_path):
+        import jarvis.permissions as permissions
+
+        (tmp_path / ".env").write_text("SECRET=abc123\n")
+
+        permissions.set_dangerously_skip_permissions(True)
+        try:
+            result = SearchFilesTool().execute({"pattern": "SECRET", "directory": str(tmp_path)})
+        finally:
+            permissions.set_dangerously_skip_permissions(False)
+        assert ".env" in result
 
 
 class TestFindSymbol:
