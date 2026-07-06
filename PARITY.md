@@ -60,7 +60,7 @@ Legend: ✅ Jarvis has it · 🟡 partial · ❌ missing
 | Session picker with metadata | ❌ | ROADMAP 3.3 |
 | /rewind (checkpoint & restore conversation + files) | ❌ | big; file checkpoints via git stash-like shadow |
 | Persistent memory file (auto-loaded) | ✅ | ~/.jarvis/memory.md |
-| # shortcut to append a memory quickly | ❌ | `#text` at prompt → memory.md |
+| # shortcut to append a memory quickly | ✅ | `#text` at prompt → memory.md |
 | Project context file (CLAUDE.md ≈ JARVIS.md) with parent-dir walk | ✅ | |
 | @file mentions to pull files into a message | ❌ | parse `@path` in input, attach content |
 | Session logs / transcript export | ✅ | JSONL + /save |
