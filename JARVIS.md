@@ -170,6 +170,8 @@ jarvis/
     ├── web_search.py    DuckDuckGo search via ddgs.
     ├── web_extract.py   Fetch + extract clean text via trafilatura; truncates at 12,000 chars.
     ├── find_symbol.py   grep for definitions/references of a symbol (word-boundary matched).
+    ├── glob_files.py    root.glob(pattern), files only, hidden paths skipped, newest-first,
+    │                    capped at 200.
     ├── package_info.py  npm / PyPI package metadata lookup.
     ├── git_tools.py     git_status, git_diff, git_log (shared _git() helper, 15s timeout).
     ├── todo_write.py    Replaces the visible task list wholesale (content + pending/in_progress/

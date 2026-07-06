@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from jarvis.tools.edit_file import EditFileTool
 from jarvis.tools.read_file import ReadFileTool
 from jarvis.tools.list_dir import ListDirTool
 from jarvis.tools.search_files import SearchFilesTool
 from jarvis.tools.find_symbol import FindSymbolTool
+from jarvis.tools.glob_files import GlobFilesTool
 
 
 class TestEditFile:
@@ -196,3 +198,29 @@ class TestFindSymbol:
         (tmp_path / "f.py").write_text("def foobar():\n    pass\n")
         result = FindSymbolTool().execute({"symbol": "foo", "kind": "definition", "directory": str(tmp_path)})
         assert "No matches" in result
+
+
+class TestGlobFiles:
+    def test_matches_newest_first(self, tmp_path):
+        import os
+        import time
+
+        (tmp_path / "sub").mkdir()
+        (tmp_path / "a.py").write_text("")
+        time.sleep(0.01)
+        (tmp_path / "sub" / "b.py").write_text("")
+        (tmp_path / "sub" / ".hidden.py").write_text("")
+        os.utime(tmp_path / "a.py", (1000, 1000))
+        os.utime(tmp_path / "sub" / "b.py", (2000, 2000))
+
+        result = GlobFilesTool().execute({"pattern": "**/*.py", "path": str(tmp_path)})
+        lines = result.splitlines()
+        assert lines == [str(Path("sub") / "b.py"), "a.py"]
+
+    def test_no_matches(self, tmp_path):
+        result = GlobFilesTool().execute({"pattern": "*.nope", "path": str(tmp_path)})
+        assert result == "No files match *.nope"
+
+    def test_missing_path(self, tmp_path):
+        result = GlobFilesTool().execute({"pattern": "*.py", "path": str(tmp_path / "nope")})
+        assert result.startswith("Error")

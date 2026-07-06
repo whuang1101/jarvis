@@ -16,6 +16,7 @@ from .edit_file import EditFileTool
 from .git_tools import GitStatusTool, GitDiffTool, GitLogTool
 from .todo_write import TodoWriteTool
 from .spawn_agent import SpawnAgentTool
+from .glob_files import GlobFilesTool
 
 _REGISTRY: list[BaseTool] = [
     ReadFileTool(),
@@ -35,6 +36,7 @@ _REGISTRY: list[BaseTool] = [
     GitLogTool(),
     TodoWriteTool(),
     SpawnAgentTool(),
+    GlobFilesTool(),
 ]
 
 _BY_NAME: dict[str, BaseTool] = {t.name: t for t in _REGISTRY}
