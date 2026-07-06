@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import os
 import subprocess
@@ -32,6 +33,10 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         "--max-turns", dest="max_turns", type=int, default=None, metavar="N",
         help="Cap the tool-call iterations for a one-shot run; default uses the "
              "configured max_tool_iterations.",
+    )
+    parser.add_argument(
+        "--model", dest="model", default=None, metavar="DEPLOYMENT",
+        help="Override the Azure deployment name for this run.",
     )
     return parser.parse_args(argv)
 
@@ -216,6 +221,7 @@ def _init_mcp(mcp: MCPManager) -> None:
 
 def _run_one_shot(
     prompt: str, connect_mcp: bool, debug: bool = False, max_turns: int | None = None,
+    model: str | None = None,
 ) -> None:
     """Run a single agent turn non-interactively and exit 0/1 — no banner, no
     readline loop, and MCP servers only connect if the caller asked for them."""
@@ -224,6 +230,9 @@ def _run_one_shot(
     except RuntimeError as e:
         print_error(str(e))
         sys.exit(1)
+
+    if model:
+        config = dataclasses.replace(config, deployment=model)
 
     client = JarvisClient(config)
     tracker = UsageTracker()
@@ -254,13 +263,19 @@ def main() -> None:
     piped = _read_piped_stdin()
     effective = _compose_one_shot_prompt(args.prompt, piped)
     if effective is not None:
-        _run_one_shot(effective, connect_mcp=args.mcp, debug=args.debug, max_turns=args.max_turns)
+        _run_one_shot(
+            effective, connect_mcp=args.mcp, debug=args.debug,
+            max_turns=args.max_turns, model=args.model,
+        )
 
     try:
         config = Config.load()
     except RuntimeError as e:
         print_error(str(e))
         sys.exit(1)
+
+    if args.model:
+        config = dataclasses.replace(config, deployment=args.model)
 
     set_code_theme(Settings.load().theme)
 

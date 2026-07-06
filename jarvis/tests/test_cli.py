@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import dataclasses
+
 import pytest
 
 import jarvis.cli as cli
 import jarvis.commands as commands_module
 import jarvis.logger as logger_module
 import jarvis.permissions as permissions_module
+from jarvis.config import Config
 
 
 class _FakeConfig:
@@ -61,6 +64,20 @@ class TestParseArgs:
     def test_max_turns_flag(self):
         args = cli._parse_args(["--max-turns", "3"])
         assert args.max_turns == 3
+
+    def test_model_defaults_none(self):
+        args = cli._parse_args([])
+        assert args.model is None
+
+    def test_model_flag(self):
+        args = cli._parse_args(["--model", "gpt-4o"])
+        assert args.model == "gpt-4o"
+
+
+class TestConfigModelOverride:
+    def test_dataclasses_replace_overrides_deployment(self):
+        config = Config(endpoint="e", api_key="k", deployment="d", api_version="v")
+        assert dataclasses.replace(config, deployment="gpt-4o").deployment == "gpt-4o"
 
 
 class TestReadFullInput:

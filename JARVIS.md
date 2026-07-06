@@ -111,7 +111,9 @@ jarvis/
 │                    whichever exists alone otherwise, None if neither) so a bare `cat x | jarvis`
 │                    with no `-p` also runs one-shot mode. `--max-turns N` caps _run_one_shot's
 │                    tool-call iterations by passing `max_iterations=N` into run_agent
-│                    (default None uses the configured max_tool_iterations).
+│                    (default None uses the configured max_tool_iterations). `--model DEPLOYMENT`
+│                    overrides `config.deployment` via `dataclasses.replace` in both one-shot mode
+│                    and before the interactive REPL's client is built.
 ├── agent.py         Streaming tool-use loop. run_agent() + _stream_turn() (renders live) +
 │                    _stream_with_retry() (lazy generator) + _accumulate_tool_calls().
 ├── client.py        Only file importing openai for requests. stream() (lazy, include_usage),
