@@ -130,6 +130,20 @@ class TestReadPipedStdin:
         assert cli._read_piped_stdin() is None
 
 
+class TestComposeOneShotPrompt:
+    def test_both_absent_returns_none(self):
+        assert cli._compose_one_shot_prompt(None, None) is None
+
+    def test_prompt_only_returns_prompt(self):
+        assert cli._compose_one_shot_prompt("p", None) == "p"
+
+    def test_piped_only_returns_piped(self):
+        assert cli._compose_one_shot_prompt(None, "q") == "q"
+
+    def test_both_joins_prompt_then_piped(self):
+        assert cli._compose_one_shot_prompt("p", "q") == "p\n\nq"
+
+
 class TestOneShotMode(object):
     @pytest.fixture(autouse=True)
     def _isolate_logs(self, tmp_path, monkeypatch):
