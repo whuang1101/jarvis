@@ -169,7 +169,7 @@ These are all small, independent, and already listed in TODO.md § Robustness.
 
 ## Phase 3 — Sessions (resume, list, one-shot mode)
 
-- [ ] **3.1 Non-interactive one-shot mode.**
+- [x] **3.1 Non-interactive one-shot mode.**
   `cli.py`: support `jarvis -p "prompt"` (like `claude -p`) — run one agent turn with
   auto mode on, print the final answer, exit with code 0/1. Skip the banner and MCP
   connection unless `--mcp` is passed (startup speed matters for one-shots).

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import subprocess
@@ -7,6 +8,19 @@ import sys
 from pathlib import Path
 
 _RESUME_FILE = Path.home() / ".jarvis" / "resume.json"
+
+
+def _parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(prog="jarvis")
+    parser.add_argument(
+        "-p", "--print", dest="prompt", metavar="PROMPT",
+        help="Run one agent turn non-interactively, print the answer, and exit.",
+    )
+    parser.add_argument(
+        "--mcp", action="store_true",
+        help="Connect configured MCP servers in one-shot mode (skipped by default for startup speed).",
+    )
+    return parser.parse_args(argv)
 
 
 def _find_jarvis_md() -> tuple[str, Path] | None:
@@ -124,7 +138,43 @@ def _init_mcp(mcp: MCPManager) -> None:
         )
 
 
+def _run_one_shot(prompt: str, connect_mcp: bool) -> None:
+    """Run a single agent turn non-interactively and exit 0/1 — no banner, no
+    readline loop, and MCP servers only connect if the caller asked for them."""
+    try:
+        config = Config.load()
+    except RuntimeError as e:
+        print_error(str(e))
+        sys.exit(1)
+
+    client = JarvisClient(config)
+    tracker = UsageTracker()
+    logger = SessionLogger(cwd=os.getcwd())
+    jarvis_md = _find_jarvis_md()
+    context = ContextManager(project_context=jarvis_md[0] if jarvis_md else None)
+
+    if connect_mcp:
+        _init_mcp(MCPManager())
+
+    set_auto_mode(True)
+
+    exit_code = 0
+    try:
+        run_agent(prompt, client, context, tracker, logger)
+    except Exception as e:
+        logger.error(str(e))
+        print_error(f"Unexpected error: {e}")
+        exit_code = 1
+
+    logger.end(tracker.prompt_tokens, tracker.completion_tokens)
+    sys.exit(exit_code)
+
+
 def main() -> None:
+    args = _parse_args(sys.argv[1:])
+    if args.prompt is not None:
+        _run_one_shot(args.prompt, connect_mcp=args.mcp)
+
     try:
         config = Config.load()
     except RuntimeError as e:
