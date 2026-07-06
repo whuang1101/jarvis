@@ -691,7 +691,7 @@ imported binding), then emit a JSON result object (or newline-delimited event
 objects) on stdout. Every step is unit-testable through `_parse_args`, a pure
 payload builder, and an emitter writing to an in-memory stream — no Azure call.
 
-- [ ] **15.1 Add `--output-format` and route human render to stderr.**
+- [x] **15.1 Add `--output-format` and route human render to stderr.**
   In `jarvis/cli.py` `_parse_args`, add
   `parser.add_argument("--output-format", dest="output_format",
   choices=("text", "json", "stream-json"), default="text", help="Headless output
