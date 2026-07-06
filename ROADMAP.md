@@ -595,7 +595,7 @@ monkeypatching `sys.stdin`, with no Azure call needed.*
   branches (None/None → None; prompt-only → prompt; piped-only → piped; both →
   `"p\n\nq"`). `/selftest` (pytest) green.
 
-- [ ] **13.3 Docs + parity flip.**
+- [x] **13.3 Docs + parity flip.**
   In JARVIS.md, note under the headless / CLI section that Jarvis reads piped stdin
   in one-shot mode: `cat err.log | jarvis -p "fix this"` appends the piped text below
   the `-p` prompt, and a bare `command | jarvis` uses the piped text as the whole
