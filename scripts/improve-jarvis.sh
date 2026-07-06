@@ -25,7 +25,12 @@ command -v claude >/dev/null || { echo "claude not installed"; exit 1; }
 gh auth status >/dev/null 2>&1 || { echo "gh not logged in — run: gh auth login"; exit 1; }
 cd "$(dirname "$0")/.." || exit 1
 
-git checkout main -q && git pull -q
+# Self-heal: a previous run may have left modified tracked files behind, which
+# makes `git pull` abort. Reset tracked state to origin/main (leaves untracked
+# files alone — never `git clean` here, the checkout may host unrelated dirs).
+git fetch -q origin
+git checkout main -q 2>/dev/null || git checkout -f main -q
+git reset --hard -q origin/main
 # Self-deploy: refresh deps in case main changed pyproject since the last run
 .venv/bin/pip install -q -e ".[dev]" 2>/dev/null || true
 
