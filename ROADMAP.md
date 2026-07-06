@@ -250,7 +250,7 @@ These are all small, independent, and already listed in TODO.md § Robustness.
   (pass a flag through).
   *Verify:* ask Jarvis to "use a subagent to find every place plan mode state is read".
 
-- [ ] **5.5 `/review` and `/commit` workflow commands.**
+- [x] **5.5 `/review` and `/commit` workflow commands.**
   `/commit`: stage, generate a commit message from `git diff --staged`, commit (through
   the permission gate). `/review [pr#]`: fetch diff (`git diff main` or `gh pr diff`),
   run it through the agent with a review prompt. Both are `_RUN_AGENT_PREFIX` commands.

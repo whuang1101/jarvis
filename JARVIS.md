@@ -229,8 +229,12 @@ or `_RUN_AGENT_PREFIX` (`__RUN__:`) + message (the REPL strips the prefix and ru
 case-insensitive; the argument keeps original case.
 
 Implemented commands: `/help /history /retry /undo /clear /compact /usage /model /config /file /run
-/plan /go /cancel /restart /auto /fix /copy /save /sessions /resume /memory /init /selftest /exit
-/quit`. Every one is listed in `_HELP_TEXT` — keep that invariant. Any other `/name` falls back to a
+/plan /go /cancel /restart /auto /fix /copy /save /sessions /resume /memory /init /selftest /commit
+/review /exit /quit`. Every one is listed in `_HELP_TEXT` — keep that invariant. `/commit` stages
+with `git add -A`, then hands `git diff --staged` to the agent to write the message and run `git
+commit` itself (so the commit goes through the normal tool permission gate). `/review [pr#]` fetches
+`git diff main` (or `gh pr diff <pr#>`) and hands it to the agent with a review prompt. Both return
+via `_RUN_AGENT_PREFIX`. Any other `/name` falls back to a
 custom command lookup: `_load_custom_command` checks `~/.jarvis/commands/<name>.md` then
 `.jarvis/commands/<name>.md` (project, global wins on conflict), substitutes `$ARGUMENTS` in the file
 content with the command's args, and returns it via `_RUN_AGENT_PREFIX`. `_discover_custom_commands`
