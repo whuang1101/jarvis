@@ -14,7 +14,7 @@ Legend: ✅ Jarvis has it · 🟡 partial · ❌ missing
 |---|---|---|
 | Streaming responses with live rendering | ✅ | Rich Live markdown |
 | Multi-step tool loop (dozens of iterations) | ✅ | 40 cap + progress summary |
-| Extended thinking / reasoning display | ❌ | show model "thinking" distinctly when available |
+| Extended thinking / reasoning display | ✅ | dimmed italic live block, gated by `show_thinking` |
 | Parallel tool calls in one turn | 🟡 | executed sequentially; could thread independent calls |
 | Todo list the agent maintains (TaskCreate-style) with live checklist UI | ❌ | ROADMAP 5.1 |
 | Subagents (spawn isolated agent for a subtask, return summary) | ❌ | ROADMAP 5.4 |
