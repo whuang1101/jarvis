@@ -505,7 +505,7 @@ message, so referencing a file mid-sentence forces the user to break flow and ru
 command first. The scan mirrors the existing `build_multimodal_content` image
 helper, so it drops in beside it.*
 
-- [ ] **12.1 `expand_file_mentions` helper.**
+- [x] **12.1 `expand_file_mentions` helper.**
   In `jarvis/context.py`, next to `build_multimodal_content` (around
   `context.py:20`), add `expand_file_mentions(text: str) -> str`. Split `text` on
   whitespace; for every token starting with `@`, strip the leading `@` and any

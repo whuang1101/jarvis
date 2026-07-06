@@ -39,6 +39,31 @@ def build_multimodal_content(text: str) -> str | list[dict[str, Any]]:
         })
     return parts
 
+
+def expand_file_mentions(text: str) -> str:
+    """Scan whitespace-separated tokens in `text` for `@path` mentions and inline
+    the referenced file's contents, in the same `[File: ...]` fenced-block format
+    the `/file` command uses. Image paths are left untouched so
+    `build_multimodal_content` still routes them to vision. The original `@path`
+    token is left in `text` so the model still sees the reference."""
+    blocks = []
+    for word in text.split():
+        if not word.startswith("@"):
+            continue
+        candidate = word[1:].rstrip("?.,!:;)")
+        path = Path(candidate)
+        if not candidate or path.suffix.lower() in _IMAGE_EXTENSIONS or not path.is_file():
+            continue
+        try:
+            with open(candidate, "r", encoding="utf-8", errors="replace") as f:
+                content = f.read()
+        except OSError:
+            continue
+        blocks.append(f"\n\n[File: {candidate}]\n```\n{content}\n```")
+    if not blocks:
+        return text
+    return text + "".join(blocks)
+
 # Price per 1M tokens in USD (input, output)
 _PRICING: dict[str, tuple[float, float]] = {
     "gpt-4o":       (2.50,  10.00),
