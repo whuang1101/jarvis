@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from jarvis.settings import Settings
+from jarvis.settings import Settings, persist_allow_pattern
 
 
 class TestSettingsLoad:
@@ -95,3 +95,79 @@ class TestProjectConfigOverlay:
         assert settings.theme == "dracula"
         captured = capsys.readouterr()
         assert "Warning" in captured.err
+
+
+class TestPermissionRules:
+    def test_defaults_are_empty(self):
+        assert Settings().permission_allow == ()
+        assert Settings().permission_deny == ()
+
+    def test_permissions_table_is_parsed(self, tmp_path):
+        path = tmp_path / "config.toml"
+        path.write_text(
+            "[permissions]\n"
+            'allow = ["write_file(*)"]\n'
+            'deny = ["run_command(git push*)"]\n'
+        )
+        settings = Settings.load(path)
+        assert settings.permission_allow == ("write_file(*)",)
+        assert settings.permission_deny == ("run_command(git push*)",)
+
+    def test_project_permissions_overlay_global(self, tmp_path):
+        global_path = tmp_path / "global.toml"
+        global_path.write_text('[permissions]\nallow = ["write_file(*)"]\n')
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        (project_dir / ".jarvis.toml").write_text('[permissions]\ndeny = ["run_command(rm *)"]\n')
+
+        settings = Settings.load(global_path, cwd=project_dir)
+        # Project's deny list is layered on top; the global allow list it didn't
+        # touch is kept, same overlay semantics as any other setting.
+        assert settings.permission_allow == ("write_file(*)",)
+        assert settings.permission_deny == ("run_command(rm *)",)
+
+    def test_missing_permissions_table_keeps_defaults(self, tmp_path):
+        path = tmp_path / "config.toml"
+        path.write_text('theme = "dracula"\n')
+        settings = Settings.load(path)
+        assert settings.permission_allow == ()
+        assert settings.permission_deny == ()
+
+
+class TestPersistAllowPattern:
+    def test_creates_file_with_pattern(self, tmp_path):
+        path = tmp_path / "config.toml"
+        persist_allow_pattern("run_command(git *)", path)
+
+        settings = Settings.load(path)
+        assert settings.permission_allow == ("run_command(git *)",)
+
+    def test_appends_to_existing_allow_list_without_dropping_other_keys(self, tmp_path):
+        path = tmp_path / "config.toml"
+        path.write_text(
+            'theme = "dracula"\n'
+            "\n"
+            "[permissions]\n"
+            'allow = ["write_file(*)"]\n'
+            'deny = ["run_command(rm *)"]\n'
+        )
+
+        persist_allow_pattern("run_command(git *)", path)
+
+        settings = Settings.load(path)
+        assert settings.theme == "dracula"
+        assert settings.permission_allow == ("write_file(*)", "run_command(git *)")
+        assert settings.permission_deny == ("run_command(rm *)",)
+
+    def test_duplicate_pattern_is_not_added_twice(self, tmp_path):
+        path = tmp_path / "config.toml"
+        persist_allow_pattern("run_command(git *)", path)
+        persist_allow_pattern("run_command(git *)", path)
+
+        settings = Settings.load(path)
+        assert settings.permission_allow == ("run_command(git *)",)
+
+    def test_creates_parent_directory(self, tmp_path):
+        path = tmp_path / "nested" / "config.toml"
+        persist_allow_pattern("write_file(*)", path)
+        assert path.exists()

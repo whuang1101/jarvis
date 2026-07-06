@@ -146,14 +146,14 @@ These are all small, independent, and already listed in TODO.md § Robustness.
   up to 4 parents (same walk as `_find_jarvis_md`) and overlay its values.
   *Verify:* pytest.
 
-- [ ] **2.3 Permission allow/deny rules.**
+- [x] **2.3 Permission allow/deny rules.**
   Add `[permissions] allow = []` / `deny = []` lists to the config (glob-style patterns
   like `run_command(git *)`, `write_file(*)`). In `permissions.py:needs_permission`,
   check deny first (deny → always prompt/refuse), then allow (allow → no prompt),
   then existing logic. This is the equivalent of Claude Code's permission rules.
   *Verify:* pytest covering allow, deny, and precedence.
 
-- [ ] **2.4 "Always allow" option in the prompt.**
+- [x] **2.4 "Always allow" option in the prompt.**
   Extend `_arrow_confirm` in `permissions.py` from Yes/No to
   Yes / Yes-always-for-this-pattern / No. Choosing "always" appends the pattern to the
   in-memory allow list AND persists it to `~/.jarvis/config.toml`.
