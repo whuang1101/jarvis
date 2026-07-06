@@ -51,6 +51,7 @@ from .context import ContextManager, UsageTracker
 from .formatter import print_banner, print_error, print_system, print_user_header, console
 from .logger import SessionLogger
 from .mcp_manager import MCPManager
+from .sessions import SessionStore
 from .tools import register_tool
 
 
@@ -150,6 +151,7 @@ def _run_one_shot(prompt: str, connect_mcp: bool) -> None:
     client = JarvisClient(config)
     tracker = UsageTracker()
     logger = SessionLogger(cwd=os.getcwd())
+    session = SessionStore(cwd=os.getcwd())
     jarvis_md = _find_jarvis_md()
     context = ContextManager(project_context=jarvis_md[0] if jarvis_md else None)
 
@@ -160,7 +162,7 @@ def _run_one_shot(prompt: str, connect_mcp: bool) -> None:
 
     exit_code = 0
     try:
-        run_agent(prompt, client, context, tracker, logger)
+        run_agent(prompt, client, context, tracker, logger, session)
     except Exception as e:
         logger.error(str(e))
         print_error(f"Unexpected error: {e}")
@@ -185,6 +187,7 @@ def main() -> None:
     tracker = UsageTracker()
     mcp = MCPManager()
     logger = SessionLogger(cwd=os.getcwd())
+    session = SessionStore(cwd=os.getcwd())
 
     # Load JARVIS.md project context if present
     jarvis_md = _find_jarvis_md()
@@ -222,7 +225,7 @@ def main() -> None:
     if resume_message:
         print_user_header(resume_message)
         try:
-            run_agent(resume_message, client, context, tracker, logger)
+            run_agent(resume_message, client, context, tracker, logger, session)
         except Exception as e:
             print_error(f"Resume error: {e}")
 
@@ -271,7 +274,7 @@ def main() -> None:
                     if result and result.startswith(_RUN_AGENT_PREFIX):
                         agent_message = result[len(_RUN_AGENT_PREFIX):]
                         try:
-                            run_agent(agent_message, client, context, tracker, logger)
+                            run_agent(agent_message, client, context, tracker, logger, session)
                         except KeyboardInterrupt:
                             console.print()
                             print_system("Cancelled.")
@@ -283,7 +286,7 @@ def main() -> None:
 
             print_user_header(user_input)
             try:
-                run_agent(user_input, client, context, tracker, logger)
+                run_agent(user_input, client, context, tracker, logger, session)
             except KeyboardInterrupt:
                 console.print()
                 print_system("Cancelled.")

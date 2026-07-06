@@ -175,7 +175,7 @@ These are all small, independent, and already listed in TODO.md § Robustness.
   connection unless `--mcp` is passed (startup speed matters for one-shots).
   *Verify:* `jarvis -p "what is 2+2"` prints an answer and exits.
 
-- [ ] **3.2 Session persistence.**
+- [x] **3.2 Session persistence.**
   New `jarvis/sessions.py`: on every turn, dump `context._history` as JSON to
   `~/.jarvis/sessions/<session-id>.json` (id = timestamp + short random suffix; store
   cwd and first user message as metadata). This is separate from the JSONL event log.

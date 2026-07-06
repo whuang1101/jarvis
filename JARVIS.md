@@ -127,6 +127,9 @@ jarvis/
 │                    make_live_markdown, print_system/print_error/print_command_output.
 ├── logger.py        SessionLogger — JSONL to ~/.jarvis/logs/YYYY-MM-DD.jsonl (session_start,
 │                    user, assistant, tool_call, tool_result[≤500 chars], error, session_end).
+├── sessions.py      SessionStore — dumps full ContextManager history (cwd + first user message
+│                    as metadata) to ~/.jarvis/sessions/<timestamp-suffix>.json after every turn;
+│                    separate from the JSONL event log, meant for reload/continue.
 ├── mcp_manager.py   Daemon-thread asyncio loop. MCPManager.connect() launches a server, lists
 │                    tools, parks the session alive; MCPTool wraps each as a BaseTool.
 └── tools/
