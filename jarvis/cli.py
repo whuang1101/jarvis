@@ -73,7 +73,10 @@ from .permissions import (
 from .context import build_multimodal_content, expand_file_mentions, is_plan_mode, set_plan_mode
 from .config import Config
 from .context import ContextManager, UsageTracker
-from .formatter import print_banner, print_error, print_system, print_user_header, console, set_code_theme
+from .formatter import (
+    print_banner, print_error, print_system, print_user_header, console,
+    redirect_console, set_code_theme,
+)
 from .logger import SessionLogger
 from .mcp_manager import MCPManager
 from .sessions import SessionStore, list_sessions
@@ -251,7 +254,7 @@ def _emit_result(fmt: str, payload: dict, init_meta: dict, out) -> None:
 
 def _run_one_shot(
     prompt: str, connect_mcp: bool, debug: bool = False, max_turns: int | None = None,
-    model: str | None = None,
+    model: str | None = None, output_format: str = "text",
 ) -> None:
     """Run a single agent turn non-interactively and exit 0/1 — no banner, no
     readline loop, and MCP servers only connect if the caller asked for them."""
@@ -263,6 +266,9 @@ def _run_one_shot(
 
     if model:
         config = dataclasses.replace(config, deployment=model)
+
+    if output_format != "text":
+        redirect_console(sys.stderr)
 
     client = JarvisClient(config)
     tracker = UsageTracker()
@@ -277,14 +283,21 @@ def _run_one_shot(
     set_auto_mode(True)
 
     exit_code = 0
+    is_error = False
     try:
-        run_agent(prompt, client, context, tracker, logger, session, max_iterations=max_turns)
+        result = run_agent(prompt, client, context, tracker, logger, session, max_iterations=max_turns)
     except Exception as e:
         logger.error(str(e))
         print_error(f"Unexpected error: {e}")
+        result = str(e)
+        is_error = True
         exit_code = 1
 
     logger.end(tracker.prompt_tokens, tracker.completion_tokens)
+    _emit_result(
+        output_format, _result_payload(result, is_error, tracker),
+        {"model": client.current_deployment(), "cwd": os.getcwd()}, sys.stdout,
+    )
     sys.exit(exit_code)
 
 
@@ -296,6 +309,7 @@ def main() -> None:
         _run_one_shot(
             effective, connect_mcp=args.mcp, debug=args.debug,
             max_turns=args.max_turns, model=args.model,
+            output_format=args.output_format,
         )
 
     try:

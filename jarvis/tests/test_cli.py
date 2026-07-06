@@ -30,6 +30,17 @@ class _FakeClient:
         return "fake-deployment"
 
 
+class _FakeLogger:
+    def __init__(self, cwd, level="info"):
+        pass
+
+    def error(self, message):
+        pass
+
+    def end(self, prompt_tokens, completion_tokens):
+        pass
+
+
 class TestParseArgs:
     def test_no_args(self):
         args = cli._parse_args([])
@@ -342,6 +353,26 @@ class TestOneShotMode(object):
 
         assert exc.value.code == 1
         assert "boom" in capsys.readouterr().out
+
+
+class TestRunOneShotOutputFormat:
+    def test_json_format_emits_result_on_stdout(self, monkeypatch, tmp_path, capsys):
+        monkeypatch.setattr(logger_module, "_LOG_DIR", tmp_path)
+        monkeypatch.setattr(cli, "Config", _FakeConfig)
+        monkeypatch.setattr(cli, "JarvisClient", _FakeClient)
+        monkeypatch.setattr(cli, "SessionLogger", _FakeLogger)
+        monkeypatch.setattr(cli, "run_agent", lambda *a, **k: "canned answer")
+
+        original_file = formatter_module.console._file
+        try:
+            with pytest.raises(SystemExit):
+                cli._run_one_shot("q", connect_mcp=False, output_format="json")
+        finally:
+            formatter_module.console._file = original_file
+
+        payload = json.loads(capsys.readouterr().out.strip())
+        assert payload["type"] == "result"
+        assert payload["result"] == "canned answer"
 
 
 class TestHashMemoryShortcut:

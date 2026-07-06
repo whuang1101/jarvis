@@ -118,7 +118,11 @@ jarvis/
 │                    into `args.output_format`. `_result_payload(result, is_error, tracker) -> dict`
 │                    builds the `{"type":"result",...}` object; `_emit_result(fmt, payload,
 │                    init_meta, out)` writes it (plus a `system`/`init` line for `stream-json`) to
-│                    `out` — both pure, no I/O beyond the given stream (routing wired in a later step).
+│                    `out` — both pure, no I/O beyond the given stream. `_run_one_shot` wires them up:
+│                    when `output_format != "text"` it calls `redirect_console(sys.stderr)` first so
+│                    human render never touches stdout, captures `run_agent`'s return as `result`
+│                    (exceptions become `result=str(e)`, `is_error=True`), then emits the payload to
+│                    `sys.stdout` via `_emit_result` before `sys.exit`.
 ├── agent.py         Streaming tool-use loop. run_agent() + _stream_turn() (renders live) +
 │                    _stream_with_retry() (lazy generator) + _accumulate_tool_calls().
 ├── client.py        Only file importing openai for requests. stream() (lazy, include_usage),
