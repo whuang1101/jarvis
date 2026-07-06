@@ -212,7 +212,7 @@ These are all small, independent, and already listed in TODO.md § Robustness.
   from looking frozen.
   *Verify:* manual — `sleep 1 && echo a && sleep 1 && echo b` prints incrementally.
 
-- [ ] **4.4 Background tasks.**
+- [x] **4.4 Background tasks.**
   `run_command` gains a `background: bool` param: launch detached, return a task id
   immediately, write output to `~/.jarvis/tasks/<id>.log`. Add a `task_output` tool to
   read a task's log/status. macOS notification via `osascript` on completion.

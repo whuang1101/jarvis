@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import os
+import re
 import time
 from unittest.mock import patch
 
+from jarvis import tasks as tasks_mod
 from jarvis.tools.run_command import RunCommandTool
+from jarvis.tools.task_output import TaskOutputTool
 
 
 def test_captures_stdout() -> None:
@@ -43,3 +46,36 @@ def test_cd_still_works() -> None:
         assert result.startswith("Changed directory to")
     finally:
         os.chdir(original)
+
+
+def test_background_returns_task_id_immediately(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(tasks_mod, "TASKS_DIR", tmp_path)
+    start = time.monotonic()
+    result = RunCommandTool().execute({"command": "sleep 0.5", "background": True})
+    elapsed = time.monotonic() - start
+
+    assert elapsed < 0.3
+    assert "Started background task" in result
+    task_id = re.search(r"background task (\w+)", result).group(1)
+
+    deadline = time.monotonic() + 5
+    status = tasks_mod.task_status(task_id)
+    while status == "running" and time.monotonic() < deadline:
+        time.sleep(0.05)
+        status = tasks_mod.task_status(task_id)
+    assert status == "done (exit code 0)"
+
+
+def test_background_task_readable_via_task_output(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(tasks_mod, "TASKS_DIR", tmp_path)
+    result = RunCommandTool().execute({"command": "echo hi", "background": True})
+    task_id = re.search(r"background task (\w+)", result).group(1)
+
+    deadline = time.monotonic() + 5
+    output = TaskOutputTool().execute({"task_id": task_id})
+    while "[status: running]" in output and time.monotonic() < deadline:
+        time.sleep(0.05)
+        output = TaskOutputTool().execute({"task_id": task_id})
+
+    assert "[status: done (exit code 0)]" in output
+    assert "hi" in output

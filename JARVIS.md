@@ -137,7 +137,7 @@ jarvis/
 ├── mcp_manager.py   Daemon-thread asyncio loop. MCPManager.connect() launches a server, lists
 │                    tools, parks the session alive; MCPTool wraps each as a BaseTool.
 └── tools/
-    ├── __init__.py      _REGISTRY (14 built-ins) + get_all_tools/get_tool_by_name/register_tool.
+    ├── __init__.py      _REGISTRY (15 built-ins) + get_all_tools/get_tool_by_name/register_tool.
     ├── base.py          BaseTool(ABC): name/description/parameters/execute + to_openai_schema().
     ├── read_file.py     Read a file; truncates at 10,000 chars; files >100KB require
     │                    offset/limit (1-based line slice, output prefixed "N: line").
@@ -145,7 +145,12 @@ jarvis/
     ├── edit_file.py     Replace old_string→new_string; old_string must appear exactly once.
     ├── run_command.py   Run a shell command via Popen, streaming stdout/stderr lines live to
     │                    the console as they arrive (result is still the captured, truncated
-    │                    text); intercepts `cd`/`cd <path>` via os.chdir().
+    │                    text); intercepts `cd`/`cd <path>` via os.chdir(). `background=true`
+    │                    instead launches it detached via `tasks.start_background_task()` and
+    │                    returns a task id right away.
+    ├── task_output.py   Reads a background task's status/log by id (tasks.py: subshell wrapped
+    │                    with `>> <id>.log`, exit code written to `<id>.status`, best-effort
+    │                    `osascript` notification on completion).
     ├── list_dir.py      Directory tree to depth 2, honoring top-level .gitignore.
     ├── search_files.py  grep -rn for a pattern; caps output at 200 lines.
     ├── fetch_url.py     HTTP GET a URL; truncates at 8,000 chars.

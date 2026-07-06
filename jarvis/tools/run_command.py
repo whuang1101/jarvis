@@ -11,6 +11,7 @@ from typing import Any
 
 from .base import BaseTool
 from ..formatter import print_streamed_line
+from ..tasks import start_background_task
 
 _TIMEOUT = 120
 # Matches `cd` alone (-> home) or `cd <path>`, but NOT commands merely prefixed
@@ -26,12 +27,23 @@ class RunCommandTool(BaseTool):
         "type": "object",
         "properties": {
             "command": {"type": "string", "description": "Shell command to execute."},
+            "background": {
+                "type": "boolean",
+                "description": (
+                    "If true, launch the command detached and return a task id immediately "
+                    "instead of waiting for it to finish. Use task_output to check on it."
+                ),
+            },
         },
         "required": ["command"],
     }
 
     def execute(self, args: dict[str, Any]) -> str:
         command: str = args["command"]
+
+        if args.get("background"):
+            task_id = start_background_task(command)
+            return f"Started background task {task_id}. Use task_output to check its status and log."
 
         # Handle `cd` by actually changing the process working directory
         m = _CD_RE.match(command)
