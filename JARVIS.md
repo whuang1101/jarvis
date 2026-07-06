@@ -266,7 +266,10 @@ with `git add -A`, then hands `git diff --staged` to the agent to write the mess
 commit` itself (so the commit goes through the normal tool permission gate). `/review [pr#]` fetches
 `git diff main` (or `gh pr diff <pr#>`) and hands it to the agent with a review prompt. Both return
 via `_RUN_AGENT_PREFIX`. Any other `/name` falls back to a
-custom command lookup: `_load_custom_command` checks `~/.jarvis/commands/<name>.md` then
+custom command lookup. Inline `@path` mentions work in any normal message too — not just
+`/file` — attaching that file's contents at that point in the prompt, so `@path` can be
+stacked mid-sentence with surrounding text; image `@mentions` still route to vision instead.
+`_load_custom_command` checks `~/.jarvis/commands/<name>.md` then
 `.jarvis/commands/<name>.md` (project, global wins on conflict), substitutes `$ARGUMENTS` in the file
 content with the command's args, and returns it via `_RUN_AGENT_PREFIX`. `_discover_custom_commands`
 lists both dirs' `*.md` stems for the plain `/help` command list. `/config` (no args) prints

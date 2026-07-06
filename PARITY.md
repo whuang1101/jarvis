@@ -62,7 +62,7 @@ Legend: ✅ Jarvis has it · 🟡 partial · ❌ missing
 | Persistent memory file (auto-loaded) | ✅ | ~/.jarvis/memory.md |
 | # shortcut to append a memory quickly | ✅ | `#text` at prompt → memory.md |
 | Project context file (CLAUDE.md ≈ JARVIS.md) with parent-dir walk | ✅ | |
-| @file mentions to pull files into a message | ❌ | parse `@path` in input, attach content |
+| @file mentions to pull files into a message | ✅ | `expand_file_mentions` inlines `@path` text; image `@mentions` route to vision |
 | Session logs / transcript export | ✅ | JSONL + /save |
 
 ## Headless / scripting

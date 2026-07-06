@@ -539,7 +539,7 @@ helper, so it drops in beside it.*
   `build_multimodal_content(...)`, and that `_HELP_TEXT` mentions `@path`.
   `/selftest` (pytest) green.
 
-- [ ] **12.3 Docs + parity flip.**
+- [x] **12.3 Docs + parity flip.**
   In JARVIS.md, note under the commands/input section that typing an inline `@path`
   in a normal message attaches that file's contents (equivalent to `/file`, but
   usable mid-sentence and stackable with the surrounding text); image `@mentions`
