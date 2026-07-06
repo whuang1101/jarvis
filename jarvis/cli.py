@@ -28,6 +28,11 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         "--debug", action="store_true",
         help="Log at debug level (verbose entries in ~/.jarvis/logs/*.jsonl) instead of info.",
     )
+    parser.add_argument(
+        "--max-turns", dest="max_turns", type=int, default=None, metavar="N",
+        help="Cap the tool-call iterations for a one-shot run; default uses the "
+             "configured max_tool_iterations.",
+    )
     return parser.parse_args(argv)
 
 
@@ -209,7 +214,9 @@ def _init_mcp(mcp: MCPManager) -> None:
         )
 
 
-def _run_one_shot(prompt: str, connect_mcp: bool, debug: bool = False) -> None:
+def _run_one_shot(
+    prompt: str, connect_mcp: bool, debug: bool = False, max_turns: int | None = None,
+) -> None:
     """Run a single agent turn non-interactively and exit 0/1 — no banner, no
     readline loop, and MCP servers only connect if the caller asked for them."""
     try:
@@ -232,7 +239,7 @@ def _run_one_shot(prompt: str, connect_mcp: bool, debug: bool = False) -> None:
 
     exit_code = 0
     try:
-        run_agent(prompt, client, context, tracker, logger, session)
+        run_agent(prompt, client, context, tracker, logger, session, max_iterations=max_turns)
     except Exception as e:
         logger.error(str(e))
         print_error(f"Unexpected error: {e}")
@@ -247,7 +254,7 @@ def main() -> None:
     piped = _read_piped_stdin()
     effective = _compose_one_shot_prompt(args.prompt, piped)
     if effective is not None:
-        _run_one_shot(effective, connect_mcp=args.mcp, debug=args.debug)
+        _run_one_shot(effective, connect_mcp=args.mcp, debug=args.debug, max_turns=args.max_turns)
 
     try:
         config = Config.load()
