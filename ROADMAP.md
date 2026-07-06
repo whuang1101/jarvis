@@ -666,6 +666,98 @@ confined to `cli.py` argument dispatch and unit-testable through `_parse_args`
 
 ---
 
+## Phase 15 — `--output-format json` / `stream-json` for headless mode
+
+*Re-surveying PARITY top-to-bottom, the ❌ rows above this one are once more all
+already-shipped-but-stale — todo list, subagents, vision input, background &
+streamed command output, allow/deny + persistent "Always" rules, the settings
+overlay, `--continue`/`/sessions`/`/resume` (session picker with metadata),
+custom markdown commands, and PreToolUse/PostToolUse hooks are every one of them
+present in the tree — or items the loop skips: `Prompt caching / cost
+optimization` is flagged N/A on Azure with nothing a pytest run can exercise;
+`Sandboxed command execution` is a Phase-6-scale OS-level security item CI cannot
+drive; and `/rewind` is explicitly "big" (shadow-git file checkpoints on a live
+repo, unsafe to build unattended). That leaves the topmost genuinely-missing,
+human-resource-free headless item: `--output-format json / stream-json`. Phase 14
+deferred it as "not a single self-contained increment" — which is exactly what a
+multi-step phase is for. One-shot mode (`-p`) already exists and `run_agent`
+already returns the final assistant text, but everything renders through the Rich
+`console` in `formatter.py` (which `agent.py` imports directly), so stdout is
+human-formatted markdown, not machine-readable. The fix is confined to `cli.py`
+and `formatter.py`: divert the Rich `console` to stderr for non-text formats
+(Rich `Console` exposes a `file` setter, so one assignment reroutes every
+`console.print`/`console.status`/`Live` call without touching `agent.py`'s
+imported binding), then emit a JSON result object (or newline-delimited event
+objects) on stdout. Every step is unit-testable through `_parse_args`, a pure
+payload builder, and an emitter writing to an in-memory stream — no Azure call.
+
+- [ ] **15.1 Add `--output-format` and route human render to stderr.**
+  In `jarvis/cli.py` `_parse_args`, add
+  `parser.add_argument("--output-format", dest="output_format",
+  choices=("text", "json", "stream-json"), default="text", help="Headless output
+  format for -p mode: text (default human render), json (one result object), or
+  stream-json (newline-delimited event objects).")`. In `jarvis/formatter.py`, add
+  `def redirect_console(file) -> None:` that sets the module `console.file = file`
+  (Rich `Console`'s `file` setter), so every existing `console.print` /
+  `console.status` / `Live` render call is diverted at once — no change to
+  `agent.py`, which imports `console` by binding.
+  *Verify:* add `test_cli.py` cases asserting `_parse_args([]).output_format ==
+  "text"`, `_parse_args(["--output-format", "json"]).output_format == "json"`, and
+  that `_parse_args(["--output-format", "bogus"])` raises `SystemExit`; add a case
+  that after `import sys; jarvis.formatter.redirect_console(sys.stderr)` then
+  `jarvis.formatter.console.file is sys.stderr` (reset to `sys.stdout` after).
+  `/selftest` (pytest) green.
+
+- [ ] **15.2 Pure result-payload builder and stdout emitter.**
+  In `jarvis/cli.py`, add `def _result_payload(result: str, is_error: bool,
+  tracker: UsageTracker) -> dict` returning
+  `{"type": "result", "subtype": "error" if is_error else "success", "is_error":
+  is_error, "result": result, "usage": {"input_tokens": tracker.prompt_tokens,
+  "output_tokens": tracker.completion_tokens}}` (mirrors Claude Code's headless
+  result shape closely enough to be scriptable). Add `def _emit_result(fmt: str,
+  payload: dict, init_meta: dict, out) -> None` that, for `fmt == "json"`, writes
+  `json.dumps(payload)` + newline to `out`; for `fmt == "stream-json"`, writes two
+  lines — `json.dumps({"type": "system", "subtype": "init", **init_meta})` then
+  `json.dumps(payload)`, each newline-terminated; for `fmt == "text"`, writes
+  nothing (text mode already rendered live). Both helpers are pure (no Azure, no
+  `sys.exit`).
+  *Verify:* add `test_cli.py` cases: `_result_payload("hi", False, tracker)` (with a
+  `UsageTracker` whose `prompt_tokens`/`completion_tokens` were set via `.record(...)`)
+  has `subtype == "success"`, `is_error is False`, `result == "hi"`, and the `usage`
+  numbers; and that `_emit_result("stream-json", payload, {"model": "d"}, buf)` with
+  `buf = io.StringIO()` writes exactly two lines that each `json.loads` cleanly, the
+  first `type == "system"` and the second `type == "result"`. `/selftest` (pytest) green.
+
+- [ ] **15.3 Wire the formats into `_run_one_shot` and `main()`.**
+  In `jarvis/cli.py`, give `_run_one_shot` an `output_format: str = "text"`
+  parameter. When `output_format != "text"`, call
+  `formatter.redirect_console(sys.stderr)` before running so all render goes to
+  stderr and stdout stays clean. Capture `result = run_agent(...)` (it already
+  returns the final text); on the `except` branch set `result = str(e)`,
+  `is_error = True`, `exit_code = 1` (keep the existing `print_error`, now on
+  stderr). After the run, call `_emit_result(output_format,
+  _result_payload(result, is_error, tracker), {"model": client.current_deployment(),
+  "cwd": os.getcwd()}, sys.stdout)` before `sys.exit(exit_code)`. In `main()`, pass
+  `output_format=args.output_format` into the `_run_one_shot(...)` call.
+  *Verify:* add a `test_cli.py` case that monkeypatches `cli.run_agent` to return
+  `"canned answer"`, `cli.Config` and `cli.JarvisClient` to the existing
+  `_FakeConfig`/`_FakeClient`, and `cli.SessionLogger`, then calls
+  `_run_one_shot("q", connect_mcp=False, output_format="json")` inside
+  `pytest.raises(SystemExit)` with `capsys`; assert the captured stdout parses as
+  JSON with `type == "result"` and `result == "canned answer"`. `/selftest` (pytest) green.
+
+- [ ] **15.4 Docs + parity flip.**
+  In JARVIS.md, note under the headless / CLI section that `--output-format json`
+  prints a single `{"type":"result",...}` object and `--output-format stream-json`
+  prints newline-delimited event objects (init + result), with human render sent to
+  stderr so stdout stays machine-readable. Flip PARITY.md's
+  `--output-format json / stream-json` row from ❌ to ✅ (note in the row that
+  per-tool event lines are a follow-up if 15.3 emits only init + result).
+  *Verify:* `/selftest` (pytest) green; grep confirms the PARITY `--output-format`
+  row is no longer ❌ and JARVIS.md documents `--output-format`.
+
+---
+
 ## Standing orders (apply to every step)
 
 - **Registration invariants:** new tool → `tools/__init__.py` `_REGISTRY` + JARVIS.md
