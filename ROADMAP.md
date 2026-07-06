@@ -348,6 +348,41 @@ is small), and the existing `_TRUNCATE_AT` cap still applies to the result.
 
 ---
 
+## Phase 9 — Glob tool (fast file lookup by pattern)
+
+*The top PARITY sections have several stale ❌ rows for features that already
+shipped (todo list = `todo_write`, subagents = `spawn_agent`, bash background =
+`run_command background`/`task_output`, image/vision paths = `build_multimodal_content`).
+The topmost genuinely-missing, self-contained tool is `Glob (find files by
+pattern)` — a name/path lookup that's cheaper than `list_dir` + `search_files`
+when you already know the filename shape.*
+
+- [ ] **9.1 Glob tool.**
+  Add `jarvis/tools/glob_files.py` with `GlobFilesTool(BaseTool)`, `name = "glob"`.
+  Parameters: `pattern` (required, a glob like `**/*.py` or `src/*.ts`) and optional
+  `path` (root directory to search from, default `"."`). In `execute`, resolve the
+  root via `Path(path).expanduser()`, return `"Error: path not found: ..."` if it
+  doesn't exist / isn't a directory, then collect matches with `root.glob(pattern)`.
+  Keep only files, skip any match whose path parts start with `.` (hidden/`.git`),
+  sort by `st_mtime` descending (newest first), cap at 200 entries (append a
+  `"[... N more]"` note when truncated), and return the relative paths joined by
+  newlines — or `"No files match <pattern>"` when empty. Never raise: wrap the glob
+  call and catch bad patterns / `OSError` as `"Error: ..."` strings. Register the
+  tool in `jarvis/tools/__init__.py` (`import` + add `GlobFilesTool()` to `_REGISTRY`).
+  *Verify:* pytest builds a tmp tree (e.g. `a.py`, `sub/b.py`, `sub/.hidden.py`),
+  asserts `glob` with `**/*.py` returns `a.py` and `sub/b.py` (not the hidden one)
+  newest-first, returns the `"No files match"` string for a non-matching pattern,
+  and returns an `"Error: ..."` string for a missing root path.
+
+- [ ] **9.2 Docs + parity flip.**
+  Add a `glob_files.py` row to the tool tree in JARVIS.md (one line: "Find files by
+  glob pattern, newest-first, capped at 200"). Flip PARITY.md's
+  `Glob (find files by pattern)` row from ❌ to ✅.
+  *Verify:* `/selftest` (pytest) green; grep confirms the PARITY Glob row is ✅ and
+  JARVIS.md mentions `glob_files.py`.
+
+---
+
 ## Standing orders (apply to every step)
 
 - **Registration invariants:** new tool → `tools/__init__.py` `_REGISTRY` + JARVIS.md
