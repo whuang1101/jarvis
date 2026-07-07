@@ -18,6 +18,7 @@ from .formatter import (
     print_todo_list,
     set_code_theme,
 )
+from .mcp_manager import get_active_manager
 from .permissions import (
     is_auto_mode,
     is_dangerously_skip_permissions,
@@ -26,6 +27,7 @@ from .permissions import (
 )
 from .sessions import SessionStore, list_sessions
 from .settings import Settings, persist_setting
+from .tools import register_tool, unregister_tool
 
 _HELP_TEXT = """
 [bold cyan]Available commands:[/bold cyan]
@@ -59,6 +61,7 @@ _HELP_TEXT = """
   [cyan]/sessions[/cyan]      List the last 10 saved sessions (date, cwd, first message)
   [cyan]/resume <n>[/cyan]    Load a session from /sessions into this conversation
   [cyan]/rewind [n][/cyan]    List checkpoints, restore checkpoint n, or `/rewind clear` to clear them
+  [cyan]/mcp[/cyan]           List connected MCP servers, `/mcp add <name> <command> [args...]`, or `/mcp remove <name>`
   [cyan]/memory[/cyan]        Manage persistent memory (`~/.jarvis/memory.md`)
   [cyan]/todos[/cyan]         Show the maintained todo list (`/todos clear` to clear it)
   [cyan]#text[/cyan]          Shortcut: append `text` to memory without sending it to the agent
@@ -220,6 +223,7 @@ def handle_command(
                 "/sessions",
                 "/resume",
                 "/rewind",
+                "/mcp",
                 "/memory",
                 "/todos",
                 "/init",
@@ -533,6 +537,62 @@ def handle_command(
         for i, cp in enumerate(listing, start=1):
             suffix = " [files]" if cp["has_files"] else ""
             print_system(f"{i}: {cp['label']}  ({cp['time']}){suffix}")
+        return None
+
+    if cmd == "/mcp":
+        tokens = arg.split()
+        sub = tokens[0].lower() if tokens else "list"
+
+        if sub == "list" or not tokens:
+            mgr = get_active_manager()
+            if mgr is None:
+                print_error("no MCP manager active (start with --mcp)")
+                return None
+            servers = mgr.list_servers()
+            if not servers:
+                print_command_output("No MCP servers connected.")
+                return None
+            for server in servers:
+                print_command_output(f"{server['name']} — {server['tool_count']} tools")
+            return None
+
+        if sub == "add":
+            if len(tokens) < 3:
+                print_error("usage: /mcp add <name> <command> [args...]")
+                return None
+            mgr = get_active_manager()
+            if mgr is None:
+                print_error("no MCP manager active (start with --mcp)")
+                return None
+            name, command, *command_args = tokens[1:]
+            try:
+                tools = mgr.connect(name=name, command=command, args=command_args, env={})
+                for tool in tools:
+                    register_tool(tool)
+                print_command_output(f"Connected {name} ({len(tools)} tools).")
+            except Exception as e:
+                print_error(f"Error: could not connect {name}: {e}")
+            return None
+
+        if sub == "remove":
+            if len(tokens) < 2:
+                print_error("usage: /mcp remove <name>")
+                return None
+            mgr = get_active_manager()
+            if mgr is None:
+                print_error("no MCP manager active (start with --mcp)")
+                return None
+            name = tokens[1]
+            names = mgr.disconnect(name)
+            if names:
+                for tool_name in names:
+                    unregister_tool(tool_name)
+                print_command_output(f"Removed {name} ({len(names)} tools).")
+            else:
+                print_error(f"Error: no MCP server named {name}.")
+            return None
+
+        print_error("usage: /mcp [list | add <name> <command> [args...] | remove <name>]")
         return None
 
     if cmd == "/copy":

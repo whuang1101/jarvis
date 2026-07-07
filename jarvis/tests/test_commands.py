@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import types
 from pathlib import Path
 
 import jarvis.commands as commands_module
+import jarvis.mcp_manager as mcp_manager
 import jarvis.sessions as sessions_module
 import jarvis.settings as settings_module
 import jarvis.todos as todos_module
@@ -365,3 +367,37 @@ class TestRewindCommand:
 
         assert result is None
         assert checkpoints.list_checkpoints() == []
+
+
+class TestMcpCommand:
+    def test_list_shows_connected_servers(self, capsys):
+        fake = types.SimpleNamespace(
+            list_servers=lambda: [{"name": "srv", "tool_count": 3}],
+            connect=lambda **kwargs: [],
+            disconnect=lambda name: ["x"],
+        )
+        mcp_manager.set_active_manager(fake)
+        try:
+            result = handle_command("/mcp", None, None, None)
+
+            assert result is None
+            out = capsys.readouterr().out
+            assert "srv" in out
+            assert "3" in out
+        finally:
+            mcp_manager.set_active_manager(None)
+
+    def test_remove_reports_removed_tools(self, capsys):
+        fake = types.SimpleNamespace(
+            list_servers=lambda: [{"name": "srv", "tool_count": 3}],
+            connect=lambda **kwargs: [],
+            disconnect=lambda name: ["x"],
+        )
+        mcp_manager.set_active_manager(fake)
+        try:
+            result = handle_command("/mcp remove srv", None, None, None)
+
+            assert result is None
+            assert "Removed srv" in capsys.readouterr().out
+        finally:
+            mcp_manager.set_active_manager(None)
