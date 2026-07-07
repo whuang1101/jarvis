@@ -214,6 +214,38 @@ class TestReadFullInput:
         monkeypatch.setattr("builtins.input", raise_eof)
         assert cli._read_full_input("status") == "only line"
 
+    def test_continuation_uses_prompt_toolkit_session_on_tty(self, monkeypatch):
+        class FakeStdin:
+            def isatty(self) -> bool:
+                return True
+
+        class FakeSession:
+            def prompt(self, prompt: str = "") -> str:
+                return "b"
+
+        monkeypatch.setattr(cli, "_read_input", lambda status: "a\\")
+        monkeypatch.setattr(cli.sys, "stdin", FakeStdin())
+        monkeypatch.setattr(cli, "_get_continuation_session", lambda: FakeSession())
+
+        def fail_input(prompt=""):
+            raise AssertionError("builtin input() should not be used on a TTY")
+
+        monkeypatch.setattr("builtins.input", fail_input)
+        assert cli._read_full_input("s") == "a\nb"
+
+    def test_continuation_uses_input_on_non_tty(self, monkeypatch):
+        monkeypatch.setattr(sys.stdin, "isatty", lambda: False)
+        monkeypatch.setattr(cli, "_read_input", lambda status: "a\\")
+        calls = []
+
+        def fake_input(prompt=""):
+            calls.append(prompt)
+            return "b"
+
+        monkeypatch.setattr("builtins.input", fake_input)
+        assert cli._read_full_input("s") == "a\nb"
+        assert calls == ["... "]
+
 
 class TestReadPipedStdin:
     class _FakeStdin:

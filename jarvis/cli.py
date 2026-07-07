@@ -185,6 +185,14 @@ def _read_input(status_plain: str) -> str:
         console.print("[bright_black]╰" + "─" * (width - 2) + "╯[/bright_black]")
 
 
+def _read_continuation(prompt: str = "... ") -> str:
+    """Read a single continuation line, via prompt_toolkit on an interactive
+    TTY (letting its EOFError propagate) or builtin input() otherwise."""
+    if _PROMPT_TOOLKIT and sys.stdin.isatty():
+        return _get_continuation_session().prompt(prompt)
+    return input(prompt)
+
+
 def _read_full_input(status_plain: str) -> str:
     """Read one logical line of user input, joining continuation lines.
 
@@ -199,7 +207,7 @@ def _read_full_input(status_plain: str) -> str:
         lines: list[str] = []
         while True:
             try:
-                cont = input("... ")
+                cont = _read_continuation()
             except EOFError:
                 break
             if cont.strip() == "```":
@@ -211,7 +219,7 @@ def _read_full_input(status_plain: str) -> str:
     while line.endswith("\\"):
         lines.append(line[:-1])
         try:
-            line = input("... ")
+            line = _read_continuation()
         except EOFError:
             return "\n".join(lines)
     lines.append(line)
