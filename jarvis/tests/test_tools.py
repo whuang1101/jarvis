@@ -10,6 +10,8 @@ from jarvis.tools.search_files import SearchFilesTool
 from jarvis.tools.find_symbol import FindSymbolTool
 from jarvis.tools.glob_files import GlobFilesTool
 from jarvis.tools.sensitive import is_sensitive_path, sensitive_read_error
+from jarvis.tools.skill import SkillTool
+from jarvis.skills import Skill
 
 
 class TestEditFile:
@@ -283,3 +285,21 @@ class TestSensitive:
 
     def test_read_error_message(self):
         assert sensitive_read_error("x").startswith("Error:")
+
+
+class TestSkillTool:
+    def test_returns_skill_body(self, monkeypatch):
+        fake_skill = Skill(name="x", description="does x", body="X body.\n", path=Path("x.md"))
+        monkeypatch.setattr("jarvis.tools.skill.load_skill", lambda name: fake_skill)
+        result = SkillTool().execute({"name": "x"})
+        assert result == "X body.\n"
+
+    def test_missing_skill_returns_error(self, monkeypatch):
+        monkeypatch.setattr("jarvis.tools.skill.load_skill", lambda name: None)
+        result = SkillTool().execute({"name": "nope"})
+        assert result == "Error: no skill named 'nope'"
+
+    def test_registered_in_tool_registry(self):
+        from jarvis.tools import get_tool_by_name
+
+        assert get_tool_by_name("skill") is not None
