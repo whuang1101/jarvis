@@ -1387,7 +1387,7 @@ status text — falling back to the built-in default on empty output, non-zero e
 timeout. A `/statusline` command views/sets/clears it. No behavior change when the
 setting is empty (the default today).
 
-- [ ] **24.1 Extract the default status builder (`jarvis/status.py`).**
+- [x] **24.1 Extract the default status builder (`jarvis/status.py`).**
   New module `jarvis/status.py`. Add a pure function
   `build_default_status(cwd: Path, tokens: int, plan: bool, auto: bool, danger: bool) -> str`
   that reproduces today's inline string exactly: `~`-abbreviated cwd (relative to
