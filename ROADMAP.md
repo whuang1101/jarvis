@@ -1802,7 +1802,7 @@ subfolders and a `.mcp.json`. No remote install / marketplace fetch (that half n
 human-only network signup and stays ❌-adjacent); this reuses the existing custom-command,
 skills, and `.mcp.json` loaders so nothing new has to parse markdown or MCP JSON.
 
-- [ ] **31.1 Plugin discovery module (`jarvis/plugins.py`).**
+- [x] **31.1 Plugin discovery module (`jarvis/plugins.py`).**
   New module. Add a `@dataclass(frozen=True) Plugin` with fields `name: str`,
   `description: str`, `version: str`, `path: Path`. Add `_plugin_roots()` returning
   `(Path.home() / ".jarvis" / "plugins", Path.cwd() / ".jarvis" / "plugins")`. Add

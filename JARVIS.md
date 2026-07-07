@@ -447,6 +447,7 @@ root. First hit is injected into the system prompt as project context. This file
 | `jarvis/images.py` | Pure helpers to detect image files and encode them as `image_url` content parts for vision input |
 | `jarvis/skills.py` | Discovers/parses auto-triggered skills from `~/.jarvis/skills/` and `./.jarvis/skills/` (`<name>.md` or `<name>/SKILL.md`, project overrides global) |
 | `jarvis/doctor.py` | Pure `run_diagnostics()` — Python version, Azure credentials, MCP servers, pytest/mypy install checks, each a `Check(name, status, detail)` |
+| `jarvis/plugins.py` | Discovers local plugin bundles from `~/.jarvis/plugins/` and `./.jarvis/plugins/` (`<name>/plugin.toml`, project overrides global) |
 | `pyproject.toml` | Dependencies and the `jarvis` entry point |
 
 ## Environment variables (in `.env`, gitignored)
