@@ -1707,7 +1707,7 @@ state (double-drawn prompts, lost history, a stray slash-command dropdown), so m
 is only reliable when stdin is piped. This phase routes continuation lines through
 `prompt_toolkit` too, then flips the PARITY row.
 
-- [ ] **29.1 Completer-free continuation session (`jarvis/cli.py`).**
+- [x] **29.1 Completer-free continuation session (`jarvis/cli.py`).**
   Add a module-level `_continuation_session: "PromptSession | None" = None` alongside the
   existing `_prompt_session`, and a `_get_continuation_session() -> "PromptSession"` that
   lazily builds a `PromptSession(history=InMemoryHistory(), completer=None,
