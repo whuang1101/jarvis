@@ -1253,7 +1253,7 @@ via `/sandbox`. No change to command semantics when the sandbox is off (default)
   `sandbox = true` loads as `sandbox is True`; a `permissions.py` test asserts
   `set_sandbox(True)` then `is_sandbox()` is `True` (reset to `False` after). `/selftest` green.
 
-- [ ] **22.2 Pure sandbox-argv builder.**
+- [x] **22.2 Pure sandbox-argv builder.**
   In `jarvis/tools/run_command.py` add a module-level helper
   `_build_sandbox_argv(command: str, cwd: str, allow_network: bool) -> list[str]` that
   returns the `bwrap` argv: start with `[bwrap_path, "--ro-bind", "/", "/", "--dev",

@@ -6,7 +6,7 @@ import time
 from unittest.mock import patch
 
 from jarvis import tasks as tasks_mod
-from jarvis.tools.run_command import RunCommandTool
+from jarvis.tools.run_command import RunCommandTool, _build_sandbox_argv
 from jarvis.tools.task_output import TaskOutputTool
 
 
@@ -37,6 +37,31 @@ def test_streams_output_live() -> None:
     # The second line should land noticeably after the command started, not all at once at exit.
     assert timestamps[1] - timestamps[0] >= 0.2
     assert timestamps[0] - start < 0.2
+
+
+def test_build_sandbox_argv_network_disallowed() -> None:
+    with patch("jarvis.tools.run_command.shutil.which", return_value="/usr/bin/bwrap"):
+        argv = _build_sandbox_argv("echo hi", "/tmp/proj", allow_network=False)
+
+    assert "--unshare-net" in argv
+    assert argv[0] == "/usr/bin/bwrap"
+    assert ["--bind", "/tmp/proj", "/tmp/proj"] == argv[10:13]
+    assert argv[-3:] == ["/bin/sh", "-c", "echo hi"]
+
+
+def test_build_sandbox_argv_network_allowed() -> None:
+    with patch("jarvis.tools.run_command.shutil.which", return_value="/usr/bin/bwrap"):
+        argv = _build_sandbox_argv("echo hi", "/tmp/proj", allow_network=True)
+
+    assert "--unshare-net" not in argv
+    assert argv[-3:] == ["/bin/sh", "-c", "echo hi"]
+
+
+def test_build_sandbox_argv_unavailable() -> None:
+    with patch("jarvis.tools.run_command.shutil.which", return_value=None):
+        argv = _build_sandbox_argv("echo hi", "/tmp/proj", allow_network=False)
+
+    assert argv == []
 
 
 def test_cd_still_works() -> None:

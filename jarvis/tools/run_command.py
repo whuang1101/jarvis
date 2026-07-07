@@ -20,6 +20,26 @@ _CD_RE = re.compile(r"^\s*cd(?:\s+(.*?))?\s*$")
 _REINSTALL_RE = re.compile(r"pipx\s+reinstall\s+jarvis")
 
 
+def _build_sandbox_argv(command: str, cwd: str, allow_network: bool) -> list[str]:
+    bwrap_path = shutil.which("bwrap")
+    if bwrap_path is None:
+        return []
+    argv = [
+        bwrap_path,
+        "--ro-bind", "/", "/",
+        "--dev", "/dev",
+        "--proc", "/proc",
+        "--tmpfs", "/tmp",
+        "--bind", cwd, cwd,
+        "--chdir", cwd,
+        "--die-with-parent",
+    ]
+    if not allow_network:
+        argv.append("--unshare-net")
+    argv.extend(["/bin/sh", "-c", command])
+    return argv
+
+
 class RunCommandTool(BaseTool):
     name = "run_command"
     description = "Run a shell command and return its stdout and stderr output."

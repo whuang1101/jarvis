@@ -198,7 +198,10 @@ jarvis/
     │                    the console as they arrive (result is still the captured, truncated
     │                    text); intercepts `cd`/`cd <path>` via os.chdir(). `background=true`
     │                    instead launches it detached via `tasks.start_background_task()` and
-    │                    returns a task id right away.
+    │                    returns a task id right away. `_build_sandbox_argv(command, cwd,
+    │                    allow_network)` builds a `bwrap` argv (read-only `/` bind, read-write
+    │                    `cwd` bind, `--unshare-net` unless network allowed); returns `[]` if
+    │                    `bwrap` isn't on PATH. Not yet wired into `execute`.
     ├── task_output.py   Reads a background task's status/log by id (tasks.py: subshell wrapped
     │                    with `>> <id>.log`, exit code written to `<id>.status`, best-effort
     │                    `osascript` notification on completion).
