@@ -82,7 +82,7 @@ Legend: ✅ Jarvis has it · 🟡 partial · ❌ missing
 | Custom slash commands from markdown files | ❌ | ROADMAP 4.1 |
 | Hooks (PreToolUse / PostToolUse / Stop, with blocking exit codes) | ❌ | ROADMAP 4.2 |
 | MCP servers (stdio) | ✅ | GitHub / Azure / Brave at startup |
-| MCP: add/remove/list at runtime, project .mcp.json config | ❌ | servers are hardcoded; `/mcp` command + config file |
+| MCP: add/remove/list at runtime, project .mcp.json config | 🟡 | `/mcp` list/add/remove + `.mcp.json` startup loading; runtime-added servers are session-scoped |
 | MCP reconnect on crash | ❌ | TODO.md robustness item |
 | Skills (folder of markdown capabilities, auto-triggered) | ❌ | ambitious; markdown commands first |
 | Plugins / marketplaces | ❌ | out of scope for now |
