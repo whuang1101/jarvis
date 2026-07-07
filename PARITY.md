@@ -83,7 +83,7 @@ Legend: ✅ Jarvis has it · 🟡 partial · ❌ missing
 | Hooks (PreToolUse / PostToolUse / Stop, with blocking exit codes) | ✅ | ROADMAP 4.2 |
 | MCP servers (stdio) | ✅ | GitHub / Azure / Brave at startup |
 | MCP: add/remove/list at runtime, project .mcp.json config | 🟡 | `/mcp` list/add/remove + `.mcp.json` startup loading; runtime-added servers are session-scoped |
-| MCP reconnect on crash | ❌ | TODO.md robustness item |
+| MCP reconnect on crash | ✅ | transparent respawn + single retry in `_call_tool`, gated by `mcp_auto_reconnect` |
 | Skills (folder of markdown capabilities, auto-triggered) | ❌ | ambitious; markdown commands first |
 | Plugins / marketplaces | ❌ | out of scope for now |
 | Output styles / themes | ✅ | `/theme` + `theme` setting (Rich syntax themes) |
