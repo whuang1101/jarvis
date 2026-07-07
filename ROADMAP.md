@@ -1217,7 +1217,7 @@ stable across turns.
   `usage` contains `cached_input_tokens`; and a `commands.py` test (or manual grep) that
   the `/usage` handler references `tracker.cached_tokens`. `/selftest` green.
 
-- [ ] **21.4 Docs + parity flip.**
+- [x] **21.4 Docs + parity flip.**
   In `JARVIS.md`, note in the usage/cost section (or `UsageTracker` mention) that Jarvis
   tracks Azure's `cached_tokens` and bills cached input at half rate, shown in `/usage`
   and the headless JSON `usage.cached_input_tokens`. In `PARITY.md` flip the
