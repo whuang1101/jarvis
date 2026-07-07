@@ -74,6 +74,7 @@ class Settings:
     hooks_post_tool: tuple[dict, ...] = ()
     sandbox: bool = False
     sandbox_allow_network: bool = False
+    statusline: str = ""
 
     @classmethod
     def load(cls, path: Path | None = None, cwd: Path | None = None) -> "Settings":

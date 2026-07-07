@@ -1399,7 +1399,7 @@ setting is empty (the default today).
   known cwd/token count with each combination of flags off and all on (checking the
   ` · PLAN · AUTO · DANGER` ordering); `/selftest` green.
 
-- [ ] **24.2 Add the `statusline` setting (`jarvis/settings.py`).**
+- [x] **24.2 Add the `statusline` setting (`jarvis/settings.py`).**
   Add a scalar field `statusline: str = ""` to the `Settings` dataclass (it is a top-level
   scalar, so it is picked up automatically by `load` / `persist_setting`, not a `_TABLE_KEYS`
   entry). Document the new key in the JARVIS.md settings/config section (1-line table row or

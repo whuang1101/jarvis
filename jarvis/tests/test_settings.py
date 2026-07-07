@@ -23,6 +23,16 @@ class TestSettingsLoad:
         assert settings.sandbox is False
         assert settings.sandbox_allow_network is False
 
+    def test_statusline_default_is_empty(self, tmp_path):
+        settings = Settings.load(tmp_path / "does_not_exist.toml")
+        assert settings.statusline == ""
+
+    def test_statusline_from_config(self, tmp_path):
+        path = tmp_path / "config.toml"
+        path.write_text('statusline = "echo hi"\n')
+        settings = Settings.load(path)
+        assert settings.statusline == "echo hi"
+
     def test_full_file_overrides_all_defaults(self, tmp_path):
         path = tmp_path / "config.toml"
         path.write_text(
