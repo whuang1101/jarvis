@@ -87,7 +87,7 @@ Legend: ✅ Jarvis has it · 🟡 partial · ❌ missing
 | Skills (folder of markdown capabilities, auto-triggered) | 🟡 | name+description catalog injected into the system prompt from `~/.jarvis/skills/` + project `.jarvis/skills/`; model loads full body on demand via the `skill` tool; `/skills` lists them |
 | Plugins / marketplaces | ❌ | out of scope for now |
 | Output styles / themes | ✅ | `/theme` + `theme` setting (Rich syntax themes) |
-| Status line customization | ❌ | input-bar top border is the hook point |
+| Status line customization | 🟡 | shell command in `statusline` setting; receives cwd/tokens/mode JSON on stdin, first stdout line becomes the input-bar top border, falls back to default on error; `/statusline` sets it |
 
 ## Git & GitHub workflows
 
