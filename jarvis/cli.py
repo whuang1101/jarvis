@@ -6,9 +6,17 @@ import json
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 _RESUME_FILE = Path.home() / ".jarvis" / "resume.json"
+
+
+def _notify_turn_done(start: float) -> None:
+    elapsed = time.monotonic() - start
+    settings = Settings.load()
+    if settings.notify and elapsed >= settings.notify_min_seconds:
+        send_notification("Jarvis", f"Turn finished in {int(elapsed)}s")
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
@@ -89,6 +97,7 @@ from .formatter import (
 from .logger import SessionLogger
 from .mcp_config import load_mcp_servers
 from .mcp_manager import MCPManager, set_active_manager
+from .notify import send_notification
 from .sessions import SessionStore, list_sessions
 from .settings import Settings
 from .status import render_status
@@ -493,7 +502,9 @@ def main() -> None:
                         agent_message = result[len(_RUN_AGENT_PREFIX):]
                         try:
                             checkpoints.checkpoint_turn(context, user_input)
+                            start = time.monotonic()
                             run_agent(agent_message, client, context, tracker, logger, session)
+                            _notify_turn_done(start)
                         except KeyboardInterrupt:
                             console.print()
                             print_system("Cancelled.")
@@ -506,7 +517,9 @@ def main() -> None:
             print_user_header(user_input)
             try:
                 checkpoints.checkpoint_turn(context, user_input)
+                start = time.monotonic()
                 run_agent(build_multimodal_content(expand_file_mentions(user_input)), client, context, tracker, logger, session)
+                _notify_turn_done(start)
             except KeyboardInterrupt:
                 console.print()
                 print_system("Cancelled.")
