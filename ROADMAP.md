@@ -965,7 +965,7 @@ list, add, and remove servers at runtime. Runtime-added servers are session-scop
   `mgr._servers`, `disconnect("missing") == []`; `set_active_manager(mgr)` then
   `get_active_manager() is mgr` (reset to `None` after). `/selftest` (pytest) green.
 
-- [ ] **18.2 Load MCP servers from `.mcp.json` config files.**
+- [x] **18.2 Load MCP servers from `.mcp.json` config files.**
   Add `jarvis/mcp_config.py` with `load_mcp_servers(cwd: str | None = None) ->
   list[dict[str, Any]]`: read a global `~/.jarvis/mcp.json` then walk up from `cwd`
   (default `Path.cwd()`) up to `_PROJECT_WALK_DEPTH = 5` levels for a project `.mcp.json`,

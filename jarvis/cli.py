@@ -79,6 +79,7 @@ from .formatter import (
     redirect_console, set_code_theme,
 )
 from .logger import SessionLogger
+from .mcp_config import load_mcp_servers
 from .mcp_manager import MCPManager, set_active_manager
 from .sessions import SessionStore, list_sessions
 from .settings import Settings
@@ -228,6 +229,10 @@ def _init_mcp(mcp: MCPManager) -> None:
             args=["-y", "@modelcontextprotocol/server-brave-search"],
             env={"BRAVE_API_KEY": brave_key},
         )
+
+    # Extra servers from ~/.jarvis/mcp.json and project .mcp.json
+    for entry in load_mcp_servers():
+        _connect_mcp(mcp, entry["name"], entry["command"], entry["args"], entry["env"])
 
 
 def _result_payload(result: str, is_error: bool, tracker: UsageTracker) -> dict:
