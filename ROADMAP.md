@@ -800,7 +800,7 @@ module-level-store pattern.
   `handle_command("/todos clear", ...)` returns `None` and afterwards
   `todos.get_todos() == []`. `/selftest` (pytest) green.
 
-- [ ] **16.3 Surface outstanding todos in the system prompt so the agent maintains them.**
+- [x] **16.3 Surface outstanding todos in the system prompt so the agent maintains them.**
   In `jarvis/context.py` `ContextManager.system_message`, after the `_pinned` block
   and before the `_plan_mode` block, `import`/call the `todos` module: when
   `todos.get_todos()` is non-empty, append a `"\n\n## Current Todos\n\n"` section

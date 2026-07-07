@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from jarvis import todos
 from jarvis.context import ContextManager, _lookup_price, _PRICING, build_multimodal_content, expand_file_mentions
 
 
@@ -160,3 +161,20 @@ class TestExpandFileMentions:
         text = f"what is in @{image}?"
 
         assert expand_file_mentions(text) == text
+
+
+class TestTodosInSystemMessage:
+    def teardown_method(self):
+        todos.clear_todos()
+
+    def test_no_todos_section_when_empty(self):
+        todos.clear_todos()
+        ctx = ContextManager()
+        assert "## Current Todos" not in ctx.system_message["content"]
+
+    def test_todos_section_lists_pending_item(self):
+        todos.set_todos([{"content": "ship it", "status": "pending"}])
+        ctx = ContextManager()
+        content = ctx.system_message["content"]
+        assert "## Current Todos" in content
+        assert "- [ ] ship it" in content

@@ -284,6 +284,9 @@ Implemented commands: `/help /history /retry /undo /clear /compact /usage /model
 /config /file /run /plan /go /cancel /restart /auto /fix /copy /save /sessions /resume /memory /todos
 /init /selftest /commit /review /exit /quit`. Every one is listed in `_HELP_TEXT` — keep that invariant.
 `/todos` prints the maintained todo list via `formatter.print_todo_list`; `/todos clear` clears it.
+`ContextManager.system_message` also appends a `## Current Todos` section (one `- [ ]`/`- [x]` line
+per item, `(in progress)` suffix for in-progress) whenever `todos.get_todos()` is non-empty, so the
+agent re-sees its own checklist every turn.
 `/theme` sets the Rich code-block Pygments style (persisted via `persist_setting`); `/diff` shows
 `git diff HEAD`; `/pin <text>` adds a note into `ContextManager._pinned`, which is rendered into the
 system prompt and survives `clear()`/`compact()`. `/selftest` runs pytest **and** mypy. `/commit` stages

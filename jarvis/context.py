@@ -4,6 +4,8 @@ import base64
 from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
+from . import todos
+
 if TYPE_CHECKING:
     from .client import JarvisClient
 
@@ -182,6 +184,14 @@ class ContextManager:
                 content += f"\n\n## Persistent Memory\n\n{memory_content}"
         if self._pinned:
             content += "\n\n## Pinned\n\n" + "\n".join(f"- {p}" for p in self._pinned)
+        todo_items = todos.get_todos()
+        if todo_items:
+            lines = []
+            for t in todo_items:
+                box = "x" if t["status"] == "completed" else " "
+                suffix = " (in progress)" if t["status"] == "in_progress" else ""
+                lines.append(f"- [{box}] {t['content']}{suffix}")
+            content += "\n\n## Current Todos\n\n" + "\n".join(lines)
         if _plan_mode:
             content += _PLAN_MODE_PROMPT
         return {"role": "system", "content": content}
