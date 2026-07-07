@@ -813,7 +813,7 @@ module-level-store pattern.
   contains `"## Current Todos"` and `"- [ ] ship it"`. Reset the store at test end.
   `/selftest` (pytest) green.
 
-- [ ] **16.4 Docs + parity flip.**
+- [x] **16.4 Docs + parity flip.**
   In JARVIS.md, document the `/todos` command in the command list and note that the
   `todo_write` tool now persists the list in a session store (`jarvis/todos.py`),
   recallable with `/todos`, and injected into the system prompt each turn so the

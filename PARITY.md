@@ -16,7 +16,7 @@ Legend: ✅ Jarvis has it · 🟡 partial · ❌ missing
 | Multi-step tool loop (dozens of iterations) | ✅ | 40 cap + progress summary |
 | Extended thinking / reasoning display | ✅ | dimmed italic live block, gated by `show_thinking` |
 | Parallel tool calls in one turn | 🟡 | executed sequentially; could thread independent calls |
-| Todo list the agent maintains (TaskCreate-style) with live checklist UI | ❌ | ROADMAP 5.1 |
+| Todo list the agent maintains (TaskCreate-style) with live checklist UI | ✅ | full re-render panel, not an in-place `Live` widget (a second concurrent `Live` would fight the streaming-markdown `Live`) |
 | Subagents (spawn isolated agent for a subtask, return summary) | ❌ | ROADMAP 5.4 |
 | Interrupt stream with Esc/Ctrl+C, keep partial, steer mid-task | 🟡 | Ctrl+C keeps partial; no "steer while running" queued input |
 | Auto-compaction of context | ✅ | at ~25K est. tokens |
