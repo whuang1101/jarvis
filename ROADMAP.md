@@ -1697,6 +1697,56 @@ interactive turn so only turns that both finish normally and ran at least the th
 
 ---
 
+## Phase 29 — First-class multiline input on the interactive bar
+
+The `\`-continuation and ```-fenced multiline forms already work on the `readline`
+fallback path (`cli._read_full_input`, tested), but on an interactive TTY the *first*
+line is read through `prompt_toolkit` while each continuation line falls back to a raw
+`input("... ")`. On a real TTY that raw `input()` fights `prompt_toolkit` for terminal
+state (double-drawn prompts, lost history, a stray slash-command dropdown), so multiline
+is only reliable when stdin is piped. This phase routes continuation lines through
+`prompt_toolkit` too, then flips the PARITY row.
+
+- [ ] **29.1 Completer-free continuation session (`jarvis/cli.py`).**
+  Add a module-level `_continuation_session: "PromptSession | None" = None` alongside the
+  existing `_prompt_session`, and a `_get_continuation_session() -> "PromptSession"` that
+  lazily builds a `PromptSession(history=InMemoryHistory(), completer=None,
+  complete_while_typing=False, vi_mode=Settings.load().vi_mode)` — no `SlashCommandCompleter`,
+  so typing on a `... ` continuation line never pops the slash dropdown. Extend
+  `_reset_prompt_session()` to also set `_continuation_session = None` so `/vim` rebuilds both
+  sessions with the current `vi_mode`.
+  *Verify:* a `test_cli.py` test calls `cli._get_continuation_session()` twice and asserts the
+  same object is returned and its `completer is None`; after `cli._reset_prompt_session()` a
+  subsequent call returns a *different* object. `/selftest` (pytest) green.
+
+- [ ] **29.2 Route continuation lines through prompt_toolkit (`jarvis/cli.py`).**
+  Add a module-level `_read_continuation(prompt: str = "... ") -> str` that, when
+  `_PROMPT_TOOLKIT and sys.stdin.isatty()`, reads the line via
+  `_get_continuation_session().prompt(prompt)` (letting `prompt_toolkit`'s `EOFError` propagate),
+  and otherwise `return input(prompt)`. Replace both `input("... ")` call sites in
+  `_read_full_input` (the ```-fenced-block loop and the `\`-continuation loop) with
+  `_read_continuation()`, keeping the existing `EOFError` handling unchanged. Because
+  `sys.stdin.isatty()` is False under pytest, the non-TTY branch keeps using `input()`, so the
+  existing `_read_full_input` tests stay green untouched.
+  *Verify:* a `test_cli.py` test monkeypatches `cli.sys.stdin` to an object whose `isatty()`
+  returns True and `cli._get_continuation_session` to a stub whose `.prompt` returns `"b"`, then
+  monkeypatches `_read_input`→`"a\\"` and asserts `cli._read_full_input("s") == "a\nb"` (the
+  continuation came from the session, not `input`); a second test forces the non-TTY branch and
+  asserts a monkeypatched `builtins.input` was used. `/selftest` (pytest) green.
+
+- [ ] **29.3 Docs + parity flip (`JARVIS.md`, `PARITY.md`).**
+  In JARVIS.md's interactive-UX / `_read_input` paragraph, note that continuation lines
+  (`\`-continued and ```-fenced multiline input) are read through a completer-free
+  `_get_continuation_session()` on a TTY (raw `input("... ")` fallback off-TTY), so multiline
+  editing works on the `prompt_toolkit` bar without a stray slash dropdown. In PARITY.md, flip
+  the "Multiline input (backslash or ``` blocks)" row from ❌ to ✅ with the note
+  "`\`-continuation + ```-fenced blocks joined by `_read_full_input`; continuation lines routed
+  through a completer-free prompt_toolkit session on a TTY".
+  *Verify:* `grep` confirms JARVIS.md mentions `_get_continuation_session` and the PARITY
+  "Multiline input" row is no longer ❌; `/selftest` (pytest) green.
+
+---
+
 ## Standing orders (apply to every step)
 
 - **Registration invariants:** new tool → `tools/__init__.py` `_REGISTRY` + JARVIS.md
