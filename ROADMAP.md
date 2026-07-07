@@ -932,6 +932,98 @@ Azure calls.
 
 ---
 
+## Phase 18 — MCP: runtime add/remove/list + project `.mcp.json` config
+
+PARITY row "MCP: add/remove/list at runtime, project .mcp.json config" is ❌: the
+three MCP servers (GitHub / Azure / Brave) are hardcoded in `cli.py:_init_mcp`, the
+`MCPManager` is created inline and thrown away (nothing can reach it after startup),
+and there is no `/mcp` command and no config file. This phase (1) gives the live
+`MCPManager` an inspectable server list, a `disconnect`, and a module-level active
+handle; (2) loads extra servers from a Claude-Code-compatible `.mcp.json`
+(project + `~/.jarvis/mcp.json` global) at startup; and (3) adds a `/mcp` command to
+list, add, and remove servers at runtime. Runtime-added servers are session-scoped
+(config-file and hardcoded ones reconnect each launch). No new Azure calls.
+
+- [ ] **18.1 MCPManager introspection, disconnect, and an active-manager handle.**
+  In `jarvis/mcp_manager.py` add three `MCPManager` methods: `list_servers() ->
+  list[dict[str, Any]]` returning `[{"name": name, "tool_count": len(info.get("tools",
+  []))} for name, info in self._servers.items()]` sorted by `name`; `disconnect(name:
+  str) -> list[str]` — if `name` not in `self._servers` return `[]`, else pop the entry,
+  collect its tool names (`[t.name for t in info.get("tools", [])]`), best-effort request
+  cancellation of a stored keep-alive task if present (wrap in `try/except`, never raise),
+  and return those names. In the `_connect` coroutine, after `ready.set()` and before the
+  `await asyncio.Event().wait()`, store the running task on the entry
+  (`self._servers[name]["task"] = asyncio.current_task()`) so `disconnect` can tear down
+  the stdio subprocess. Add module-level `_ACTIVE_MANAGER: MCPManager | None = None` with
+  `set_active_manager(manager)` and `get_active_manager() -> MCPManager | None`. In
+  `jarvis/cli.py`, change the `_init_mcp(MCPManager())` call site (~line 282) to build the
+  manager into a local, `set_active_manager(mgr)`, then `_init_mcp(mgr)`; add the import.
+  *Verify:* add `jarvis/tests/test_mcp_manager.py`: build `MCPManager()`, directly set
+  `mgr._servers["srv"] = {"tools": [types.SimpleNamespace(name="a"),
+  types.SimpleNamespace(name="b")]}`; assert `list_servers() == [{"name": "srv",
+  "tool_count": 2}]`, `disconnect("srv") == ["a", "b"]` and `"srv"` no longer in
+  `mgr._servers`, `disconnect("missing") == []`; `set_active_manager(mgr)` then
+  `get_active_manager() is mgr` (reset to `None` after). `/selftest` (pytest) green.
+
+- [ ] **18.2 Load MCP servers from `.mcp.json` config files.**
+  Add `jarvis/mcp_config.py` with `load_mcp_servers(cwd: str | None = None) ->
+  list[dict[str, Any]]`: read a global `~/.jarvis/mcp.json` then walk up from `cwd`
+  (default `Path.cwd()`) up to `_PROJECT_WALK_DEPTH = 5` levels for a project `.mcp.json`,
+  each file shaped `{"mcpServers": {"<name>": {"command": str, "args": [...], "env":
+  {...}}}}`. Merge into a dict keyed by server name with project entries overriding global
+  ones, and return a list of `{"name": name, "command": command, "args": args or [],
+  "env": env or {}}` for every entry with a non-empty `command`. Best-effort: a missing
+  file, unreadable file, JSON/parse error, or non-dict shape skips that file and never
+  raises; an entry without `command` is dropped. Expose the global path as a module
+  constant (e.g. `_GLOBAL_CONFIG`) so tests can monkeypatch it. In `jarvis/cli.py`
+  `_init_mcp`, after the three hardcoded server blocks, loop over `load_mcp_servers()` and
+  call `_connect_mcp(mcp, entry["name"], entry["command"], entry["args"], entry["env"])`
+  for each.
+  *Verify:* add `jarvis/tests/test_mcp_config.py` (monkeypatch `_GLOBAL_CONFIG` to a temp
+  path): a temp `.mcp.json` with two well-formed servers → `load_mcp_servers(cwd=tmp)`
+  returns both with correct `command`/`args`/`env`; an entry missing `command` is dropped;
+  a project entry overrides a global entry of the same name; a malformed-JSON file returns
+  `[]` without raising. `/selftest` (pytest) green.
+
+- [ ] **18.3 `unregister_tool` + `/mcp` command (list / add / remove).**
+  In `jarvis/tools/__init__.py` add `unregister_tool(name: str) -> None` that deletes
+  `_BY_NAME.pop(name, None)` and rebuilds `_REGISTRY` without any tool whose `.name ==
+  name`. In `jarvis/commands.py:handle_command`, add a `/mcp` branch (import
+  `get_active_manager` from `.mcp_manager` and `register_tool`/`unregister_tool` from
+  `.tools`): parse the argument string — no arg or `list` → `mgr = get_active_manager()`;
+  if `None` emit a "no MCP manager active (start with --mcp)" line, else if
+  `mgr.list_servers()` is empty emit "No MCP servers connected." else one line per server
+  as `f"{name} — {tool_count} tools"`; `add <name> <command> [args...]` → on too few tokens
+  emit a usage error, else `try` `tools = mgr.connect(name=name, command=command,
+  args=args, env={})`, `register_tool` each, emit `f"Connected {name} ({len(tools)}
+  tools)."`, catching `Exception as e` → `f"Error: could not connect {name}: {e}"`;
+  `remove <name>` → `names = mgr.disconnect(name)`, `unregister_tool` each, emit
+  `f"Removed {name} ({len(names)} tools)."` when `names` else `f"Error: no MCP server
+  named {name}."`. All output through `formatter` helpers (`print_command_output` for
+  listings, `print_error` for the `"Error: ..."` lines); every path `return None`. Register
+  `/mcp` in `_HELP_TEXT`, in the `commands_list` literal used by `/help`, and in the
+  JARVIS.md command list.
+  *Verify:* add a `test_commands.py` case: build a fake manager
+  (`types.SimpleNamespace`) whose `list_servers()` returns `[{"name": "srv", "tool_count":
+  3}]`, `connect(...)` returns `[]`, and `disconnect(name)` returns `["x"]`;
+  `mcp_manager.set_active_manager(fake)`; `handle_command("/mcp", ...)` returns `None` and
+  (via `capsys`) output contains `"srv"` and `"3"`; `handle_command("/mcp remove srv",
+  ...)` returns `None` and output contains `"Removed srv"`; reset
+  `set_active_manager(None)` after. `/selftest` (pytest) green.
+
+- [ ] **18.4 Docs + parity flip.**
+  In JARVIS.md, document the `/mcp` command in the command list (list/add/remove connected
+  MCP servers) and note that extra MCP servers can be declared in a project `.mcp.json`
+  or global `~/.jarvis/mcp.json` (`{"mcpServers": {name: {command, args, env}}}`) and are
+  connected at startup alongside the built-in GitHub/Azure/Brave servers. Flip PARITY.md's
+  "MCP: add/remove/list at runtime, project .mcp.json config" row from ❌ to 🟡 (note:
+  `/mcp` list/add/remove + `.mcp.json` startup loading; runtime-added servers are
+  session-scoped).
+  *Verify:* `/selftest` (pytest) green; grep confirms the PARITY MCP-runtime row is no
+  longer ❌ and JARVIS.md mentions `/mcp` and `.mcp.json`.
+
+---
+
 ## Standing orders (apply to every step)
 
 - **Registration invariants:** new tool → `tools/__init__.py` `_REGISTRY` + JARVIS.md
