@@ -7,6 +7,7 @@ from dataclasses import fields
 from pathlib import Path
 
 from . import checkpoints, todos
+from .skills import discover_skills
 from .client import JarvisClient
 from .context import ContextManager, UsageTracker, is_plan_mode, set_plan_mode
 from .formatter import (
@@ -68,6 +69,7 @@ _HELP_TEXT = """
   [cyan]/mcp[/cyan]           List connected MCP servers, `/mcp add <name> <command> [args...]`, or `/mcp remove <name>`
   [cyan]/memory[/cyan]        Manage persistent memory (`~/.jarvis/memory.md`)
   [cyan]/todos[/cyan]         Show the maintained todo list (`/todos clear` to clear it)
+  [cyan]/skills[/cyan]        List discovered skills (name and description)
   [cyan]#text[/cyan]          Shortcut: append `text` to memory without sending it to the agent
   [cyan]/init[/cyan]          Create a JARVIS.md project context file here
   [cyan]/selftest[/cyan]      Run Jarvis's own test suite (pytest) and type-check it (mypy)
@@ -231,6 +233,7 @@ def handle_command(
                 "/mcp",
                 "/memory",
                 "/todos",
+                "/skills",
                 "/init",
                 "/selftest",
                 "/commit",
@@ -793,6 +796,15 @@ def handle_command(
             print_system("Todo list cleared.")
             return None
         print_todo_list(todos.get_todos())
+        return None
+
+    if cmd == "/skills":
+        skills = discover_skills()
+        if not skills:
+            print_system("No skills found.")
+            return None
+        for skill in skills:
+            print_system(f"{skill.name} — {skill.description}")
         return None
 
     custom_template = _load_custom_command(cmd[1:])
