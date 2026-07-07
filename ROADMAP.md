@@ -1745,6 +1745,53 @@ is only reliable when stdin is piped. This phase routes continuation lines throu
   *Verify:* `grep` confirms JARVIS.md mentions `_get_continuation_session` and the PARITY
   "Multiline input" row is no longer ❌; `/selftest` (pytest) green.
 
+## Phase 30 — `/doctor` self-diagnostics
+
+PARITY lists `/doctor` (env vars, MCP health, install, test suite) as the topmost
+feasible ❌ — there is no command that tells a user at a glance whether their Jarvis
+install is healthy. Today that state is scattered: Azure credentials fail lazily inside
+`config.Config.load()`, MCP health lives in `mcp_manager`, and `/selftest` only runs
+the suite. This phase adds a read-only `jarvis/doctor.py` that gathers those signals
+into structured checks and a `/doctor` command that renders them, then flips the row.
+
+- [ ] **30.1 Diagnostics module (`jarvis/doctor.py`).**
+  Add a new module defining `Check = namedtuple("Check", "name status detail")` where
+  `status` is one of `"ok"`, `"warn"`, `"fail"`, and a pure `run_diagnostics() -> list[Check]`
+  that appends, in order: (a) **Python version** — `ok` with `sys.version.split()[0]` as
+  detail; (b) **Azure credentials** — iterate `config._REQUIRED`, `ok` if all
+  `os.getenv(k)` are set else `fail` with the comma-joined missing names as detail; (c)
+  **MCP servers** — `mcp_manager.get_active_manager()`; if `None`, `ok` "no MCP servers
+  configured", else `ok`/`warn` with `len(mgr.list_servers())` servers as detail; (d)
+  **pytest** and (e) **mypy** — `ok`/`warn` per `importlib.util.find_spec(name) is not None`,
+  detail "installed"/"not installed". Import `os`, `sys`, `importlib.util`, `config`, and
+  `mcp_manager` at module top; no side effects, no printing.
+  *Verify:* a `test_doctor.py` test calls `doctor.run_diagnostics()` and asserts the returned
+  list is non-empty, every element is a `Check` with `status in {"ok","warn","fail"}`, and
+  that with all four `config._REQUIRED` env vars monkeypatched present the "Azure credentials"
+  check is `ok` while clearing one flips it to `fail`. `/selftest` (pytest) green.
+
+- [ ] **30.2 `/doctor` command (`jarvis/commands.py`).**
+  Import `doctor` in `commands.py`. In `handle_command`, add an `if cmd == "/doctor":` branch
+  that calls `doctor.run_diagnostics()` and, for each `Check`, prints one line through the
+  existing `formatter` helpers — `print_system` for `ok`, `print_error` for `fail`, and
+  `print_system` prefixed with `"! "` for `warn` — formatted `"<glyph> <name>: <detail>"`
+  (glyph `✓`/`!`/`✗`), then `return None`. Register `/doctor` in `_BUILTIN_COMMANDS` (near
+  `/selftest`) and add a `_HELP_TEXT` line
+  `[cyan]/doctor[/cyan]        Run environment self-diagnostics (Azure creds, MCP, tooling)`.
+  *Verify:* a `test_commands.py` test monkeypatches `doctor.run_diagnostics` to return one `ok`
+  and one `fail` `Check`, calls `handle_command("/doctor", ...)`, asserts it returns `None` and
+  (via `capsys`/a formatter spy) that both check names appear in output; a second test asserts
+  `"/doctor"` is in `commands.all_command_names()`. `/selftest` (pytest) green.
+
+- [ ] **30.3 Docs + parity flip (`JARVIS.md`, `PARITY.md`).**
+  Add `/doctor` to JARVIS.md's command list with a one-line description matching `_HELP_TEXT`,
+  and note the `jarvis/doctor.py` diagnostics module (checks: Python version, Azure creds,
+  MCP servers, pytest/mypy) in the relevant module/flow section. In PARITY.md, flip the
+  "/doctor style self-diagnostics" row from ❌ to ✅ with the note
+  "`/doctor` runs `doctor.run_diagnostics()`: Azure creds, MCP health, pytest/mypy tooling".
+  *Verify:* `grep` confirms JARVIS.md mentions `/doctor` and the PARITY "/doctor" row is no
+  longer ❌; `/selftest` (pytest) green.
+
 ---
 
 ## Standing orders (apply to every step)
