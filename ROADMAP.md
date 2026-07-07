@@ -1034,7 +1034,7 @@ list, add, and remove servers at runtime. Runtime-added servers are session-scop
 > needs a vision-capable Azure deployment, but every step here is verified offline with
 > pytest — we test the encoding/message construction, not a live completion.
 
-- [ ] **19.1 Image encoding helpers (`jarvis/images.py`).**
+- [x] **19.1 Image encoding helpers (`jarvis/images.py`).**
   Add a new module `jarvis/images.py` with: a `frozenset` constant `_IMAGE_EXTENSIONS =
   {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"}`; `is_image_path(path: str) -> bool`
   that lower-cases `path` and returns whether it ends with any extension in the set;
