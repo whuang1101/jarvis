@@ -880,7 +880,7 @@ Azure calls.
   A second case: `snapshot_files(cwd=<non-git tmp dir>)` returns `None`. `/selftest`
   (pytest) green.
 
-- [ ] **17.3 Auto-checkpoint before each interactive user turn.**
+- [x] **17.3 Auto-checkpoint before each interactive user turn.**
   In `jarvis/checkpoints.py` add `checkpoint_turn(context: "ContextManager", message:
   str) -> int` that calls `create(context._history, label=message,
   file_stash=snapshot_files())` and returns the new index — this captures the

@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import subprocess
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .context import ContextManager
 
 _CHECKPOINTS: list[dict[str, Any]] = []
 _MAX_CHECKPOINTS = 30
@@ -19,6 +22,12 @@ def create(history: list[dict], label: str = "", file_stash: str | None = None) 
     )
     del _CHECKPOINTS[:-_MAX_CHECKPOINTS]
     return len(_CHECKPOINTS)
+
+
+def checkpoint_turn(context: "ContextManager", message: str) -> int:
+    # Snapshots history before the new user message is appended, so a rewind
+    # lands on the pre-turn state rather than replaying the turn that was undone.
+    return create(context._history, label=message, file_stash=snapshot_files())
 
 
 def list_checkpoints() -> list[dict]:

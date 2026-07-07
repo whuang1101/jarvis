@@ -3,6 +3,7 @@ from __future__ import annotations
 import subprocess
 
 from jarvis import checkpoints
+from jarvis.context import ContextManager
 
 
 def teardown_function(_fn) -> None:
@@ -111,3 +112,22 @@ def test_snapshot_and_restore_files_round_trip(tmp_path) -> None:
 
 def test_snapshot_files_returns_none_outside_git_repo(tmp_path) -> None:
     assert checkpoints.snapshot_files(cwd=str(tmp_path)) is None
+
+
+def test_checkpoint_turn_snapshots_history_before_new_message() -> None:
+    ctx = ContextManager()
+    ctx.append({"role": "user", "content": "first"})
+
+    index = checkpoints.checkpoint_turn(ctx, "hi")
+    assert index == 1
+    stored = checkpoints.get(1)
+    assert stored is not None
+    assert stored["label"] == "hi"
+    assert len(stored["history"]) == 1
+
+    ctx.append({"role": "user", "content": "second"})
+    index = checkpoints.checkpoint_turn(ctx, "again")
+    assert index == 2
+    stored = checkpoints.get(2)
+    assert stored is not None
+    assert len(stored["history"]) == 2
