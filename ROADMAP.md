@@ -1375,6 +1375,81 @@ No behavior change when no skills are present.
 
 ---
 
+## Phase 24 — Status line customization
+
+The input-bar top border (`╭─ ~/jarvis · 0.0k tokens ───╮`, built inline in
+`jarvis/cli.py:main()` and drawn by `_read_input`) is the only status surface Jarvis
+exposes, and its contents are hard-coded. Claude Code lets users customize this line by
+configuring a shell command that renders it. This phase adds a `statusline` setting: when
+set, Jarvis runs it as a shell command each prompt, feeds it a small JSON payload
+(cwd, tokens, mode flags) on stdin, and uses the command's first stdout line as the
+status text — falling back to the built-in default on empty output, non-zero exit, or
+timeout. A `/statusline` command views/sets/clears it. No behavior change when the
+setting is empty (the default today).
+
+- [ ] **24.1 Extract the default status builder (`jarvis/status.py`).**
+  New module `jarvis/status.py`. Add a pure function
+  `build_default_status(cwd: Path, tokens: int, plan: bool, auto: bool, danger: bool) -> str`
+  that reproduces today's inline string exactly: `~`-abbreviated cwd (relative to
+  `Path.home()`, falling back to the absolute path), ` · {tokens/1000:.1f}k tokens`, then
+  ` · PLAN` / ` · AUTO` / ` · DANGER` suffixes for each true flag. Replace the inline status
+  construction in `jarvis/cli.py:main()` (the `status = f"{short} · ..."` block) with a call
+  to `build_default_status(...)`. Pure refactor, no behavior change.
+  *Verify:* a `status` test asserts `build_default_status` returns the expected string for a
+  known cwd/token count with each combination of flags off and all on (checking the
+  ` · PLAN · AUTO · DANGER` ordering); `/selftest` green.
+
+- [ ] **24.2 Add the `statusline` setting (`jarvis/settings.py`).**
+  Add a scalar field `statusline: str = ""` to the `Settings` dataclass (it is a top-level
+  scalar, so it is picked up automatically by `load` / `persist_setting`, not a `_TABLE_KEYS`
+  entry). Document the new key in the JARVIS.md settings/config section (1-line table row or
+  bullet).
+  *Verify:* a `settings` test writes a temp `config.toml` containing
+  `statusline = "echo hi"` and asserts `Settings.load(path=...)` yields
+  `statusline == "echo hi"`, and that the default (no key) is `""`; `grep` confirms
+  `statusline` is documented in JARVIS.md; `/selftest` green.
+
+- [ ] **24.3 Render a custom status via the configured command (`jarvis/status.py`).**
+  Add `render_status(settings: Settings, cwd: Path, tokens: int, plan: bool, auto: bool,
+  danger: bool) -> str`. When `settings.statusline` is empty, return
+  `build_default_status(...)`. Otherwise run it with
+  `subprocess.run(settings.statusline, shell=True, input=<json>, capture_output=True,
+  text=True, timeout=...)`, passing a JSON object with `cwd` (str), `tokens` (int), `plan`,
+  `auto`, `danger` on stdin; on a zero exit with non-empty stdout, return the first stdout
+  line stripped; on empty output, non-zero exit, `TimeoutExpired`, or any exception, fall
+  back to `build_default_status(...)`. Wire `render_status` into `jarvis/cli.py:main()` in
+  place of the 24.1 `build_default_status` call (loading `Settings` as `main` already does /
+  via `Settings.load`).
+  *Verify:* a `status` test monkeypatches `subprocess.run` to return a stub with
+  `returncode=0, stdout="CUSTOM\n"` and asserts `render_status` (with a non-empty
+  `statusline`) returns `"CUSTOM"`; a second case where `subprocess.run` raises
+  `TimeoutExpired` (or returns `returncode=1`) asserts it returns the default status; with an
+  empty `statusline` it returns the default without invoking the command; `/selftest` green.
+
+- [ ] **24.4 `/statusline` slash command (`jarvis/commands.py`).**
+  In `handle_command()`, add a `/statusline` branch modeled on `/theme`: no arg prints the
+  current `statusline` value (or "(default)" when empty) via a `formatter.py` helper;
+  `/statusline off` clears it (`persist_setting("statusline", "")`); any other arg persists it
+  verbatim via `persist_setting("statusline", arg)` and confirms with `print_system`; the
+  branch must `return`. Add a `/statusline` line to `_HELP_TEXT` and to the command list in
+  JARVIS.md.
+  *Verify:* a `commands.py` test calls `handle_command("/statusline")` and asserts it returns
+  without raising and its captured output mentions "status"; `grep` confirms `_HELP_TEXT` and
+  JARVIS.md mention `/statusline`; `/selftest` green.
+
+- [ ] **24.5 Docs + parity flip.**
+  In JARVIS.md, document status-line customization in the extensibility/config section: the
+  `statusline` setting, the command-based hook (runs each prompt, JSON payload of
+  cwd/tokens/mode flags on stdin, first stdout line becomes the input-bar top-border status,
+  falls back to the built-in default on empty/error/timeout), and the `/statusline` command.
+  In PARITY.md, flip the "Status line customization" row from ❌ to 🟡 with the note "shell
+  command in `statusline` setting; receives cwd/tokens/mode JSON on stdin, first stdout line
+  becomes the input-bar top border, falls back to default on error; `/statusline` sets it".
+  *Verify:* `grep` confirms JARVIS.md mentions `statusline`/`/statusline` and the PARITY
+  "Status line customization" row is no longer ❌; `/selftest` (pytest) green.
+
+---
+
 ## Standing orders (apply to every step)
 
 - **Registration invariants:** new tool → `tools/__init__.py` `_REGISTRY` + JARVIS.md
