@@ -28,7 +28,7 @@ Legend: ✅ Jarvis has it · 🟡 partial · ❌ missing
 | Feature | Status | Notes |
 |---|---|---|
 | Read (with offset/limit, line numbers) | ✅ | |
-| Read images (vision input) | ❌ | paths/clipboard → vision content parts |
+| Read images (vision input) | ✅ | `read_file` image detection + `image_url` attachment, gated by `vision` setting |
 | Read PDFs / Jupyter notebooks | ✅ | `read_file` auto-detects `.ipynb`/`.pdf` |
 | Write / Edit with unique-anchor + replace_all | 🟡 | no replace_all yet (ROADMAP 5.3) |
 | Bash with persistent cwd | ✅ | os.chdir on `cd` |

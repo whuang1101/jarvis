@@ -1083,7 +1083,7 @@ list, add, and remove servers at runtime. Runtime-added servers are session-scop
   disabled"`; a `.png` path that does not exist returns `"Error: file not found"`.
   `/selftest` (pytest) green.
 
-- [ ] **19.4 Agent attaches the image after the tool result.**
+- [x] **19.4 Agent attaches the image after the tool result.**
   In `jarvis/agent.py`, import `from .images import is_image_path, image_message` at the
   top. In the tool-result loop, immediately after the existing `context.append({"role":
   "tool", "tool_call_id": tc["id"], "content": result})`, add: if `_settings.vision` and

@@ -15,6 +15,7 @@ from .formatter import (
     print_thinking_header, render_thinking_block,
     print_tool_use, print_tool_result, console,
 )
+from .images import is_image_path, image_message
 from .logger import SessionLogger
 from .permissions import needs_permission, request_permission
 from .sessions import SessionStore
@@ -376,6 +377,13 @@ def run_agent(
                     "tool_call_id": tc["id"],
                     "content": result,
                 })
+                if (
+                    _settings.vision
+                    and tool_name == "read_file"
+                    and is_image_path(str(args.get("path", "")))
+                    and not result.startswith("Error")
+                ):
+                    context.append(image_message(str(args["path"])))
 
     # Iteration cap hit — ask the model for a final progress summary instead of
     # stopping silently.
