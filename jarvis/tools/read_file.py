@@ -37,6 +37,20 @@ class ReadFileTool(BaseTool):
         if is_sensitive_path(path) and not is_dangerously_skip_permissions():
             return sensitive_read_error(path)
 
+        from ..images import is_image_path
+
+        if is_image_path(path):
+            if not os.path.exists(path):
+                return f"Error: file not found: {path}"
+            from ..settings import Settings
+
+            if not Settings.load().vision:
+                return (
+                    f"Note: {path} is an image; vision is disabled (set "
+                    "vision = true in config to view it)."
+                )
+            return f"[Image {path} attached below as visual input.]"
+
         try:
             size = os.path.getsize(path)
         except FileNotFoundError:

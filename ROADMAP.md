@@ -1065,7 +1065,7 @@ list, add, and remove servers at runtime. Runtime-added servers are session-scop
   `Settings().vision is True`; write a temp global TOML containing `vision = false` and
   assert `Settings.load(path=tmp).vision is False`. `/selftest` (pytest) green.
 
-- [ ] **19.3 `read_file` recognises image files.**
+- [x] **19.3 `read_file` recognises image files.**
   In `jarvis/tools/read_file.py`, after the sensitive-path guard and before the
   `os.path.getsize` size check, add `from ..images import is_image_path` and a branch:
   when `is_image_path(path)`, first confirm the file exists (`os.path.exists(path)`,
