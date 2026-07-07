@@ -180,6 +180,37 @@ def append_memory(text: str) -> str:
         return f"Error: failed to add to memory: {e}"
 
 
+def _pr_context() -> tuple[str | None, str | None]:
+    try:
+        branch = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True, text=True, timeout=30,
+        ).stdout.strip()
+        subjects = subprocess.run(
+            ["git", "log", "main..HEAD", "--pretty=format:%s"],
+            capture_output=True, text=True, timeout=30,
+        ).stdout.strip()
+        diff = subprocess.run(
+            ["git", "diff", "main...HEAD"], capture_output=True, text=True, timeout=30
+        ).stdout.strip()
+    except subprocess.TimeoutExpired:
+        return None, "Building the PR context timed out."
+    except Exception as e:
+        return None, f"Failed to build PR context: {e}"
+
+    if branch == "main":
+        return None, "You are on main — check out a feature branch before opening a PR."
+    if not diff:
+        return None, "No commits on this branch to open a PR for."
+
+    context = (
+        f"Branch: {branch}\n"
+        f"Commits:\n{subjects}\n"
+        f"Diff:\n```diff\n{diff}\n```"
+    )
+    return context, None
+
+
 def handle_command(
     raw: str,
     client: JarvisClient,
