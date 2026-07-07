@@ -21,7 +21,7 @@ Legend: ✅ Jarvis has it · 🟡 partial · ❌ missing
 | Interrupt stream with Esc/Ctrl+C, keep partial, steer mid-task | 🟡 | Ctrl+C keeps partial; no "steer while running" queued input |
 | Auto-compaction of context | ✅ | at ~25K est. tokens |
 | Context window usage indicator | ✅ | token tag in input bar |
-| Prompt caching / cost optimization | ❌ | N/A-ish on Azure; could cache system prompt |
+| Prompt caching / cost optimization | 🟡 | surfaces Azure `cached_tokens` in `/usage` + JSON, cost discounted; relies on Azure's automatic prefix caching (no explicit cache-control API) |
 
 ## Tools
 
