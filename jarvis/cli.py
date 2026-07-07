@@ -62,6 +62,7 @@ def _find_jarvis_md() -> tuple[str, Path] | None:
     return None
 
 from .agent import run_agent
+from . import checkpoints
 from .client import JarvisClient
 from .commands import handle_command, _EXIT_SENTINEL, _RUN_AGENT_PREFIX
 from .permissions import (
@@ -435,6 +436,7 @@ def main() -> None:
                     if result and result.startswith(_RUN_AGENT_PREFIX):
                         agent_message = result[len(_RUN_AGENT_PREFIX):]
                         try:
+                            checkpoints.checkpoint_turn(context, user_input)
                             run_agent(agent_message, client, context, tracker, logger, session)
                         except KeyboardInterrupt:
                             console.print()
@@ -447,6 +449,7 @@ def main() -> None:
 
             print_user_header(user_input)
             try:
+                checkpoints.checkpoint_turn(context, user_input)
                 run_agent(build_multimodal_content(expand_file_mentions(user_input)), client, context, tracker, logger, session)
             except KeyboardInterrupt:
                 console.print()
