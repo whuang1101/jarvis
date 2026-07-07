@@ -919,7 +919,7 @@ Azure calls.
   "content": "first"}]`; `handle_command("/rewind clear", ...)` returns `None` and
   `checkpoints.list_checkpoints() == []`. `/selftest` (pytest) green.
 
-- [ ] **17.5 Docs + parity flip.**
+- [x] **17.5 Docs + parity flip.**
   In JARVIS.md, document the `/rewind` command in the command list and note that the
   REPL now snapshots each user turn into a session checkpoint store
   (`jarvis/checkpoints.py`) — conversation history restored in-place and tracked

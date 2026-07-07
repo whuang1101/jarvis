@@ -58,7 +58,7 @@ Legend: ✅ Jarvis has it · 🟡 partial · ❌ missing
 |---|---|---|
 | --continue / --resume past sessions | ❌ | ROADMAP 3.2–3.3 |
 | Session picker with metadata | ❌ | ROADMAP 3.3 |
-| /rewind (checkpoint & restore conversation + files) | ❌ | big; file checkpoints via git stash-like shadow |
+| /rewind (checkpoint & restore conversation + files) | 🟡 | session-scoped in-memory checkpoints, not cross-session; file restore covers tracked modifications only |
 | Persistent memory file (auto-loaded) | ✅ | ~/.jarvis/memory.md |
 | # shortcut to append a memory quickly | ✅ | `#text` at prompt → memory.md |
 | Project context file (CLAUDE.md ≈ JARVIS.md) with parent-dir walk | ✅ | |
