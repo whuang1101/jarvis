@@ -112,7 +112,7 @@ class TestPin:
         class _FakeClient:
             def complete(self, messages):
                 from jarvis.client import CompleteResult
-                return CompleteResult(text="summary", prompt_tokens=1, completion_tokens=1)
+                return CompleteResult(text="summary", prompt_tokens=1, completion_tokens=1, cached_tokens=0)
 
         ctx.compact(_FakeClient())
         assert ctx.pinned == ["Remember this."]

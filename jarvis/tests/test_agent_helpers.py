@@ -227,6 +227,32 @@ class TestStreamTurnThinking:
         assert thinking_calls == []
 
 
+class TestStreamTurnUsage:
+    def test_cached_tokens_recorded_from_prompt_tokens_details(self):
+        usage = SimpleNamespace(
+            prompt_tokens=1000,
+            completion_tokens=100,
+            prompt_tokens_details=SimpleNamespace(cached_tokens=600),
+        )
+        chunk = SimpleNamespace(choices=[], usage=usage)
+        client = _FakeStreamClient([chunk])
+        tracker = UsageTracker()
+
+        agent_module._stream_turn(client, ContextManager(), tracker, [])
+
+        assert tracker.cached_tokens == 600
+
+    def test_missing_prompt_tokens_details_records_zero_cached_tokens(self):
+        usage = SimpleNamespace(prompt_tokens=1000, completion_tokens=100)
+        chunk = SimpleNamespace(choices=[], usage=usage)
+        client = _FakeStreamClient([chunk])
+        tracker = UsageTracker()
+
+        agent_module._stream_turn(client, ContextManager(), tracker, [])
+
+        assert tracker.cached_tokens == 0
+
+
 class TestPostToolHooks:
     def test_runs_matching_hook_as_side_effect(self, tmp_path):
         marker = tmp_path / "marker.txt"

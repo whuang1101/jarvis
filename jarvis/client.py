@@ -13,6 +13,7 @@ class CompleteResult(NamedTuple):
     text: str
     prompt_tokens: int
     completion_tokens: int
+    cached_tokens: int
 
 
 class JarvisClient:
@@ -60,4 +61,7 @@ class JarvisClient:
             text=response.choices[0].message.content or "",
             prompt_tokens=usage.prompt_tokens if usage else 0,
             completion_tokens=usage.completion_tokens if usage else 0,
+            cached_tokens=getattr(getattr(usage, "prompt_tokens_details", None), "cached_tokens", 0) or 0
+            if usage
+            else 0,
         )
