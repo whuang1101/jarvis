@@ -1734,7 +1734,7 @@ is only reliable when stdin is piped. This phase routes continuation lines throu
   continuation came from the session, not `input`); a second test forces the non-TTY branch and
   asserts a monkeypatched `builtins.input` was used. `/selftest` (pytest) green.
 
-- [ ] **29.3 Docs + parity flip (`JARVIS.md`, `PARITY.md`).**
+- [x] **29.3 Docs + parity flip (`JARVIS.md`, `PARITY.md`).**
   In JARVIS.md's interactive-UX / `_read_input` paragraph, note that continuation lines
   (`\`-continued and ```-fenced multiline input) are read through a completer-free
   `_get_continuation_session()` on a TTY (raw `input("... ")` fallback off-TTY), so multiline

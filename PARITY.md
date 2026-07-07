@@ -106,7 +106,7 @@ Legend: ✅ Jarvis has it · 🟡 partial · ❌ missing
 | Welcome panel, ⏺ bullets, ⎿ tool results, boxed input bar | ✅ | restyled 2026-07 |
 | Input history (up arrow), tab hints | 🟡 | readline history; no fuzzy command autocomplete |
 | Slash-command autocomplete menu as you type / | ✅ | prompt_toolkit input bar shows a live `/`-command dropdown on TTY; falls back to readline `input()` when piped or prompt_toolkit missing |
-| Multiline input (backslash or ``` blocks) | ❌ | TODO.md |
+| Multiline input (backslash or ``` blocks) | ✅ | `\`-continuation + ```-fenced blocks joined by `_read_full_input`; continuation lines routed through a completer-free prompt_toolkit session on a TTY |
 | Vim mode / keybindings | ✅ | prompt_toolkit `vi_mode` on the TTY input bar; `/vim [on|off]` toggle + persisted `vi_mode` setting |
 | Syntax-highlighted code fences in streamed output | 🟡 | Markdown render highlights after stream; not during |
 | Spinner with elapsed time + token count while thinking | 🟡 | plain spinner |
