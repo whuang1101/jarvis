@@ -1450,6 +1450,58 @@ setting is empty (the default today).
 
 ---
 
+## Phase 25 — PR creation with generated title/body (`/pr`)
+
+Parity gap: "PR creation with generated title/body" is ❌. Jarvis already has `/commit`
+(stage + agent-authored commit) and `/review` (agent reviews a diff). Add a `/pr` slash
+command that gathers the branch's context and hands the agent a prompt to write a PR title
+and body and run `gh pr create`, mirroring the `_RUN_AGENT_PREFIX` pattern those commands use.
+
+- [ ] **25.1 PR-context helper (`jarvis/commands.py`).**
+  Add a module-level helper `def _pr_context() -> tuple[str | None, str | None]:` returning
+  `(context, error)` — exactly one non-`None`. It runs, each via
+  `subprocess.run(..., capture_output=True, text=True, timeout=30)` inside a `try/except`
+  that maps `subprocess.TimeoutExpired` to `(None, "Building the PR context timed out.")` and
+  any other `Exception` to `(None, f"Failed to build PR context: {e}")`:
+  `git rev-parse --abbrev-ref HEAD` (branch), `git log main..HEAD --pretty=format:%s`
+  (commit subjects), and `git diff main...HEAD` (diff). If the branch is `main`, return
+  `(None, "You are on main — check out a feature branch before opening a PR.")`; if the diff
+  is empty, return `(None, "No commits on this branch to open a PR for.")`. On success return
+  a context string embedding the branch, the commit-subject list, and the diff in a
+  ```` ```diff ```` fence, error `None`.
+  *Verify:* a `commands.py` test monkeypatches `subprocess.run` to report branch
+  `feat/x` with a non-empty diff and asserts `_pr_context()` returns `(ctx, None)` with `ctx`
+  containing `feat/x`; a second case where the branch is `main` asserts the error mentions
+  "main" and context is `None`; a third where the diff is empty asserts the error mentions
+  "No commits". `/selftest` (pytest) green.
+
+- [ ] **25.2 Wire the `/pr` command (`jarvis/commands.py`).**
+  In `handle_command()`, add a `/pr` branch (near `/commit`/`/review`): call `_pr_context()`;
+  on error, `print_error(error)` and `return None`; otherwise return
+  `f"{_RUN_AGENT_PREFIX}{message}"` where `message` embeds the context and instructs the agent
+  to write a concise PR title and body (why, not just what) and run
+  `gh pr create --title "<title>" --body "<body>"` (so the call goes through the normal tool
+  permission gate). The branch must `return`. Add a `/pr` line to `_HELP_TEXT` and add `"/pr"`
+  to the autocomplete `commands_list` (near `"/commit"`/`"/review"`).
+  *Verify:* a `commands.py` test monkeypatches `_pr_context` to return `("CTX", None)` and
+  asserts `handle_command("/pr")` returns a string starting with `_RUN_AGENT_PREFIX` that
+  contains `gh pr create` and `CTX`; a second test where `_pr_context` returns
+  `(None, "boom")` asserts `handle_command("/pr")` returns `None` and the captured output
+  mentions "boom". `grep` confirms `_HELP_TEXT` and the autocomplete list mention `/pr`.
+  `/selftest` (pytest) green.
+
+- [ ] **25.3 Docs + parity flip (`JARVIS.md`, `PARITY.md`).**
+  In JARVIS.md, add `/pr` to the `Implemented commands:` list and document it beside
+  `/commit`/`/review`: it collects the branch, commit subjects, and `git diff main...HEAD`,
+  then has the agent author a title/body and run `gh pr create` (through the permission gate).
+  In PARITY.md, flip the "PR creation with generated title/body" row from ❌ to ✅ with the
+  note "`/pr` gathers branch + commits + diff, agent writes title/body and runs `gh pr create`".
+  *Verify:* `grep` confirms JARVIS.md's `Implemented commands:` line and the PARITY
+  "PR creation" row both mention `/pr` and the PARITY row is no longer ❌; `/selftest`
+  (pytest) green.
+
+---
+
 ## Standing orders (apply to every step)
 
 - **Registration invariants:** new tool → `tools/__init__.py` `_REGISTRY` + JARVIS.md
