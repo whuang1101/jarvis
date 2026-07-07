@@ -414,6 +414,25 @@ class TestPrContext:
         assert "No commits" in error
 
 
+class TestPrCommand:
+    def test_runs_agent_with_context(self, monkeypatch):
+        monkeypatch.setattr(commands_module, "_pr_context", lambda: ("CTX", None))
+
+        result = handle_command("/pr", None, None, None)
+
+        assert result.startswith(commands_module._RUN_AGENT_PREFIX)
+        assert "gh pr create" in result
+        assert "CTX" in result
+
+    def test_error_reports_and_returns_none(self, monkeypatch, capsys):
+        monkeypatch.setattr(commands_module, "_pr_context", lambda: (None, "boom"))
+
+        result = handle_command("/pr", None, None, None)
+
+        assert result is None
+        assert "boom" in capsys.readouterr().out
+
+
 class TestTodosCommand:
     def test_shows_current_todos(self, capsys):
         todos_module.set_todos([{"content": "step one", "status": "in_progress"}])
