@@ -182,6 +182,9 @@ jarvis/
     │                    `.ipynb` paths are dispatched to documents.render_notebook
     │                    (cell source + compact `# Out:` output text) before the size guard.
     │                    `.pdf` paths are dispatched to documents.extract_pdf_text likewise.
+    │                    Image paths (images.is_image_path) are recognised before the size
+    │                    guard: attached as visual input (marker string) when `vision` is
+    │                    enabled, otherwise a plain note that vision is disabled.
     │                    Refuses to read secret-file patterns (sensitive.py) unless
     │                    dangerously_skip_permissions is set.
     ├── documents.py      render_notebook(path) — renders a Jupyter notebook's cells as
