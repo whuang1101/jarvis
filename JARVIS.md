@@ -476,7 +476,10 @@ visual input; set false to disable.
 `mcp_auto_reconnect` (bool, default true) — gates whether `mcp_manager._call_tool` retries a
 failed call once via `reconnect()`; false skips the retry and returns the error immediately.
 `statusline` (str, default `""`) — a shell command; when set, `status.render_status` runs it
-(JSON of cwd/tokens/plan/auto/danger on stdin) and uses its first stdout line as the status.
+before each prompt read (JSON of cwd/tokens/plan/auto/danger on stdin) and uses its first stdout
+line as the input-bar top-border status; an empty/nonzero/timing-out (`tool_timeout_secs`) result
+or any exception falls back to the built-in `build_default_status`. Set/view/clear with
+`/statusline [cmd]` (`/statusline off` clears it, no arg shows the current value).
 
 `[permissions] allow`/`deny` are glob-style pattern lists (`fnmatch`) checked in
 `permissions.py:needs_permission` before the tool-specific logic: a `deny` match forces the

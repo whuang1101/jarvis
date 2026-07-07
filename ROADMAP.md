@@ -1437,7 +1437,7 @@ setting is empty (the default today).
   without raising and its captured output mentions "status"; `grep` confirms `_HELP_TEXT` and
   JARVIS.md mention `/statusline`; `/selftest` green.
 
-- [ ] **24.5 Docs + parity flip.**
+- [x] **24.5 Docs + parity flip.**
   In JARVIS.md, document status-line customization in the extensibility/config section: the
   `statusline` setting, the command-based hook (runs each prompt, JSON payload of
   cwd/tokens/mode flags on stdin, first stdout line becomes the input-bar top-border status,
