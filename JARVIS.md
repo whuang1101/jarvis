@@ -298,8 +298,10 @@ or `_RUN_AGENT_PREFIX` (`__RUN__:`) + message (the REPL strips the prefix and ru
 case-insensitive; the argument keeps original case.
 
 Implemented commands: `/help /history /retry /undo /clear /compact /usage /model /theme /diff /pin
-/config /file /run /plan /go /cancel /restart /auto /fix /copy /save /sessions /resume /rewind /mcp
-/memory /todos /init /selftest /commit /review /exit /quit`. Every one is listed in `_HELP_TEXT` — keep that invariant.
+/config /file /run /plan /go /cancel /restart /auto /sandbox /fix /copy /save /sessions /resume /rewind /mcp
+/memory /todos /init /selftest /commit /review /exit /quit`. Every one is listed in `_HELP_TEXT` — keep
+that invariant. `/sandbox [on|off|status]` shows or toggles `permissions.is_sandbox()`/`set_sandbox()`
+(no arg or `status` just prints current state).
 `/todos` prints the maintained todo list via `formatter.print_todo_list`; `/todos clear` clears it.
 `ContextManager.system_message` also appends a `## Current Todos` section (one `- [ ]`/`- [x]` line
 per item, `(in progress)` suffix for in-progress) whenever `todos.get_todos()` is non-empty, so the

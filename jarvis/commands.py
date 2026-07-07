@@ -22,8 +22,10 @@ from .mcp_manager import get_active_manager
 from .permissions import (
     is_auto_mode,
     is_dangerously_skip_permissions,
+    is_sandbox,
     set_auto_mode,
     set_dangerously_skip_permissions,
+    set_sandbox,
 )
 from .sessions import SessionStore, list_sessions
 from .settings import Settings, persist_setting
@@ -52,6 +54,8 @@ _HELP_TEXT = """
   [cyan]/auto[/cyan]          Toggle auto mode (approve file edits without prompting)
   [cyan]/dangerously-skip-permissions[/cyan]
                   Toggle Claude-style permission bypass for all tool calls
+  [cyan]/sandbox [on|off|status][/cyan]
+                  Show or toggle sandboxed command execution
   [cyan]/fix[/cyan]           Send clipboard contents as an error to fix
   [cyan]/copy[/cyan]          Copy the last assistant response to the clipboard
   [cyan]/config[/cyan]        Show effective settings and their source
@@ -217,6 +221,7 @@ def handle_command(
                 "/restart",
                 "/auto",
                 "/dangerously-skip-permissions",
+                "/sandbox",
                 "/fix",
                 "/copy",
                 "/save",
@@ -462,6 +467,20 @@ def handle_command(
             print_system("Dangerously skip permissions ON — all tool permission prompts are bypassed.")
         else:
             print_system("Dangerously skip permissions OFF — normal permission gates restored.")
+        return None
+
+    if cmd == "/sandbox":
+        sub = arg.strip().lower()
+        if sub in ("", "status"):
+            print_system(f"Sandbox is {'ON' if is_sandbox() else 'OFF'}.")
+        elif sub == "on":
+            set_sandbox(True)
+            print_system("Sandbox ON — commands run through the sandboxed executor.")
+        elif sub == "off":
+            set_sandbox(False)
+            print_system("Sandbox OFF — commands run without sandboxing.")
+        else:
+            print_error("Usage: /sandbox [on|off|status]")
         return None
 
     if cmd == "/save":

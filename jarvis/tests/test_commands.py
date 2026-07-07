@@ -5,6 +5,7 @@ from pathlib import Path
 
 import jarvis.commands as commands_module
 import jarvis.mcp_manager as mcp_manager
+import jarvis.permissions as permissions_module
 import jarvis.sessions as sessions_module
 import jarvis.settings as settings_module
 import jarvis.todos as todos_module
@@ -337,6 +338,26 @@ class TestTodosCommand:
 
         assert result is None
         assert todos_module.get_todos() == []
+
+
+class TestSandboxCommand:
+    def test_on_enables_sandbox(self):
+        result = handle_command("/sandbox on", None, None, None)
+
+        assert result is None
+        assert permissions_module.is_sandbox() is True
+
+    def test_off_disables_sandbox(self):
+        result = handle_command("/sandbox off", None, None, None)
+
+        assert result is None
+        assert permissions_module.is_sandbox() is False
+
+    def test_no_arg_reports_status_without_raising(self, capsys):
+        result = handle_command("/sandbox", None, None, None)
+
+        assert result is None
+        assert "andbox" in capsys.readouterr().out
 
 
 class TestRewindCommand:
