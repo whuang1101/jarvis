@@ -44,6 +44,8 @@ _HELP_TEXT = """
   [cyan]/usage[/cyan]         Show token usage and estimated cost for this session
   [cyan]/model [name][/cyan]  Show or switch the current model
   [cyan]/theme [name][/cyan]  Show or switch the Rich syntax highlighting theme
+  [cyan]/statusline [cmd][/cyan]
+                  Show, set, or `/statusline off` to reset the statusline command
   [cyan]/diff[/cyan]          Show uncommitted changes (git diff HEAD)
   [cyan]/pin [text][/cyan]    Pin a note into the system prompt (survives /compact and /clear); no arg lists pins
   [cyan]/file <path>[/cyan]   Load a file into context (or inline @path in any message to pull it in without the command)
@@ -363,6 +365,22 @@ def handle_command(
         try:
             persist_setting("theme", arg)
             print_system(f"Theme set to {arg}.")
+        except ValueError as e:
+            print_error(str(e))
+        return None
+
+    if cmd == "/statusline":
+        if not arg:
+            current = Settings.load().statusline
+            print_command_output(f"Current statusline: {current or '(default)'}")
+            return None
+        if arg == "off":
+            persist_setting("statusline", "")
+            print_system("Statusline reset to default.")
+            return None
+        try:
+            persist_setting("statusline", arg)
+            print_system(f"Statusline set to {arg}.")
         except ValueError as e:
             print_error(str(e))
         return None
