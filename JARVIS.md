@@ -350,7 +350,9 @@ registered into the global `_REGISTRY` by `cli._connect_mcp`. Servers connect **
 (GitHub via `gh auth token` → `GITHUB_PERSONAL_ACCESS_TOKEN`; Azure if `az account show` succeeds;
 Brave if `BRAVE_API_KEY` set). `connect()` also records spawn params in `self._server_params[name]`;
 `reconnect(name)` disconnects and re-`connect()`s a crashed server from those saved params,
-returning `False` if the server was never connected or the respawn raises.
+returning `False` if the server was never connected or the respawn raises. `_call_tool` retries
+a failed call once via `reconnect()` when `Settings.load().mcp_auto_reconnect` is true (default),
+returning an `"Error: ..."` string if reconnect is disabled or fails.
 `list_servers()`/`disconnect(name)` give introspection and teardown; `set_active_manager`/
 `get_active_manager` expose the running `MCPManager` module-wide (set in `cli.py` at startup).
 `/mcp` (no arg or `list`) prints `list_servers()` as `name — tool_count tools`; `/mcp add <name>
@@ -414,6 +416,7 @@ tool_timeout_secs = 60
 theme = "monokai"
 show_thinking = true
 vision = true
+mcp_auto_reconnect = true
 
 [permissions]
 allow = ["write_file(*)"]          # glob patterns matched against "tool_name(args)"
@@ -436,6 +439,8 @@ skipped (the other file/defaults still apply). Unknown keys are ignored. Current
 `_settings.show_thinking` to gate whether reasoning deltas are rendered (7.2).
 `vision` (bool, default true) — attach image files read with `read_file` to the conversation as
 visual input; set false to disable.
+`mcp_auto_reconnect` (bool, default true) — gates whether `mcp_manager._call_tool` retries a
+failed call once via `reconnect()`; false skips the retry and returns the error immediately.
 
 `[permissions] allow`/`deny` are glob-style pattern lists (`fnmatch`) checked in
 `permissions.py:needs_permission` before the tool-specific logic: a `deny` match forces the

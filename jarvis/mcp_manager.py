@@ -138,7 +138,17 @@ class MCPManager:
                     parts.append(str(item))
             return "\n".join(parts)
 
-        return self._run(_call(), timeout=60)
+        try:
+            return self._run(_call(), timeout=60)
+        except Exception as exc:
+            from .settings import Settings
+
+            if Settings.load().mcp_auto_reconnect and self.reconnect(server_name):
+                return self._run(_call(), timeout=60)
+            return (
+                f"Error: MCP tool '{tool_name}' on '{server_name}' failed and "
+                f"could not reconnect: {exc}"
+            )
 
     def reconnect(self, name: str) -> bool:
         if name not in self._server_params:
