@@ -1792,6 +1792,80 @@ into structured checks and a `/doctor` command that renders them, then flips the
   *Verify:* `grep` confirms JARVIS.md mentions `/doctor` and the PARITY "/doctor" row is no
   longer ❌; `/selftest` (pytest) green.
 
+## Phase 31 — Local plugin bundles
+
+Ship the *local* half of "Plugins / marketplaces": a plugin is a folder (bundle) that
+contributes custom slash commands, skills, and MCP servers in one drop-in unit, discovered
+from `~/.jarvis/plugins/<name>/` and project `<cwd>/.jarvis/plugins/<name>/`. Each bundle has a
+`plugin.toml` manifest (`name`/`description`/`version`) and optional `commands/`, `skills/`
+subfolders and a `.mcp.json`. No remote install / marketplace fetch (that half needs
+human-only network signup and stays ❌-adjacent); this reuses the existing custom-command,
+skills, and `.mcp.json` loaders so nothing new has to parse markdown or MCP JSON.
+
+- [ ] **31.1 Plugin discovery module (`jarvis/plugins.py`).**
+  New module. Add a `@dataclass(frozen=True) Plugin` with fields `name: str`,
+  `description: str`, `version: str`, `path: Path`. Add `_plugin_roots()` returning
+  `(Path.home() / ".jarvis" / "plugins", Path.cwd() / ".jarvis" / "plugins")`. Add
+  `discover_plugins() -> list[Plugin]`: for each root that `is_dir()`, iterate its child
+  directories; for each child that contains a `plugin.toml`, parse it with `tomllib` and build
+  a `Plugin` (missing/blank `name` falls back to the directory name, missing `description`/
+  `version` default to `""`); a child dir without `plugin.toml` is skipped. Return the plugins
+  sorted by `name`, project root shadowing global on duplicate `name` (project wins). Wrap the
+  `tomllib.load` in `try/except` so a malformed manifest is skipped rather than raising.
+  *Verify:* a `test_plugins.py` test monkeypatches `plugins._plugin_roots` to a `tmp_path`
+  holding two plugin dirs (one with a full manifest, one with only `plugin.toml` = empty table,
+  one junk dir with no manifest) and asserts `discover_plugins()` returns exactly the two valid
+  `Plugin`s, that the empty-manifest one takes `name` from its directory, and that a plugin dir
+  containing invalid TOML is skipped without raising. `/selftest` (pytest) green.
+
+- [ ] **31.2 Wire plugin commands + skills into discovery (`jarvis/plugins.py`, `jarvis/skills.py`, `jarvis/commands.py`).**
+  In `plugins.py` add `plugin_command_dirs() -> list[Path]` and `plugin_skill_dirs() -> list[Path]`
+  returning, for every `discover_plugins()` entry, its `<path>/commands` resp. `<path>/skills`
+  subdir that `is_dir()`. In `skills.py`, extend `_skill_dirs()` to append
+  `plugins.plugin_skill_dirs()` (imported lazily inside the function to avoid an import cycle) so
+  `discover_skills()` also sees plugin skills. In `commands.py`, extend `_custom_command_dirs()`
+  to append `plugins.plugin_command_dirs()` (same lazy import) so `_load_custom_command()` and
+  `_discover_custom_commands()` pick up plugin-provided `<name>.md` commands.
+  *Verify:* a `test_plugins.py` test creates a plugin bundle under a monkeypatched root with
+  `commands/hello.md` and `skills/greet.md`, then asserts `"/hello"` is in
+  `commands.all_command_names()` and a skill named `greet` is in
+  `[s.name for s in skills.discover_skills()]`. `/selftest` (pytest) green.
+
+- [ ] **31.3 Load plugin MCP servers at startup (`jarvis/plugins.py`, `jarvis/cli.py`).**
+  In `plugins.py` add `plugin_mcp_configs() -> list[dict]`: for every `discover_plugins()`
+  entry with a `<path>/.mcp.json`, parse it with the existing `mcp_config._read_mcp_servers`
+  helper and return one dict per server `{"name", "command", "args", "env"}` (prefix each
+  server `name` with the plugin name to avoid collisions, mirroring how `_init_mcp` shapes its
+  connect calls). In `cli.py`'s `_init_mcp`, after the existing project `.mcp.json` loop, iterate
+  `plugins.plugin_mcp_configs()` and call `_connect_mcp(...)` for each, guarded by the same
+  try/except so a missing/broken plugin server logs `✗ ... unavailable` and never aborts startup.
+  *Verify:* a `test_plugins.py` test writes a plugin bundle with a `.mcp.json` (one stdio server)
+  under a monkeypatched root and asserts `plugin_mcp_configs()` returns one entry whose `name` is
+  prefixed with the plugin name and whose `command`/`args` match the file. `/selftest` (pytest) green.
+
+- [ ] **31.4 `/plugins` command (`jarvis/commands.py`).**
+  Import `plugins` in `commands.py`. Add an `if cmd == "/plugins":` branch to `handle_command`
+  that calls `plugins.discover_plugins()` and prints, via `formatter` helpers, one
+  `"<name> v<version> — <description>  (<path>)"` line per plugin (or a single
+  "No plugins installed. Drop a bundle in ~/.jarvis/plugins/<name>/ or .jarvis/plugins/<name>/."
+  line through `print_system` when empty), then `return None`. Register `/plugins` in
+  `_BUILTIN_COMMANDS` (near `/skills`) and add a `_HELP_TEXT` line
+  `[cyan]/plugins[/cyan]       List installed plugin bundles (commands + skills + MCP)`.
+  *Verify:* a `test_commands.py` test monkeypatches `plugins.discover_plugins` to return one
+  `Plugin`, calls `handle_command("/plugins", ...)`, asserts it returns `None` and (via a
+  formatter spy / `capsys`) that the plugin name appears in output; a second asserts `"/plugins"`
+  is in `commands.all_command_names()`. `/selftest` (pytest) green.
+
+- [ ] **31.5 Docs + parity flip (`JARVIS.md`, `PARITY.md`).**
+  Add `/plugins` to JARVIS.md's command list with a one-line description matching `_HELP_TEXT`,
+  and document the `jarvis/plugins.py` module + the `~/.jarvis/plugins/<name>/` (and project
+  `.jarvis/plugins/<name>/`) bundle layout (`plugin.toml` + `commands/` + `skills/` + `.mcp.json`)
+  in the relevant module/flow section. In PARITY.md, flip the "Plugins / marketplaces" row from ❌
+  to 🟡 with the note "local plugin bundles from `~/.jarvis/plugins/` + project `.jarvis/plugins/`
+  contribute commands/skills/MCP via `plugins.py` + `/plugins`; no remote marketplace install".
+  *Verify:* `grep` confirms JARVIS.md mentions `/plugins` and the PARITY "Plugins / marketplaces"
+  row is no longer ❌; `/selftest` (pytest) green.
+
 ---
 
 ## Standing orders (apply to every step)
