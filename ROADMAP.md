@@ -826,6 +826,112 @@ module-level-store pattern.
 
 ---
 
+## Phase 17 — `/rewind`: session checkpoints (restore conversation & files)
+
+PARITY row "/rewind (checkpoint & restore conversation + files)" is ❌: once a
+turn runs there is no way to step the conversation back to a prior point, and file
+edits made by tools can only be reversed by hand or `git`. This phase adds a
+session-scoped checkpoint store, an automatic pre-turn snapshot (conversation
+history + a `git stash create` of the working tree), and a `/rewind` command to
+list checkpoints and restore one. Checkpoints are in-memory (session-scoped, like
+`tasks.py`/`todos.py`; they do not survive a restart) and file restore is
+best-effort over *tracked* modifications via `git stash create`/`apply` — a
+smaller, self-contained cousin of Claude Code's cross-session `/rewind`. No new
+Azure calls.
+
+- [ ] **17.1 In-memory checkpoint store the REPL writes into.**
+  Add `jarvis/checkpoints.py` with a module-level `_CHECKPOINTS: list[dict[str,
+  Any]] = []` and `_MAX_CHECKPOINTS = 30`, plus: `create(history: list[dict],
+  label: str = "", file_stash: str | None = None) -> int` — appends `{"label":
+  label[:80], "history": [dict(m) for m in history], "file_stash": file_stash,
+  "time": <ISO-8601 local timestamp>}`, trims the list to its last
+  `_MAX_CHECKPOINTS` entries, and returns the 1-based index of the newest entry
+  (`len(_CHECKPOINTS)` after trimming); `list_checkpoints() -> list[dict]` — returns
+  metadata copies (`label`, `time`, and `has_files = file_stash is not None`), never
+  the stored `history`; `get(index: int) -> dict | None` — returns a fresh deep copy
+  (`history` re-copied as `[dict(m) for m in ...]`) of the 1-based `index`-th
+  checkpoint, or `None` if out of range; `clear() -> None`; and `summary() -> str`
+  returning `""` when empty else `f"{len(_CHECKPOINTS)} checkpoints"`. Store the
+  internal copy so a later `create` caller mutating the passed-in `history` can't
+  change a stored checkpoint.
+  *Verify:* add `jarvis/tests/test_checkpoints.py`: `create` returns `1` then `2`
+  for two calls; `get(1)["history"]` equals the first input but mutating the returned
+  list/dicts does not change a later `get(1)`; passing the same list object to
+  `create` and then mutating it afterward leaves the stored checkpoint unchanged;
+  `list_checkpoints()` entries carry `label`/`time`/`has_files` and no `history` key;
+  more than `_MAX_CHECKPOINTS` calls keeps exactly `_MAX_CHECKPOINTS` (oldest
+  dropped); `clear()` empties and `summary()` is `""` when empty. `/selftest`
+  (pytest) green.
+
+- [ ] **17.2 Git-backed working-tree snapshots.**
+  In `jarvis/checkpoints.py` add `snapshot_files(cwd: str | None = None) -> str |
+  None`: run `git stash create` (via `subprocess.run`, `capture_output=True,
+  text=True`, `cwd=cwd`) and return the stripped stdout SHA when it is non-empty,
+  else `None` — swallow every failure (not a git repo, git missing, no changes) and
+  return `None`, never raise. Add `restore_files(sha: str, cwd: str | None = None) ->
+  str`: run `git stash apply <sha>`; return `"Files restored from checkpoint."` when
+  `returncode == 0`, else `f"Error: could not restore files: {stderr.strip()}"`.
+  Note in a comment that this covers tracked-file modifications only (`git stash
+  create` ignores untracked files).
+  *Verify:* add to `test_checkpoints.py` a temp-git-repo case (`git init`, commit a
+  tracked file): modify the file, `snapshot_files(cwd=repo)` returns a 40-char SHA;
+  `git checkout -- <file>` to discard the change; `restore_files(sha, cwd=repo)`
+  returns the success string and the file content is the modified version again.
+  A second case: `snapshot_files(cwd=<non-git tmp dir>)` returns `None`. `/selftest`
+  (pytest) green.
+
+- [ ] **17.3 Auto-checkpoint before each interactive user turn.**
+  In `jarvis/checkpoints.py` add `checkpoint_turn(context: "ContextManager", message:
+  str) -> int` that calls `create(context._history, label=message,
+  file_stash=snapshot_files())` and returns the new index — this captures the
+  conversation *before* the new user message is appended, so a rewind returns to the
+  pre-turn state. In `jarvis/cli.py`, import the `checkpoints` module and call
+  `checkpoints.checkpoint_turn(context, user_input)` immediately before the two
+  interactive-REPL `run_agent(...)` dispatch sites for a fresh user turn (the normal
+  `run_agent(build_multimodal_content(...))` path and the `_RUN_AGENT_PREFIX` rerun
+  path); do NOT add it to the headless `-p` one-shot path in `run_headless`.
+  *Verify:* add to `test_checkpoints.py`: build a `ContextManager`, append one
+  message, `checkpoint_turn(ctx, "hi")` returns `1` and `get(1)["history"]` has one
+  entry with label `"hi"`; append another message, `checkpoint_turn(ctx, "again")`
+  returns `2` and `get(2)["history"]` has two entries — the store snapshots the live
+  history at call time. Then `grep` confirms `jarvis/cli.py` calls
+  `checkpoints.checkpoint_turn`. `/selftest` (pytest) green.
+
+- [ ] **17.4 `/rewind` command to list and restore checkpoints.**
+  In `jarvis/commands.py` `handle_command`, add `if cmd == "/rewind":` — when
+  `arg.strip().lower() == "clear"`, call `checkpoints.clear()` then
+  `print_system("Checkpoints cleared.")` and `return None`; when `arg` is a positive
+  integer `n`, `cp = checkpoints.get(n)` and if `cp is None` `print_error(f"No
+  checkpoint {n}.")` else `context.load_history(cp["history"])`, and if
+  `cp["file_stash"]` print the string from `checkpoints.restore_files(cp["file_stash"])`
+  (via `print_error` when it starts with `"Error"` else `print_system`), then
+  `print_system(f"Rewound to checkpoint {n}.")`, `return None`; otherwise (no arg)
+  list — if `checkpoints.list_checkpoints()` is empty `print_system("No checkpoints
+  yet.")`, else `print_system` one line per checkpoint as `f"{i}: {label}  ({time})"`
+  (1-based `i`, marking `has_files` with a trailing ` [files]`), `return None`. Add
+  the `checkpoints` module import. Register `/rewind` in `_HELP_TEXT`, in the
+  `commands_list` literal used by `/help`, and in the JARVIS.md command list.
+  *Verify:* add a `test_commands.py` case: `checkpoints.clear()`;
+  `checkpoints.create([{ "role": "user", "content": "first"}], label="first")`;
+  `handle_command("/rewind", ...)` returns `None` and (via `capsys`) output contains
+  `"first"`; set `context._history` to a different list, then `handle_command("/rewind
+  1", ...)` returns `None` and afterward `context._history == [{"role": "user",
+  "content": "first"}]`; `handle_command("/rewind clear", ...)` returns `None` and
+  `checkpoints.list_checkpoints() == []`. `/selftest` (pytest) green.
+
+- [ ] **17.5 Docs + parity flip.**
+  In JARVIS.md, document the `/rewind` command in the command list and note that the
+  REPL now snapshots each user turn into a session checkpoint store
+  (`jarvis/checkpoints.py`) — conversation history restored in-place and tracked
+  file edits restored best-effort via `git stash create`/`apply`. Flip PARITY.md's
+  "/rewind (checkpoint & restore conversation + files)" row from ❌ to 🟡 (note:
+  session-scoped in-memory checkpoints, not cross-session; file restore covers
+  tracked modifications only).
+  *Verify:* `/selftest` (pytest) green; grep confirms the PARITY "/rewind" row is no
+  longer ❌ and JARVIS.md mentions `/rewind`.
+
+---
+
 ## Standing orders (apply to every step)
 
 - **Registration invariants:** new tool → `tools/__init__.py` `_REGISTRY` + JARVIS.md
