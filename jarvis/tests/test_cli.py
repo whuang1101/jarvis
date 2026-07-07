@@ -469,3 +469,26 @@ class TestAtPathMention:
 
         assert "[File:" in calls["message"]
         assert "hello world" in calls["message"]
+
+
+class TestSlashCommandCompleter:
+    def test_completes_slash_prefix(self):
+        from prompt_toolkit.completion import CompleteEvent
+        from prompt_toolkit.document import Document
+
+        completer = cli.SlashCommandCompleter()
+        completions = list(completer.get_completions(Document("/co", 3), CompleteEvent()))
+        texts = {c.text for c in completions}
+
+        assert "/commit" in texts
+        assert "/compact" in texts
+        assert "/help" not in texts
+
+    def test_no_completions_without_leading_slash(self):
+        from prompt_toolkit.completion import CompleteEvent
+        from prompt_toolkit.document import Document
+
+        completer = cli.SlashCommandCompleter()
+        completions = list(completer.get_completions(Document("hello", 5), CompleteEvent()))
+
+        assert completions == []
