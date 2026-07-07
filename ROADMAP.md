@@ -1627,6 +1627,76 @@ stays emacs-style and simply ignores the setting.
 
 ---
 
+## Phase 28 — Desktop notification when a long agent turn finishes
+
+Parity gap: "Desktop notifications when a long task finishes" is ❌. With Vim mode (Phase 27)
+done, it is the topmost genuinely-missing, self-hostable row: "Plugins / marketplaces" is
+explicitly out of scope and "Multiline input" is already implemented in
+`cli.py:_read_full_input` (stale ❌). Note `tasks.py` already fires a macOS `osascript`
+notification when a *background task* finishes, but the interactive REPL turn (the
+`run_agent(...)` call in `cli.py`'s main loop) sends nothing — a user who kicks off a slow
+turn and switches away gets no signal when it completes. Add a small cross-platform notifier
+(macOS `osascript`, Linux `notify-send`, terminal-bell fallback), a `notify` on/off setting
+with a `notify_min_seconds` threshold so quick turns stay silent, and wire it around the
+interactive turn so only turns that both finish normally and ran at least the threshold fire.
+
+- [ ] **28.1 `notify` + `notify_min_seconds` settings (`jarvis/settings.py`, `JARVIS.md`).**
+  Add `notify: bool = True` (next to the other scalar bools like `vi_mode`) and
+  `notify_min_seconds: int = 30` (next to the other scalar ints like `tool_timeout_secs`) to the
+  `Settings` dataclass, so both participate in `load()`, `load_with_sources()`, and
+  `persist_setting()` automatically (int coercion already handled at `persist_setting`). Document
+  both keys in JARVIS.md's settings list: "notify (bool, default true): show a desktop
+  notification when an interactive agent turn finishes" and "notify_min_seconds (int, default
+  30): only notify for turns that ran at least this many seconds".
+  *Verify:* a `settings.py` test asserts `Settings().notify is True` and
+  `Settings().notify_min_seconds == 30`, and that `persist_setting("notify_min_seconds", "5",
+  path=tmp)` followed by `Settings.load(path=tmp).notify_min_seconds` returns `5`. `/selftest`
+  (pytest) green.
+
+- [ ] **28.2 Cross-platform notifier module (`jarvis/notify.py`, `JARVIS.md`).**
+  Add a new module with `def send_notification(title: str, message: str) -> None`. Resolve a
+  notifier via `shutil.which`: on `osascript` run
+  `["osascript", "-e", f'display notification "{message}" with title "{title}"']`; else on
+  `notify-send` run `["notify-send", title, message]`; else write a terminal bell (`"\a"`) to
+  `sys.stderr` and flush. Run the chosen command with `subprocess.run(..., timeout=5,
+  stdout=DEVNULL, stderr=DEVNULL)` inside a broad `try/except Exception: pass` so a missing or
+  hung notifier never surfaces to the REPL (mirrors the "errors never escape" invariant; no
+  `formatter.py` output since this is out-of-band). Document the module in JARVIS.md's module
+  list / architecture section (1–3 lines).
+  *Verify:* a `test_notify.py` monkeypatches `shutil.which` to return `/usr/bin/osascript` and
+  `subprocess.run` to a recorder, asserting the argv starts with `["osascript", "-e"]` and
+  contains the message; a second test with `which` returning `None` captures `sys.stderr` and
+  asserts a `"\a"` was written and no exception raised; a third asserts a raising
+  `subprocess.run` is swallowed. `/selftest` (pytest) green.
+
+- [ ] **28.3 Notify around the interactive turn (`jarvis/cli.py`).**
+  Import `time` and `send_notification`. Wrap the two interactive `run_agent(...)` call sites in
+  the main loop — the `/`-command-triggered agent run and the plain-prompt run — so each records
+  `start = time.monotonic()` before the call and, only on normal completion (not in the
+  `KeyboardInterrupt`/`except Exception` branches), computes `elapsed = time.monotonic() - start`
+  and, if `Settings.load().notify` and `elapsed >= Settings.load().notify_min_seconds`, calls
+  `send_notification("Jarvis", f"Turn finished in {int(elapsed)}s")`. Factor the shared
+  timing+guard into one module-level helper (e.g. `def _notify_turn_done(start: float) -> None:`)
+  to avoid duplicating the logic at both sites; the resume-path `run_agent` at startup stays
+  unwrapped.
+  *Verify:* a `cli.py` test monkeypatches `jarvis.cli.send_notification` to a recorder,
+  `Settings.load` to `Settings(notify=True, notify_min_seconds=1)`, and `time.monotonic` to
+  return values 2s apart, then calls `_notify_turn_done(start)` and asserts one notification
+  fired; a second run with the monotonic delta below the threshold (or `notify=False`) asserts
+  none fired. `/selftest` (pytest) green.
+
+- [ ] **28.4 Docs + parity flip (`JARVIS.md`, `PARITY.md`).**
+  In JARVIS.md's interactive-UX section, document that a desktop notification fires when an
+  interactive agent turn finishes and ran at least `notify_min_seconds`, controlled by the
+  `notify` setting, degrading to `notify-send` on Linux and a terminal bell when no notifier is
+  available. In PARITY.md, flip the "Desktop notifications when a long task finishes" row from ❌
+  to ✅ with the note "`notify.py` fires osascript/notify-send (terminal-bell fallback) when an
+  interactive turn finishes; gated by `notify` + `notify_min_seconds` settings".
+  *Verify:* `grep` confirms JARVIS.md mentions `notify` and the PARITY "Desktop notifications"
+  row is no longer ❌; `/selftest` (pytest) green.
+
+---
+
 ## Standing orders (apply to every step)
 
 - **Registration invariants:** new tool → `tools/__init__.py` `_REGISTRY` + JARVIS.md
