@@ -1280,7 +1280,7 @@ via `/sandbox`. No change to command semantics when the sandbox is off (default)
   test with the sandbox off confirms `echo sandbox_off_marker` still runs and its stdout
   appears (unchanged path). `/selftest` green.
 
-- [ ] **22.4 `/sandbox` slash command.**
+- [x] **22.4 `/sandbox` slash command.**
   In `jarvis/commands.py` `handle_command()`, add a `/sandbox [on|off|status]` branch:
   no arg or `status` prints the current state via a `formatter.py` helper; `on`/`off` call
   `permissions.set_sandbox(True/False)` and print confirmation; every branch `return`s. Add
