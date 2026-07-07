@@ -111,7 +111,7 @@ Legend: ✅ Jarvis has it · 🟡 partial · ❌ missing
 | Syntax-highlighted code fences in streamed output | 🟡 | Markdown render highlights after stream; not during |
 | Spinner with elapsed time + token count while thinking | 🟡 | plain spinner |
 | Desktop notifications when a long task finishes | ✅ | `notify.py` fires osascript/notify-send (terminal-bell fallback) when an interactive turn finishes; gated by `notify` + `notify_min_seconds` settings |
-| /doctor style self-diagnostics | ❌ | checks: env vars, MCP health, pipx install, test suite |
+| /doctor style self-diagnostics | ✅ | `/doctor` runs `doctor.run_diagnostics()`: Azure creds, MCP health, pytest/mypy tooling |
 | /usage, /model, /compact, /clear, /help | ✅ | |
 
 ## Autonomy loop instruction

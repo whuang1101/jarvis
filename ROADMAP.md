@@ -1783,7 +1783,7 @@ into structured checks and a `/doctor` command that renders them, then flips the
   (via `capsys`/a formatter spy) that both check names appear in output; a second test asserts
   `"/doctor"` is in `commands.all_command_names()`. `/selftest` (pytest) green.
 
-- [ ] **30.3 Docs + parity flip (`JARVIS.md`, `PARITY.md`).**
+- [x] **30.3 Docs + parity flip (`JARVIS.md`, `PARITY.md`).**
   Add `/doctor` to JARVIS.md's command list with a one-line description matching `_HELP_TEXT`,
   and note the `jarvis/doctor.py` diagnostics module (checks: Python version, Azure creds,
   MCP servers, pytest/mypy) in the relevant module/flow section. In PARITY.md, flip the
