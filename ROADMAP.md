@@ -1167,6 +1167,70 @@ list, add, and remove servers at runtime. Runtime-added servers are session-scop
 
 ---
 
+## Phase 21 — Prompt caching / cost optimization
+
+Azure OpenAI applies automatic prompt caching to repeated prompt prefixes (the stable
+system prompt + tool schemas + prior turns) and reports the cached slice as
+`usage.prompt_tokens_details.cached_tokens`. Cached input tokens bill at a discount, so
+surfacing them makes `/usage` cost estimates accurate and gives the user visibility into
+cache effectiveness. This phase threads that field through the usage tracker, the read
+paths, and the displays — no request-shape changes, since the prompt prefix is already
+stable across turns.
+
+- [ ] **21.1 UsageTracker records cached tokens and discounts their cost.**
+  In `jarvis/context.py` `UsageTracker`: add `self.cached_tokens: int = 0` in `__init__`,
+  and change `record(self, prompt, completion, deployment="")` to
+  `record(self, prompt, completion, deployment="", cached=0)`. In the body,
+  `self.cached_tokens += cached` (treat `cached` as a subset of `prompt`), and change the
+  cost line so cached input tokens bill at half rate:
+  `self.cost_usd += ((prompt - cached) * inp + cached * inp * 0.5 + completion * out) / 1_000_000`.
+  Keep the `if deployment:` guard. Do not change any callers in this step (the new
+  parameter defaults to `0`, so existing calls behave identically).
+  *Verify:* extend `jarvis/tests/test_context.py` (or add it) with a test that builds a
+  `UsageTracker`, calls `record(1000, 200, "gpt-4o", cached=800)`, and asserts
+  `tracker.cached_tokens == 800`, `tracker.prompt_tokens == 1000`, and that `cost_usd`
+  equals `((200 * inp) + (800 * inp * 0.5) + 200 * out) / 1_000_000` for the looked-up
+  `gpt-4o` price; and a second call with no `cached=` arg leaves `cached_tokens`
+  unchanged from its prior value. `/selftest` (pytest) green.
+
+- [ ] **21.2 Thread cached_tokens through the streaming and non-streaming read paths.**
+  In `jarvis/client.py`: add `cached_tokens: int` to the `CompleteResult` NamedTuple
+  (after `completion_tokens`), and in `complete()` set it from
+  `getattr(getattr(usage, "prompt_tokens_details", None), "cached_tokens", 0) or 0` when
+  `usage` else `0`. In `jarvis/agent.py` around line 198, read the same nested field off
+  `chunk.usage` into a local (guarding `None`) and pass it as the new `cached=` argument
+  to `tracker.record(...)`. In `jarvis/context.py` around line 284, pass
+  `cached=result.cached_tokens` to `tracker.record(...)` in the compaction path.
+  *Verify:* add a test in `jarvis/tests/test_agent.py` (or existing streaming test) that
+  feeds a fake chunk whose `usage` has `prompt_tokens=1000, completion_tokens=100` and a
+  `prompt_tokens_details.cached_tokens=600` (use `types.SimpleNamespace`), drains it, and
+  asserts `tracker.cached_tokens == 600`; and a chunk whose `usage` lacks
+  `prompt_tokens_details` records `cached_tokens == 0` without error. `/selftest` green.
+
+- [ ] **21.3 Surface cached tokens in `/usage` and the headless JSON result.**
+  In `jarvis/commands.py` `/usage` (around line 332), add a line after "Prompt tokens":
+  `f"  Cached (of prompt): [cyan]{tracker.cached_tokens:>10,}[/cyan]  [dim]({pct}% hit)[/dim]\n"`
+  where `pct = round(100 * tracker.cached_tokens / tracker.prompt_tokens)` if
+  `tracker.prompt_tokens` else `0`. In `jarvis/cli.py` around line 246, add
+  `"cached_input_tokens": tracker.cached_tokens,` to the `usage` dict in the JSON result.
+  *Verify:* add/extend a test asserting the `-p --output-format json` result dict's
+  `usage` contains `cached_input_tokens`; and a `commands.py` test (or manual grep) that
+  the `/usage` handler references `tracker.cached_tokens`. `/selftest` green.
+
+- [ ] **21.4 Docs + parity flip.**
+  In `JARVIS.md`, note in the usage/cost section (or `UsageTracker` mention) that Jarvis
+  tracks Azure's `cached_tokens` and bills cached input at half rate, shown in `/usage`
+  and the headless JSON `usage.cached_input_tokens`. In `PARITY.md` flip the
+  "Prompt caching / cost optimization" row from ❌ to 🟡 with the note
+  "surfaces Azure `cached_tokens` in `/usage` + JSON, cost discounted; relies on Azure's
+  automatic prefix caching (no explicit cache-control API)".
+  *Verify:* `grep` confirms `context.py` defines `cached_tokens`, `client.py`
+  `CompleteResult` includes `cached_tokens`, and `commands.py` references
+  `tracker.cached_tokens`; `grep` confirms `JARVIS.md` mentions `cached_tokens` and the
+  PARITY "Prompt caching" row is no longer ❌. `/selftest` (pytest) green.
+
+---
+
 ## Standing orders (apply to every step)
 
 - **Registration invariants:** new tool → `tools/__init__.py` `_REGISTRY` + JARVIS.md
