@@ -1329,7 +1329,7 @@ No behavior change when no skills are present.
   skill shadows a same-named global one, and that `load_skill("missing")` returns `None`.
   `/selftest` green.
 
-- [ ] **23.2 Inject the skills catalog into the system prompt (`jarvis/context.py`).**
+- [x] **23.2 Inject the skills catalog into the system prompt (`jarvis/context.py`).**
   In `ContextManager.system_message`, after the project-context block, import
   `discover_skills` from `.skills` and, when it returns a non-empty list, append a
   `## Skills` section: one `- <name>: <description>` line per skill, followed by a single

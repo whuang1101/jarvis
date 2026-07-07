@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
 from . import todos
+from .skills import discover_skills
 
 if TYPE_CHECKING:
     from .client import JarvisClient
@@ -186,6 +187,14 @@ class ContextManager:
             with open(memory_path, 'r') as f:
                 memory_content = f.read()
                 content += f"\n\n## Persistent Memory\n\n{memory_content}"
+        skills = discover_skills()
+        if skills:
+            lines = [f"- {s.name}: {s.description}" for s in skills]
+            content += "\n\n## Skills\n\n" + "\n".join(lines)
+            content += (
+                "\n\nCall the skill tool with a skill's name to load its full "
+                "instructions before acting on it."
+            )
         if self._pinned:
             content += "\n\n## Pinned\n\n" + "\n".join(f"- {p}" for p in self._pinned)
         todo_items = todos.get_todos()

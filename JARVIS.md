@@ -306,6 +306,9 @@ that invariant. `/sandbox [on|off|status]` shows or toggles `permissions.is_sand
 `ContextManager.system_message` also appends a `## Current Todos` section (one `- [ ]`/`- [x]` line
 per item, `(in progress)` suffix for in-progress) whenever `todos.get_todos()` is non-empty, so the
 agent re-sees its own checklist every turn.
+`ContextManager.system_message` also appends a `## Skills` section (one `- <name>: <description>`
+line per skill from `discover_skills()`, plus an instruction to call the `skill` tool to load one)
+whenever any skills are discovered; omitted entirely when there are none.
 `/theme` sets the Rich code-block Pygments style (persisted via `persist_setting`); `/diff` shows
 `git diff HEAD`; `/pin <text>` adds a note into `ContextManager._pinned`, which is rendered into the
 system prompt and survives `clear()`/`compact()`. `/selftest` runs pytest **and** mypy. `/commit` stages

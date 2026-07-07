@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from jarvis import todos
+from jarvis import context, todos
 from jarvis.context import ContextManager, UsageTracker, _lookup_price, _PRICING, build_multimodal_content, expand_file_mentions
+from jarvis.skills import Skill
 
 
 class TestLookupPrice:
@@ -88,6 +89,28 @@ class TestTokenEstimate:
         ctx = ContextManager()
         ctx.append({"role": "assistant", "content": None, "tool_calls": []})
         assert ctx.token_estimate() == 0
+
+
+class TestSkillsCatalog:
+    def test_skills_appear_in_system_message(self, monkeypatch):
+        fake_skill = Skill(
+            name="deploy",
+            description="Deploys the app to production.",
+            body="full instructions",
+            path=None,
+        )
+        monkeypatch.setattr(context, "discover_skills", lambda: [fake_skill])
+        ctx = ContextManager()
+        content = ctx.system_message["content"]
+        assert "## Skills" in content
+        assert "deploy" in content
+        assert "Deploys the app to production." in content
+        assert "skill" in content.lower()
+
+    def test_no_skills_section_when_none_discovered(self, monkeypatch):
+        monkeypatch.setattr(context, "discover_skills", lambda: [])
+        ctx = ContextManager()
+        assert "## Skills" not in ctx.system_message["content"]
 
 
 class TestPin:
