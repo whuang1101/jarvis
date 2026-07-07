@@ -110,7 +110,7 @@ Legend: ✅ Jarvis has it · 🟡 partial · ❌ missing
 | Vim mode / keybindings | ✅ | prompt_toolkit `vi_mode` on the TTY input bar; `/vim [on|off]` toggle + persisted `vi_mode` setting |
 | Syntax-highlighted code fences in streamed output | 🟡 | Markdown render highlights after stream; not during |
 | Spinner with elapsed time + token count while thinking | 🟡 | plain spinner |
-| Desktop notifications when a long task finishes | ❌ | TODO.md notifications section |
+| Desktop notifications when a long task finishes | ✅ | `notify.py` fires osascript/notify-send (terminal-bell fallback) when an interactive turn finishes; gated by `notify` + `notify_min_seconds` settings |
 | /doctor style self-diagnostics | ❌ | checks: env vars, MCP health, pipx install, test suite |
 | /usage, /model, /compact, /clear, /help | ✅ | |
 
