@@ -64,6 +64,7 @@ class Settings:
     tool_timeout_secs: int = 60
     theme: str = "monokai"
     show_thinking: bool = True
+    vi_mode: bool = False
     vision: bool = True
     mcp_auto_reconnect: bool = True
     # Glob-style patterns matched against "tool_name(args)", e.g. "run_command(git *)".

@@ -22,6 +22,7 @@ class TestSettingsLoad:
         assert settings.show_thinking is True
         assert settings.sandbox is False
         assert settings.sandbox_allow_network is False
+        assert settings.vi_mode is False
 
     def test_statusline_default_is_empty(self, tmp_path):
         settings = Settings.load(tmp_path / "does_not_exist.toml")
@@ -305,6 +306,11 @@ class TestPersistSetting:
         path = tmp_path / "config.toml"
         persist_setting("auto_mode", "true", path)
         assert Settings.load(path).auto_mode is True
+
+    def test_writes_vi_mode(self, tmp_path):
+        path = tmp_path / "config.toml"
+        persist_setting("vi_mode", "true", path)
+        assert Settings.load(path).vi_mode is True
 
     def test_preserves_other_keys(self, tmp_path):
         path = tmp_path / "config.toml"
