@@ -70,7 +70,7 @@ Legend: ✅ Jarvis has it · 🟡 partial · ❌ missing
 | Feature | Status | Notes |
 |---|---|---|
 | -p one-shot mode | ❌ | ROADMAP 3.1 |
-| --output-format json / stream-json | ❌ | after 3.1 |
+| --output-format json / stream-json | ✅ | init + result events only; per-tool event lines are a follow-up |
 | Pipe stdin as prompt (`cat err | jarvis -p "fix"`) | ✅ | ROADMAP 13 |
 | --max-turns, --model flags | ✅ | ROADMAP 14 |
 | Exit codes reflecting success/failure | ❌ | after 3.1 |
