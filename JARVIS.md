@@ -335,7 +335,9 @@ is a no-op.
 
 ### Cost tracking (`context.py:UsageTracker`)
 
-`record(prompt, completion, deployment, cached=0)` is called per streaming chunk with `.usage`.
+`record(prompt, completion, deployment, cached=0)` is called per streaming chunk with `.usage`, reading
+`cached` off `usage.prompt_tokens_details.cached_tokens` (defaults to 0 if absent); `client.complete()`
+surfaces the same value via `CompleteResult.cached_tokens` for the compaction path.
 `_lookup_price` lowercases the deployment and matches `_PRICING` keys **longest-first** (so
 `gpt-4o-mini` isn't mispriced as `gpt-4o`), falling back to gpt-4o pricing (2.50/10.00 per 1M).
 `cached` (a subset of `prompt`) tracks cached-prompt tokens in `cached_tokens` and bills them at

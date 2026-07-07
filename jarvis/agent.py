@@ -195,7 +195,10 @@ def _stream_turn(
     def drain(chunks: Any, status: Any) -> None:
         for chunk in chunks:
             if chunk.usage:
-                tracker.record(chunk.usage.prompt_tokens, chunk.usage.completion_tokens, client.current_deployment())
+                cached = getattr(getattr(chunk.usage, "prompt_tokens_details", None), "cached_tokens", 0) or 0
+                tracker.record(
+                    chunk.usage.prompt_tokens, chunk.usage.completion_tokens, client.current_deployment(), cached=cached
+                )
             choice = chunk.choices[0] if chunk.choices else None
             if choice is None:
                 continue

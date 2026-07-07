@@ -1193,7 +1193,7 @@ stable across turns.
   `gpt-4o` price; and a second call with no `cached=` arg leaves `cached_tokens`
   unchanged from its prior value. `/selftest` (pytest) green.
 
-- [ ] **21.2 Thread cached_tokens through the streaming and non-streaming read paths.**
+- [x] **21.2 Thread cached_tokens through the streaming and non-streaming read paths.**
   In `jarvis/client.py`: add `cached_tokens: int` to the `CompleteResult` NamedTuple
   (after `completion_tokens`), and in `complete()` set it from
   `getattr(getattr(usage, "prompt_tokens_details", None), "cached_tokens", 0) or 0` when

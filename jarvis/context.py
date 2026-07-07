@@ -285,6 +285,8 @@ class ContextManager:
             {"role": "user", "content": f"{_COMPACT_PROMPT}\n\n{history_text}"},
         ])
         if tracker:
-            tracker.record(result.prompt_tokens, result.completion_tokens, client.current_deployment())
+            tracker.record(
+                result.prompt_tokens, result.completion_tokens, client.current_deployment(), cached=result.cached_tokens
+            )
         self._history = [{"role": "assistant", "content": f"[Summary of previous conversation]\n{result.text}"}]
         return result.text
