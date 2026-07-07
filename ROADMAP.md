@@ -863,7 +863,7 @@ Azure calls.
   dropped); `clear()` empties and `summary()` is `""` when empty. `/selftest`
   (pytest) green.
 
-- [ ] **17.2 Git-backed working-tree snapshots.**
+- [x] **17.2 Git-backed working-tree snapshots.**
   In `jarvis/checkpoints.py` add `snapshot_files(cwd: str | None = None) -> str |
   None`: run `git stash create` (via `subprocess.run`, `capture_output=True,
   text=True`, `cwd=cwd`) and return the stripped stdout SHA when it is non-empty,
