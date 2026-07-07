@@ -1604,7 +1604,7 @@ stays emacs-style and simply ignores the setting.
   `editing_mode == prompt_toolkit.enums.EditingMode.VI`; a second run with `vi_mode=False`
   after `_reset_prompt_session()` asserts `EditingMode.EMACS`. `/selftest` (pytest) green.
 
-- [ ] **27.3 `/vim` toggle command (`jarvis/commands.py`).**
+- [x] **27.3 `/vim` toggle command (`jarvis/commands.py`).**
   Add a `/vim` handler in `handle_command()` modelled on `/theme`: no arg reports the current
   state from `Settings.load().vi_mode` ("Vim mode: on/off"); `on`/`off` (and bare `/vim` as a
   toggle of the current value) call `persist_setting("vi_mode", ...)`, then

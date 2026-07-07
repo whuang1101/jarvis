@@ -44,6 +44,7 @@ _HELP_TEXT = """
   [cyan]/usage[/cyan]         Show token usage and estimated cost for this session
   [cyan]/model [name][/cyan]  Show or switch the current model
   [cyan]/theme [name][/cyan]  Show or switch the Rich syntax highlighting theme
+  [cyan]/vim [on|off][/cyan]  Show or toggle Vim editing mode for the input bar
   [cyan]/statusline [cmd][/cyan]
                   Show, set, or `/statusline off` to reset the statusline command
   [cyan]/diff[/cyan]          Show uncommitted changes (git diff HEAD)
@@ -123,6 +124,7 @@ _BUILTIN_COMMANDS = (
     "/usage",
     "/model",
     "/theme",
+    "/vim",
     "/diff",
     "/pin",
     "/config",
@@ -404,6 +406,20 @@ def handle_command(
             print_system(f"Theme set to {arg}.")
         except ValueError as e:
             print_error(str(e))
+        return None
+
+    if cmd == "/vim":
+        sub = arg.strip().lower()
+        if sub not in ("", "on", "off"):
+            print_error("Usage: /vim [on|off]")
+            return None
+        current = Settings.load().vi_mode
+        new_state = (not current) if sub == "" else (sub == "on")
+        persist_setting("vi_mode", "on" if new_state else "off")
+        from .cli import _reset_prompt_session
+
+        _reset_prompt_session()
+        print_system(f"Vim mode: {'on' if new_state else 'off'}")
         return None
 
     if cmd == "/statusline":
