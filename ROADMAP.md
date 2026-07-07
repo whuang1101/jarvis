@@ -1685,7 +1685,7 @@ interactive turn so only turns that both finish normally and ran at least the th
   fired; a second run with the monotonic delta below the threshold (or `notify=False`) asserts
   none fired. `/selftest` (pytest) green.
 
-- [ ] **28.4 Docs + parity flip (`JARVIS.md`, `PARITY.md`).**
+- [x] **28.4 Docs + parity flip (`JARVIS.md`, `PARITY.md`).**
   In JARVIS.md's interactive-UX section, document that a desktop notification fires when an
   interactive agent turn finishes and ran at least `notify_min_seconds`, controlled by the
   `notify` setting, degrading to `notify-send` on Linux and a terminal bell when no notifier is

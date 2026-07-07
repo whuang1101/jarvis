@@ -362,7 +362,11 @@ via `context.load_history()` and, if it carries a `file_stash`, applies it via `
 via the module-level `append_memory(text)` helper (creates the parent dir, never raises). The REPL
 loop also treats a bare `#text` line (checked before the `/` dispatch) as a shortcut for the same
 `append_memory` call, printing the result without sending the text to the agent; `#` with no text
-is a no-op.
+is a no-op. `cli._notify_turn_done(start)` runs after each interactive turn (both the plain-prompt
+and slash-command-triggered `run_agent` call sites); when the `notify` setting is on and the turn
+took at least `notify_min_seconds`, it calls `notify.send_notification`, which fires `osascript` on
+macOS or `notify-send` on Linux (whichever `shutil.which` finds first), falling back to a terminal
+bell when neither is available.
 
 ### Plan mode vs auto mode (independent toggles)
 
