@@ -1054,7 +1054,7 @@ list, add, and remove servers at runtime. Runtime-added servers are session-scop
   data URL; `image_message(tmp)` has `role == "user"`, its `content[0]["type"] == "text"`
   and `content[1]["type"] == "image_url"`. `/selftest` (pytest) green.
 
-- [ ] **19.2 `vision` setting (default on).**
+- [x] **19.2 `vision` setting (default on).**
   In `jarvis/settings.py` add a field `vision: bool = True` to the `Settings` dataclass
   (alongside `show_thinking`); because `scalar_keys` is derived from `fields(cls)` it is
   picked up by the `~/.jarvis/config.toml` + project `.jarvis.toml` overlay automatically —

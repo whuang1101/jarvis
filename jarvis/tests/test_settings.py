@@ -69,6 +69,18 @@ class TestShowThinking:
         assert settings.show_thinking is False
 
 
+class TestVision:
+    def test_defaults_true(self):
+        assert Settings().vision is True
+
+    def test_global_config_can_disable(self, tmp_path):
+        path = tmp_path / "config.toml"
+        path.write_text("vision = false\n")
+
+        settings = Settings.load(path=path)
+        assert settings.vision is False
+
+
 class TestProjectConfigOverlay:
     def test_project_config_in_cwd_overlays_global(self, tmp_path):
         global_path = tmp_path / "global.toml"

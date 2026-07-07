@@ -408,6 +408,7 @@ autocompact_tokens = 25000
 tool_timeout_secs = 60
 theme = "monokai"
 show_thinking = true
+vision = true
 
 [permissions]
 allow = ["write_file(*)"]          # glob patterns matched against "tool_name(args)"
@@ -428,6 +429,8 @@ skipped (the other file/defaults still apply). Unknown keys are ignored. Current
 `show_thinking` (default `true`) is read once by `JarvisClient.__init__` into
 `self._show_thinking` (unused there); `agent.py._stream_turn` reads its own module-level
 `_settings.show_thinking` to gate whether reasoning deltas are rendered (7.2).
+`vision` (bool, default true) — attach image files read with `read_file` to the conversation as
+visual input; set false to disable.
 
 `[permissions] allow`/`deny` are glob-style pattern lists (`fnmatch`) checked in
 `permissions.py:needs_permission` before the tool-specific logic: a `deny` match forces the
