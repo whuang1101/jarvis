@@ -768,7 +768,7 @@ store, a `/todos` command, and a system-prompt reminder so the agent actually
 "maintains" the checklist. No new Azure calls; mirrors the existing `tasks.py`
 module-level-store pattern.
 
-- [ ] **16.1 In-memory todo store the tool writes into.**
+- [x] **16.1 In-memory todo store the tool writes into.**
   Add `jarvis/todos.py` with a module-level `_TODOS: list[dict[str, str]] = []` and:
   `set_todos(todos: list[dict[str, str]]) -> None` (replaces the list, storing a
   deep-ish copy — `[dict(t) for t in todos]` — so callers can't mutate internal
