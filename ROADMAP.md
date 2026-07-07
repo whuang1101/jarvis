@@ -758,6 +758,74 @@ payload builder, and an emitter writing to an in-memory stream — no Azure call
 
 ---
 
+## Phase 16 — Maintained todo list (persistent state + recall + agent awareness)
+
+PARITY row "Todo list the agent maintains (TaskCreate-style) with live checklist
+UI" is ❌: `todo_write` today only *prints* a one-shot panel (`formatter.print_todo_list`)
+and keeps nothing — there is no maintained state, no way to recall the current list,
+and the agent forgets its own plan between turns. This phase adds a session-scoped
+store, a `/todos` command, and a system-prompt reminder so the agent actually
+"maintains" the checklist. No new Azure calls; mirrors the existing `tasks.py`
+module-level-store pattern.
+
+- [ ] **16.1 In-memory todo store the tool writes into.**
+  Add `jarvis/todos.py` with a module-level `_TODOS: list[dict[str, str]] = []` and:
+  `set_todos(todos: list[dict[str, str]]) -> None` (replaces the list, storing a
+  deep-ish copy — `[dict(t) for t in todos]` — so callers can't mutate internal
+  state), `get_todos() -> list[dict[str, str]]` (returns a fresh copy list of
+  copies, never the internal object), `clear_todos() -> None` (empties it), and
+  `summary() -> str` returning `""` when empty else `f"{done}/{len(_TODOS)} done"`
+  where `done` counts `status == "completed"`. In `jarvis/tools/todo_write.py`,
+  `import` the module and call `todos.set_todos(normalized)` immediately before the
+  existing `print_todo_list(normalized)` call (no other behavior change).
+  *Verify:* add `jarvis/tests/test_todos.py`: `set_todos([...])` then `get_todos()`
+  equals the input but `get_todos() is not` the internal list and mutating the
+  returned list/dicts does not change a later `get_todos()`; `clear_todos()` makes
+  `get_todos() == []`; `summary()` is `""` when empty and `"1/2 done"` for a
+  2-item list with one completed. Extend `test_todo_write.py` to assert that after
+  `TodoWriteTool().execute({"todos": [...]})`, `todos.get_todos()` reflects the
+  written list. `/selftest` (pytest) green.
+
+- [ ] **16.2 `/todos` command to view and clear the maintained list.**
+  In `jarvis/commands.py` `handle_command`, add `if cmd == "/todos":` — when
+  `arg.strip().lower() == "clear"`, call `todos.clear_todos()` then
+  `print_system("Todo list cleared.")` and `return None`; otherwise call
+  `formatter.print_todo_list(todos.get_todos())` (which already renders "(no todos)"
+  for an empty list) and `return None`. Add `import`s for the `todos` module and
+  `print_todo_list`. Register `/todos` in `_HELP_TEXT`, in the `commands_list`
+  literal used by `/help`, and in the JARVIS.md command list.
+  *Verify:* add a `test_commands.py` case: `todos.set_todos([{"content": "step
+  one", "status": "in_progress"}])`, then `handle_command("/todos", ...)` returns
+  `None` and (via `capsys`) the output contains `"step one"`; a second call
+  `handle_command("/todos clear", ...)` returns `None` and afterwards
+  `todos.get_todos() == []`. `/selftest` (pytest) green.
+
+- [ ] **16.3 Surface outstanding todos in the system prompt so the agent maintains them.**
+  In `jarvis/context.py` `ContextManager.system_message`, after the `_pinned` block
+  and before the `_plan_mode` block, `import`/call the `todos` module: when
+  `todos.get_todos()` is non-empty, append a `"\n\n## Current Todos\n\n"` section
+  listing each item as `- [x] <content>` for `completed` else `- [ ] <content>`
+  (with a `(in progress)` suffix for `in_progress`), so every turn the agent re-sees
+  its own checklist and keeps working it. Empty list appends nothing.
+  *Verify:* add a `test_context.py` case: with `todos.clear_todos()` the
+  `system_message["content"]` contains no `"## Current Todos"`; after
+  `todos.set_todos([{ "content": "ship it", "status": "pending"}])` the content
+  contains `"## Current Todos"` and `"- [ ] ship it"`. Reset the store at test end.
+  `/selftest` (pytest) green.
+
+- [ ] **16.4 Docs + parity flip.**
+  In JARVIS.md, document the `/todos` command in the command list and note that the
+  `todo_write` tool now persists the list in a session store (`jarvis/todos.py`),
+  recallable with `/todos`, and injected into the system prompt each turn so the
+  agent keeps its plan. Flip PARITY.md's "Todo list the agent maintains
+  (TaskCreate-style) with live checklist UI" row from ❌ to ✅ (note the panel is a
+  full re-render, not an in-place `Live` widget, since a second concurrent `Live`
+  would fight the streaming-markdown `Live`).
+  *Verify:* `/selftest` (pytest) green; grep confirms the PARITY "Todo list the
+  agent maintains" row is no longer ❌ and JARVIS.md mentions `/todos`.
+
+---
+
 ## Standing orders (apply to every step)
 
 - **Registration invariants:** new tool → `tools/__init__.py` `_REGISTRY` + JARVIS.md
