@@ -1231,6 +1231,76 @@ stable across turns.
 
 ---
 
+## Phase 22 — Sandboxed command execution
+
+`run_command` currently runs shell commands with `shell=True` at full user privilege —
+the only guard is the permission gate. Claude Code offers a sandbox that isolates command
+network + filesystem access so risky commands can run without a prompt. On Linux the
+standard primitive is `bwrap` (bubblewrap): it runs the command in a new namespace with a
+read-only view of the root filesystem, a writable bind of the project directory, a private
+`/tmp`, and (optionally) no network. This phase adds an opt-in sandbox that wraps commands
+in `bwrap` when enabled, deny-by-default if `bwrap` is unavailable, toggleable per session
+via `/sandbox`. No change to command semantics when the sandbox is off (default).
+
+- [ ] **22.1 Sandbox setting + runtime toggle state.**
+  In `jarvis/settings.py` `Settings`: add two scalar fields — `sandbox: bool = False` and
+  `sandbox_allow_network: bool = False` (they load automatically as scalar keys; no
+  `_TABLE_KEYS` change). In `jarvis/permissions.py`, mirror the `auto_mode` pattern: add a
+  module-level `_sandbox: bool = _settings.sandbox` and functions `is_sandbox() -> bool`
+  (returns `_sandbox`) and `set_sandbox(enabled: bool) -> None` (`global _sandbox`; assign).
+  *Verify:* a `settings.py` test asserts `Settings().sandbox is False` and
+  `Settings().sandbox_allow_network is False`, and that a `.jarvis.toml` containing
+  `sandbox = true` loads as `sandbox is True`; a `permissions.py` test asserts
+  `set_sandbox(True)` then `is_sandbox()` is `True` (reset to `False` after). `/selftest` green.
+
+- [ ] **22.2 Pure sandbox-argv builder.**
+  In `jarvis/tools/run_command.py` add a module-level helper
+  `_build_sandbox_argv(command: str, cwd: str, allow_network: bool) -> list[str]` that
+  returns the `bwrap` argv: start with `[bwrap_path, "--ro-bind", "/", "/", "--dev",
+  "/dev", "--proc", "/proc", "--tmpfs", "/tmp", "--bind", cwd, cwd, "--chdir", cwd,
+  "--die-with-parent"]`, append `"--unshare-net"` when `not allow_network`, then
+  `["/bin/sh", "-c", command]`. Resolve `bwrap_path` via `shutil.which("bwrap")`; if it is
+  `None`, return an empty list to signal "unavailable". Do not call this from `execute` yet.
+  *Verify:* a test that monkeypatches `shutil.which` to return `"/usr/bin/bwrap"` asserts
+  the argv contains `"--unshare-net"` when `allow_network=False` and omits it when `True`,
+  binds `cwd` read-write (`"--bind", cwd, cwd` present), and ends with
+  `["/bin/sh", "-c", command]`; a test with `which` returning `None` asserts `[]`. `/selftest` green.
+
+- [ ] **22.3 Wire the sandbox into `execute`, deny-by-default when unavailable.**
+  In `run_command.py` `execute`, after the `cd`/`background` short-circuits and before the
+  `subprocess.Popen`: import `is_sandbox` from `..permissions`; when `is_sandbox()` is true,
+  call `_build_sandbox_argv(command, os.getcwd(), Settings.load().sandbox_allow_network)`.
+  If it returns `[]`, return the string
+  `"Error: sandbox is enabled but 'bwrap' was not found on PATH; install bubblewrap or run /sandbox off"`.
+  Otherwise run that argv with `shell=False` (pass the list as `command` to `Popen`, drop
+  `shell=True` for the sandboxed branch) keeping the existing streaming/timeout logic; the
+  non-sandboxed branch is unchanged.
+  *Verify:* a test with `is_sandbox` monkeypatched true and `shutil.which("bwrap")` → `None`
+  asserts `execute({"command": "echo hi"})` returns the `bwrap`-not-found `Error:` string; a
+  test with the sandbox off confirms `echo sandbox_off_marker` still runs and its stdout
+  appears (unchanged path). `/selftest` green.
+
+- [ ] **22.4 `/sandbox` slash command.**
+  In `jarvis/commands.py` `handle_command()`, add a `/sandbox [on|off|status]` branch:
+  no arg or `status` prints the current state via a `formatter.py` helper; `on`/`off` call
+  `permissions.set_sandbox(True/False)` and print confirmation; every branch `return`s. Add
+  the `/sandbox` line to `_HELP_TEXT`, and add it to the command list in `JARVIS.md`.
+  *Verify:* a `commands.py` test drives `handle_command("/sandbox on")` then asserts
+  `permissions.is_sandbox()` is `True`, `handle_command("/sandbox off")` → `False`, and
+  `handle_command("/sandbox")` returns without raising; `grep` confirms `_HELP_TEXT` and
+  `JARVIS.md` mention `/sandbox`. `/selftest` green.
+
+- [ ] **22.5 Docs + parity flip.**
+  In `JARVIS.md`, document the sandbox in the settings/config section: `sandbox` and
+  `sandbox_allow_network` keys, `bwrap` requirement, deny-by-default behavior, and the
+  `/sandbox` toggle. In `PARITY.md`, flip the "Sandboxed command execution" row from ❌ to
+  🟡 with the note "opt-in `bwrap` sandbox (read-only root, writable project dir, net off by
+  default); Linux-only, deny-by-default when bwrap missing; `/sandbox` toggle".
+  *Verify:* `grep` confirms `JARVIS.md` mentions `sandbox` and `/sandbox`, and the PARITY
+  "Sandboxed command execution" row is no longer ❌. `/selftest` (pytest) green.
+
+---
+
 ## Standing orders (apply to every step)
 
 - **Registration invariants:** new tool → `tools/__init__.py` `_REGISTRY` + JARVIS.md
