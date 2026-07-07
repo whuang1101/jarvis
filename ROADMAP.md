@@ -1502,6 +1502,74 @@ and body and run `gh pr create`, mirroring the `_RUN_AGENT_PREFIX` pattern those
 
 ---
 
+## Phase 26 — Slash-command autocomplete menu as you type (`/`)
+
+Parity gap: "Slash-command autocomplete menu as you type /" is ❌. The input bar in
+`cli.py:_read_input` reads through builtin `input()` + `readline` with `tab: complete`,
+which only completes on an explicit Tab press and shows no live menu. Adopt
+`prompt_toolkit` as the input backend so typing `/` pops a live dropdown of matching
+slash commands, while preserving the boxed status bar, backslash/```` ``` ````
+continuation, and history. The prompt_toolkit path is used only when stdin is a real TTY
+and the import succeeds; otherwise the current `input()` path is kept unchanged so
+one-shot/piped/headless runs and environments without prompt_toolkit still work.
+
+- [ ] **26.1 Single source of command names (`jarvis/commands.py`).**
+  Lift the hard-coded `commands_list` currently built inside the `/help` branch of
+  `handle_command()` into a module-level tuple `_BUILTIN_COMMANDS` (same names, same order)
+  and add a helper `def all_command_names() -> list[str]:` returning `list(_BUILTIN_COMMANDS)`
+  extended with `f"/{name}"` for each `_discover_custom_commands()` entry. Rewrite the `/help`
+  branch to build its printed list from `all_command_names()` (no behavior change). This gives
+  the completer and `/help` one shared source.
+  *Verify:* a `commands.py` test asserts `all_command_names()` contains `/help`, `/commit`,
+  and `/pr`, that every entry starts with `/`, and that there are no duplicates; a second
+  asserts `handle_command("/help")` still returns `None` and its captured output mentions
+  `/pr`. `/selftest` (pytest) green.
+
+- [ ] **26.2 Slash-command completer (`pyproject.toml`, `jarvis/cli.py`).**
+  Add `"prompt_toolkit>=3.0"` to `[project].dependencies`. In `cli.py` add a
+  `class SlashCommandCompleter(Completer)` (import `Completer`, `Completion` from
+  `prompt_toolkit.completion`) whose `get_completions(self, document, complete_event)` reads
+  `text = document.text_before_cursor`; if `text` starts with `/` and contains no space, it
+  yields a `Completion(name, start_position=-len(text))` for each `name` in
+  `all_command_names()` that starts with `text` (case-insensitive); otherwise it yields
+  nothing. Keep the completer import-light so `cli.py` still imports if prompt_toolkit is
+  absent (guard the top-level import in a `try/except ImportError` that sets a
+  `_PROMPT_TOOLKIT` availability flag).
+  *Verify:* a `cli.py` test builds `SlashCommandCompleter()` and, using
+  `prompt_toolkit.document.Document` and `prompt_toolkit.completion.CompleteEvent`, asserts
+  `get_completions(Document("/co", 3), CompleteEvent())` yields texts including `/commit` and
+  `/compact` but not `/help`, and `get_completions(Document("hello", 5), CompleteEvent())`
+  yields an empty list. `/selftest` (pytest) green.
+
+- [ ] **26.3 Route the input bar through prompt_toolkit (`jarvis/cli.py`).**
+  Add a lazily-created module-level `PromptSession` (import `PromptSession` from
+  `prompt_toolkit`, `InMemoryHistory` from `prompt_toolkit.history`) built with
+  `history=InMemoryHistory()`, `completer=SlashCommandCompleter()`, and
+  `complete_while_typing=True`. In `_read_input`, when `_PROMPT_TOOLKIT` and
+  `sys.stdin.isatty()`, print the top border via `console` as today, read the line with
+  `session.prompt("│ > ")` (plain string, styling optional), and print the bottom border in
+  the `finally`; on any other case fall back to the existing `input(prompt)` path unchanged.
+  Leave `_read_full_input` continuation (`... ` prompt) and the REPL loop's
+  `readline.add_history` as-is — the session records its own history on the TTY path and the
+  fallback still uses readline.
+  *Verify:* a `cli.py` test monkeypatches `sys.stdin.isatty` to return `False` and
+  `builtins.input` to return `"hi"`, then asserts `_read_input("~/x · 0k")` returns `"hi"`
+  (fallback path intact); the interactive TTY dropdown is exercised manually (note in the PR).
+  `/selftest` (pytest) green.
+
+- [ ] **26.4 Docs + parity flip (`JARVIS.md`, `PARITY.md`).**
+  In JARVIS.md's interactive-UX/input section, document that the input bar uses
+  `prompt_toolkit` when stdin is a TTY: typing `/` shows a live completion menu of slash
+  commands (builtin + custom) sourced from `commands.all_command_names()`, with a graceful
+  `input()`/readline fallback for piped/headless runs or when prompt_toolkit is unavailable.
+  In PARITY.md, flip the "Slash-command autocomplete menu as you type /" row from ❌ to ✅
+  with the note "prompt_toolkit input bar shows a live `/`-command dropdown on TTY; falls back
+  to readline `input()` when piped or prompt_toolkit missing".
+  *Verify:* `grep` confirms JARVIS.md mentions `prompt_toolkit` and the PARITY
+  "Slash-command autocomplete" row is no longer ❌; `/selftest` (pytest) green.
+
+---
+
 ## Standing orders (apply to every step)
 
 - **Registration invariants:** new tool → `tools/__init__.py` `_REGISTRY` + JARVIS.md
