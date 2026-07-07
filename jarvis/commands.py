@@ -6,7 +6,7 @@ import subprocess
 from dataclasses import fields
 from pathlib import Path
 
-from . import checkpoints, todos
+from . import checkpoints, doctor, todos
 from .skills import discover_skills
 from .client import JarvisClient
 from .context import ContextManager, UsageTracker, is_plan_mode, set_plan_mode
@@ -76,6 +76,7 @@ _HELP_TEXT = """
   [cyan]#text[/cyan]          Shortcut: append `text` to memory without sending it to the agent
   [cyan]/init[/cyan]          Create a JARVIS.md project context file here
   [cyan]/selftest[/cyan]      Run Jarvis's own test suite (pytest) and type-check it (mypy)
+  [cyan]/doctor[/cyan]        Run environment self-diagnostics (Azure creds, MCP, tooling)
   [cyan]/commit[/cyan]        Stage changes and have Jarvis write and make the commit
   [cyan]/review [pr#][/cyan]  Review the diff against main, or a PR's diff if given
   [cyan]/pr[/cyan]            Have Jarvis write a title/body and open a PR for this branch
@@ -149,6 +150,7 @@ _BUILTIN_COMMANDS = (
     "/skills",
     "/init",
     "/selftest",
+    "/doctor",
     "/commit",
     "/review",
     "/pr",
@@ -791,6 +793,18 @@ def handle_command(
             print_error("mypy is not installed in this environment (pip install mypy).")
         except subprocess.TimeoutExpired:
             print_error("mypy run timed out after 120s.")
+        return None
+
+    if cmd == "/doctor":
+        glyphs = {"ok": "✓", "warn": "!", "fail": "✗"}
+        for check in doctor.run_diagnostics():
+            line = f"{glyphs[check.status]} {check.name}: {check.detail}"
+            if check.status == "fail":
+                print_error(line)
+            elif check.status == "warn":
+                print_system(f"! {line}")
+            else:
+                print_system(line)
         return None
 
     if cmd == "/init":

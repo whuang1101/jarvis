@@ -309,8 +309,9 @@ case-insensitive; the argument keeps original case.
 
 Implemented commands: `/help /history /retry /undo /clear /compact /usage /model /theme /vim /statusline /diff /pin
 /config /file /run /plan /go /cancel /restart /auto /sandbox /fix /copy /save /sessions /resume /rewind /mcp
-/memory /todos /skills /init /selftest /commit /review /pr /exit /quit`. Every one is listed in `_HELP_TEXT` — keep
-that invariant. `/sandbox [on|off|status]` shows or toggles `permissions.is_sandbox()`/`set_sandbox()`
+/memory /todos /skills /init /selftest /doctor /commit /review /pr /exit /quit`. Every one is listed in `_HELP_TEXT` — keep
+that invariant. `/doctor` runs `doctor.run_diagnostics()` and prints one line per `Check`
+(`✓`/`!`/`✗ <name>: <detail>`) via the `formatter` helpers. `/sandbox [on|off|status]` shows or toggles `permissions.is_sandbox()`/`set_sandbox()`
 (no arg or `status` just prints current state). `/vim [on|off]` toggles `vi_mode` (persisted via
 `persist_setting`) and calls `cli._reset_prompt_session()` so the next input prompt picks it up.
 `/todos` prints the maintained todo list via `formatter.print_todo_list`; `/todos clear` clears it.

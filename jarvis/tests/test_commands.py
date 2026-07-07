@@ -9,7 +9,7 @@ import jarvis.permissions as permissions_module
 import jarvis.sessions as sessions_module
 import jarvis.settings as settings_module
 import jarvis.todos as todos_module
-from jarvis import checkpoints
+from jarvis import checkpoints, doctor
 from jarvis.commands import append_memory, handle_command
 from jarvis.context import ContextManager, UsageTracker
 from jarvis.sessions import SessionStore
@@ -629,3 +629,22 @@ class TestSkillsCommand:
 
         assert result is None
         assert "No skills found" in capsys.readouterr().out
+
+
+class TestDoctorCommand:
+    def test_prints_ok_and_fail_checks_and_returns_none(self, monkeypatch, capsys):
+        fake_checks = [
+            doctor.Check("Python version", "ok", "3.12.0"),
+            doctor.Check("Azure credentials", "fail", "AZURE_OPENAI_API_KEY"),
+        ]
+        monkeypatch.setattr(commands_module.doctor, "run_diagnostics", lambda: fake_checks)
+
+        result = handle_command("/doctor", None, None, None)
+
+        assert result is None
+        out = capsys.readouterr().out
+        assert "Python version" in out
+        assert "Azure credentials" in out
+
+    def test_registered_in_all_command_names(self):
+        assert "/doctor" in commands_module.all_command_names()

@@ -1770,7 +1770,7 @@ into structured checks and a `/doctor` command that renders them, then flips the
   that with all four `config._REQUIRED` env vars monkeypatched present the "Azure credentials"
   check is `ok` while clearing one flips it to `fail`. `/selftest` (pytest) green.
 
-- [ ] **30.2 `/doctor` command (`jarvis/commands.py`).**
+- [x] **30.2 `/doctor` command (`jarvis/commands.py`).**
   Import `doctor` in `commands.py`. In `handle_command`, add an `if cmd == "/doctor":` branch
   that calls `doctor.run_diagnostics()` and, for each `Check`, prints one line through the
   existing `formatter` helpers — `print_system` for `ok`, `print_error` for `fail`, and
