@@ -7,8 +7,14 @@ _GLOBAL_SKILLS_DIRNAME = Path(".jarvis") / "skills"
 _PROJECT_SKILLS_DIRNAME = Path(".jarvis") / "skills"
 
 
-def _skill_dirs() -> tuple[Path, Path]:
-    return (Path.home() / _GLOBAL_SKILLS_DIRNAME, Path.cwd() / _PROJECT_SKILLS_DIRNAME)
+def _skill_dirs() -> list[Path]:
+    from . import plugins
+
+    return [
+        Path.home() / _GLOBAL_SKILLS_DIRNAME,
+        Path.cwd() / _PROJECT_SKILLS_DIRNAME,
+        *plugins.plugin_skill_dirs(),
+    ]
 
 
 @dataclass(frozen=True)

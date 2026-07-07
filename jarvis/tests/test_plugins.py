@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from jarvis import plugins
+from jarvis import commands, plugins, skills
 from jarvis.plugins import discover_plugins
 
 
@@ -66,3 +66,36 @@ class TestPluginDiscovery:
         found = {p.name: p for p in discover_plugins()}
         assert set(found) == {"shared"}
         assert found["shared"].description == "project"
+
+
+class TestPluginCommandAndSkillWiring:
+    def _make_plugin_bundle(self, tmp_path, monkeypatch):
+        root = tmp_path / "plugins"
+        bundle = root / "sample-plugin"
+        bundle.mkdir(parents=True)
+        (bundle / "plugin.toml").write_text('name = "sample"\ndescription = "a sample plugin"\n')
+
+        commands_dir = bundle / "commands"
+        commands_dir.mkdir()
+        (commands_dir / "hello.md").write_text("Say hello.\n")
+
+        skills_dir = bundle / "skills"
+        skills_dir.mkdir()
+        (skills_dir / "greet.md").write_text(
+            "---\nname: greet\ndescription: greets people\n---\nGreet body.\n"
+        )
+
+        monkeypatch.setattr(plugins, "_plugin_roots", lambda: (root, tmp_path / "nonexistent"))
+        return bundle
+
+    def test_plugin_command_and_skill_dirs(self, tmp_path, monkeypatch):
+        bundle = self._make_plugin_bundle(tmp_path, monkeypatch)
+
+        assert plugins.plugin_command_dirs() == [bundle / "commands"]
+        assert plugins.plugin_skill_dirs() == [bundle / "skills"]
+
+    def test_plugin_commands_and_skills_are_discovered(self, tmp_path, monkeypatch):
+        self._make_plugin_bundle(tmp_path, monkeypatch)
+
+        assert "/hello" in commands.all_command_names()
+        assert "greet" in [s.name for s in skills.discover_skills()]
