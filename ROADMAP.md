@@ -1133,7 +1133,7 @@ list, add, and remove servers at runtime. Runtime-added servers are session-scop
   monkeypatch `mgr.connect` to raise and assert `mgr.reconnect("srv") is False`.
   `/selftest` (pytest) green.
 
-- [ ] **20.2 Retry a failed MCP tool call once via reconnect.**
+- [x] **20.2 Retry a failed MCP tool call once via reconnect.**
   In `jarvis/settings.py` add `mcp_auto_reconnect: bool = True` to the `Settings`
   dataclass (alongside `vision`); it is auto-picked-up by the config overlay because
   `scalar_keys` derives from `fields(cls)`. In `jarvis/mcp_manager.py._call_tool`, wrap

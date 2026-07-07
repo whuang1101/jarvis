@@ -65,6 +65,7 @@ class Settings:
     theme: str = "monokai"
     show_thinking: bool = True
     vision: bool = True
+    mcp_auto_reconnect: bool = True
     # Glob-style patterns matched against "tool_name(args)", e.g. "run_command(git *)".
     permission_allow: tuple[str, ...] = ()
     permission_deny: tuple[str, ...] = ()
