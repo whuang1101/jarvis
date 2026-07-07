@@ -166,6 +166,9 @@ jarvis/
 │                    (timestamp prefix sorts lexicographically), for `--continue`/`/sessions`/`/resume`.
 ├── mcp_manager.py   Daemon-thread asyncio loop. MCPManager.connect() launches a server, lists
 │                    tools, parks the session alive; MCPTool wraps each as a BaseTool.
+├── checkpoints.py   In-memory session checkpoints. create(history, label, file_stash) deep-copies
+│                    and appends, trimmed to the last 30; get(index) returns a fresh deep copy
+│                    (1-based); list_checkpoints() gives label/time/has_files metadata only.
 └── tools/
     ├── __init__.py      _REGISTRY (17 built-ins) + get_all_tools/get_tool_by_name/register_tool.
     ├── base.py          BaseTool(ABC): name/description/parameters/execute + to_openai_schema().
