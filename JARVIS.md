@@ -207,7 +207,8 @@ jarvis/
     ├── package_info.py  npm / PyPI package metadata lookup.
     ├── git_tools.py     git_status, git_diff, git_log (shared _git() helper, 15s timeout).
     ├── todo_write.py    Replaces the visible task list wholesale (content + pending/in_progress/
-    │                    completed), writes it into jarvis/todos.py's module-level store, and
+    │                    completed), writes it into jarvis/todos.py's module-level store (a
+    │                    session-lifetime list, recallable any time via `/todos`), and
     │                    re-renders it via formatter.print_todo_list.
     └── spawn_agent.py   Runs a fresh run_agent() in its own ContextManager (same client/tracker),
                          restricted to a read-only tool subset, capped at 25 iterations, and
