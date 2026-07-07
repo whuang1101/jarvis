@@ -289,8 +289,8 @@ or `_RUN_AGENT_PREFIX` (`__RUN__:`) + message (the REPL strips the prefix and ru
 case-insensitive; the argument keeps original case.
 
 Implemented commands: `/help /history /retry /undo /clear /compact /usage /model /theme /diff /pin
-/config /file /run /plan /go /cancel /restart /auto /fix /copy /save /sessions /resume /memory /todos
-/init /selftest /commit /review /exit /quit`. Every one is listed in `_HELP_TEXT` — keep that invariant.
+/config /file /run /plan /go /cancel /restart /auto /fix /copy /save /sessions /resume /rewind /memory
+/todos /init /selftest /commit /review /exit /quit`. Every one is listed in `_HELP_TEXT` — keep that invariant.
 `/todos` prints the maintained todo list via `formatter.print_todo_list`; `/todos clear` clears it.
 `ContextManager.system_message` also appends a `## Current Todos` section (one `- [ ]`/`- [x]` line
 per item, `(in progress)` suffix for in-progress) whenever `todos.get_todos()` is non-empty, so the
@@ -313,7 +313,10 @@ effective settings from `Settings.load_with_sources()` (default/global/project);
 <value>` writes a scalar key to the global TOML via `settings.persist_setting`. `/sessions` lists
 `sessions.list_sessions(limit=10)`; `/resume <n>` loads that entry via `SessionStore.load` into
 `context.load_history()` and updates the REPL's live `SessionStore` in place so later autosaves
-keep writing to the resumed session file. `/memory add <text>` appends to `~/.jarvis/memory.md`
+keep writing to the resumed session file. `/rewind` with no arg lists `checkpoints.list_checkpoints()`
+entries (1-based, ` [files]` suffix for `has_files`); `/rewind <n>` restores checkpoint `n`'s history
+via `context.load_history()` and, if it carries a `file_stash`, applies it via `checkpoints.restore_files()`;
+`/rewind clear` calls `checkpoints.clear()`. `/memory add <text>` appends to `~/.jarvis/memory.md`
 via the module-level `append_memory(text)` helper (creates the parent dir, never raises). The REPL
 loop also treats a bare `#text` line (checked before the `/` dispatch) as a shortcut for the same
 `append_memory` call, printing the result without sending the text to the agent; `#` with no text
