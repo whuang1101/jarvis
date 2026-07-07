@@ -1513,7 +1513,7 @@ continuation, and history. The prompt_toolkit path is used only when stdin is a 
 and the import succeeds; otherwise the current `input()` path is kept unchanged so
 one-shot/piped/headless runs and environments without prompt_toolkit still work.
 
-- [ ] **26.1 Single source of command names (`jarvis/commands.py`).**
+- [x] **26.1 Single source of command names (`jarvis/commands.py`).**
   Lift the hard-coded `commands_list` currently built inside the `/help` branch of
   `handle_command()` into a module-level tuple `_BUILTIN_COMMANDS` (same names, same order)
   and add a helper `def all_command_names() -> list[str]:` returning `list(_BUILTIN_COMMANDS)`

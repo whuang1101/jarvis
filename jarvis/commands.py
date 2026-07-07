@@ -113,6 +113,47 @@ _RUN_AGENT_PREFIX = "__RUN__:"
 _CUSTOM_COMMANDS_GLOBAL_DIR = Path.home() / ".jarvis" / "commands"
 _CUSTOM_COMMANDS_PROJECT_DIRNAME = Path(".jarvis") / "commands"
 
+_BUILTIN_COMMANDS = (
+    "/help",
+    "/history",
+    "/retry",
+    "/undo",
+    "/clear",
+    "/compact",
+    "/usage",
+    "/model",
+    "/theme",
+    "/diff",
+    "/pin",
+    "/config",
+    "/file",
+    "/run",
+    "/plan",
+    "/go",
+    "/cancel",
+    "/restart",
+    "/auto",
+    "/dangerously-skip-permissions",
+    "/sandbox",
+    "/fix",
+    "/copy",
+    "/save",
+    "/sessions",
+    "/resume",
+    "/rewind",
+    "/mcp",
+    "/memory",
+    "/todos",
+    "/skills",
+    "/init",
+    "/selftest",
+    "/commit",
+    "/review",
+    "/pr",
+    "/exit",
+    "/quit",
+)
+
 
 def _custom_command_dirs() -> tuple[Path, Path]:
     return (_CUSTOM_COMMANDS_GLOBAL_DIR, Path.cwd() / _CUSTOM_COMMANDS_PROJECT_DIRNAME)
@@ -133,6 +174,11 @@ def _discover_custom_commands() -> list[str]:
         if base.is_dir():
             names.update(p.stem for p in base.glob("*.md"))
     return sorted(names)
+
+
+def all_command_names() -> list[str]:
+    """All known slash command names: built-ins plus discovered custom commands."""
+    return list(_BUILTIN_COMMANDS) + [f"/{name}" for name in _discover_custom_commands()]
 
 
 def _get_clipboard() -> str | None:
@@ -236,50 +282,8 @@ def handle_command(
 
     if cmd == "/help" or cmd == "/":
         if not arg:
-            commands_list = [
-                "/help",
-                "/history",
-                "/retry",
-                "/undo",
-                "/clear",
-                "/compact",
-                "/usage",
-                "/model",
-                "/theme",
-                "/diff",
-                "/pin",
-                "/config",
-                "/file",
-                "/run",
-                "/plan",
-                "/go",
-                "/cancel",
-                "/restart",
-                "/auto",
-                "/dangerously-skip-permissions",
-                "/sandbox",
-                "/fix",
-                "/copy",
-                "/save",
-                "/sessions",
-                "/resume",
-                "/rewind",
-                "/mcp",
-                "/memory",
-                "/todos",
-                "/skills",
-                "/init",
-                "/selftest",
-                "/commit",
-                "/review",
-                "/pr",
-                "/exit",
-                "/quit",
-            ]
-            commands_list.extend(f"/{name}" for name in _discover_custom_commands())
-
             print("\n[bold cyan]Available commands:[/bold cyan]")
-            for cmd in commands_list:
+            for cmd in all_command_names():
                 print(f"  [cyan]{cmd}[/cyan]")
             return None
         console.print(_HELP_TEXT)

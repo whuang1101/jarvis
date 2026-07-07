@@ -248,6 +248,24 @@ class TestCustomCommands:
         assert "/explain" in out
 
 
+class TestAllCommandNames:
+    def test_contains_help_commit_and_pr_with_no_duplicates_and_leading_slash(self):
+        names = commands_module.all_command_names()
+
+        assert "/help" in names
+        assert "/commit" in names
+        assert "/pr" in names
+        assert all(name.startswith("/") for name in names)
+        assert len(names) == len(set(names))
+
+    def test_help_still_returns_none_and_mentions_pr(self, capsys):
+        result = handle_command("/help", None, None, None)
+
+        assert result is None
+        out = capsys.readouterr().out
+        assert "/pr" in out
+
+
 def _completed(stdout: str = "", stderr: str = "", returncode: int = 0):
     import subprocess as sp
 
