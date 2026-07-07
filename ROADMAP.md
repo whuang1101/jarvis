@@ -1409,7 +1409,7 @@ setting is empty (the default today).
   `statusline == "echo hi"`, and that the default (no key) is `""`; `grep` confirms
   `statusline` is documented in JARVIS.md; `/selftest` green.
 
-- [ ] **24.3 Render a custom status via the configured command (`jarvis/status.py`).**
+- [x] **24.3 Render a custom status via the configured command (`jarvis/status.py`).**
   Add `render_status(settings: Settings, cwd: Path, tokens: int, plan: bool, auto: bool,
   danger: bool) -> str`. When `settings.statusline` is empty, return
   `build_default_status(...)`. Otherwise run it with

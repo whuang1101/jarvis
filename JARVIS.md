@@ -142,6 +142,9 @@ jarvis/
 │                    _dump_toml — tomllib has no writer).
 ├── status.py        build_default_status(cwd, tokens, plan, auto, danger) — pure function for the
 │                    REPL's dim status line (`~`-abbreviated cwd · Nk tokens · PLAN · AUTO · DANGER).
+│                    render_status(settings, cwd, tokens, plan, auto, danger) — runs
+│                    settings.statusline as a shell command (JSON on stdin) when set, using its
+│                    first stdout line; falls back to build_default_status on empty/nonzero/error.
 ├── context.py       ContextManager (history + system prompt), UsageTracker (tokens+cost),
 │                    _PRICING table, plan-mode globals, _clean_history, compact().
 │                    expand_file_mentions() inlines `@path` file contents (non-image) into text.
@@ -471,8 +474,8 @@ returns an `Error:` instead of falling back to unsandboxed execution. Toggle at 
 visual input; set false to disable.
 `mcp_auto_reconnect` (bool, default true) — gates whether `mcp_manager._call_tool` retries a
 failed call once via `reconnect()`; false skips the retry and returns the error immediately.
-`statusline` (str, default `""`) — a top-level scalar setting reserved for status line
-customization (24); not yet consumed.
+`statusline` (str, default `""`) — a shell command; when set, `status.render_status` runs it
+(JSON of cwd/tokens/plan/auto/danger on stdin) and uses its first stdout line as the status.
 
 `[permissions] allow`/`deny` are glob-style pattern lists (`fnmatch`) checked in
 `permissions.py:needs_permission` before the tool-specific logic: a `deny` match forces the

@@ -83,7 +83,7 @@ from .mcp_config import load_mcp_servers
 from .mcp_manager import MCPManager, set_active_manager
 from .sessions import SessionStore, list_sessions
 from .settings import Settings
-from .status import build_default_status
+from .status import render_status
 from .tools import register_tool
 
 
@@ -331,7 +331,8 @@ def main() -> None:
     if args.model:
         config = dataclasses.replace(config, deployment=args.model)
 
-    set_code_theme(Settings.load().theme)
+    settings = Settings.load()
+    set_code_theme(settings.theme)
 
     client = JarvisClient(config)
     tracker = UsageTracker()
@@ -399,7 +400,8 @@ def main() -> None:
             try:
                 console.print()
                 cwd = Path.cwd()
-                status = build_default_status(
+                status = render_status(
+                    settings,
                     cwd,
                     context.token_estimate(),
                     is_plan_mode(),
