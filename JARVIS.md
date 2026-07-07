@@ -341,9 +341,11 @@ tuple with `f"/{name}"` for each discovered custom command, and is the single so
 `prompt_toolkit` `Completer`, guarded behind a `_PROMPT_TOOLKIT` import flag so `cli.py` still
 loads without the dependency) completes a bare `/prefix` against `all_command_names()`.
 `_read_input` uses it: on a TTY with `prompt_toolkit` installed, a lazily-created
-module-level `PromptSession` (`InMemoryHistory`, `complete_while_typing=True`) reads the
-line for dropdown completion; any other case (piped stdin, tests) falls back to the
-existing `readline`-backed `input()` path. `/config` (no args) prints
+module-level `PromptSession` (`InMemoryHistory`, `complete_while_typing=True`,
+`vi_mode=Settings.load().vi_mode`) reads the line for dropdown completion; any other case
+(piped stdin, tests) falls back to the existing `readline`-backed `input()` path.
+`cli._reset_prompt_session()` clears the cached session so the next `_get_prompt_session()`
+call rebuilds it with the current `vi_mode` setting. `/config` (no args) prints
 effective settings from `Settings.load_with_sources()` (default/global/project); `/config <key>
 <value>` writes a scalar key to the global TOML via `settings.persist_setting`. `/sessions` lists
 `sessions.list_sessions(limit=10)`; `/resume <n>` loads that entry via `SessionStore.load` into

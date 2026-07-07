@@ -118,8 +118,16 @@ def _get_prompt_session() -> "PromptSession":
             history=InMemoryHistory(),
             completer=SlashCommandCompleter(),
             complete_while_typing=True,
+            vi_mode=Settings.load().vi_mode,
         )
     return _prompt_session
+
+
+def _reset_prompt_session() -> None:
+    """Drop the cached session so the next `_read_input` rebuilds it with the
+    current `vi_mode` setting (needed for `/vim` to take effect without a restart)."""
+    global _prompt_session
+    _prompt_session = None
 
 
 def _read_input(status_plain: str) -> str:

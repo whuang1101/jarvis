@@ -14,6 +14,7 @@ import jarvis.logger as logger_module
 import jarvis.permissions as permissions_module
 from jarvis.config import Config
 from jarvis.context import UsageTracker
+from jarvis.settings import Settings
 
 
 class _FakeConfig:
@@ -499,3 +500,26 @@ class TestSlashCommandCompleter:
         completions = list(completer.get_completions(Document("hello", 5), CompleteEvent()))
 
         assert completions == []
+
+
+@pytest.mark.skipif(not cli._PROMPT_TOOLKIT, reason="prompt_toolkit not installed")
+class TestPromptSessionViMode:
+    def test_vi_mode_enabled_from_settings(self, monkeypatch):
+        from prompt_toolkit.enums import EditingMode
+
+        monkeypatch.setattr(cli.Settings, "load", staticmethod(lambda: Settings(vi_mode=True)))
+        cli._reset_prompt_session()
+
+        session = cli._get_prompt_session()
+
+        assert session.editing_mode == EditingMode.VI
+
+    def test_vi_mode_disabled_from_settings(self, monkeypatch):
+        from prompt_toolkit.enums import EditingMode
+
+        monkeypatch.setattr(cli.Settings, "load", staticmethod(lambda: Settings(vi_mode=False)))
+        cli._reset_prompt_session()
+
+        session = cli._get_prompt_session()
+
+        assert session.editing_mode == EditingMode.EMACS
