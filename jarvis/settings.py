@@ -72,6 +72,8 @@ class Settings:
     # Each entry: {"match": "<glob against tool name>", "run": "<shell command>"}.
     hooks_pre_tool: tuple[dict, ...] = ()
     hooks_post_tool: tuple[dict, ...] = ()
+    sandbox: bool = False
+    sandbox_allow_network: bool = False
 
     @classmethod
     def load(cls, path: Path | None = None, cwd: Path | None = None) -> "Settings":

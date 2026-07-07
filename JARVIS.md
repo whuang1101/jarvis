@@ -132,8 +132,9 @@ jarvis/
 │                    complete(), current_deployment(), set_deployment().
 ├── config.py        Frozen Config dataclass. load() searches _ENV_CANDIDATES, validates 4 Azure vars.
 ├── settings.py      Frozen Settings dataclass (auto_mode, max_tool_iterations, autocompact_tokens,
-│                    tool_timeout_secs, theme, show_thinking, permission_allow/permission_deny
-│                    glob-pattern tuples). load() reads ~/.jarvis/config.toml (tomllib), then overlays a
+│                    tool_timeout_secs, theme, show_thinking, sandbox, sandbox_allow_network,
+│                    permission_allow/permission_deny glob-pattern tuples). load() reads
+│                    ~/.jarvis/config.toml (tomllib), then overlays a
 │                    per-project `.jarvis.toml` found by walking cwd + up to 4 parents (same walk
 │                    as _find_jarvis_md) — project values win. Missing files = defaults; malformed
 │                    file = stderr warning + that file skipped. persist_allow_pattern() appends to
@@ -421,6 +422,8 @@ theme = "monokai"
 show_thinking = true
 vision = true
 mcp_auto_reconnect = true
+sandbox = false
+sandbox_allow_network = false
 
 [permissions]
 allow = ["write_file(*)"]          # glob patterns matched against "tool_name(args)"
@@ -437,7 +440,9 @@ sets — project values win over global values, both win over the dataclass defa
 files fall back silently; a malformed file prints a stderr warning and that file's values are
 skipped (the other file/defaults still apply). Unknown keys are ignored. Currently informs
 `agent.py`'s iteration cap / tool timeout / autocompact threshold and `permissions.py`'s
-`auto_mode` and `dangerously_skip_permissions` defaults; nothing consumes `theme` yet.
+`auto_mode`, `dangerously_skip_permissions`, and `sandbox`/`sandbox_allow_network` defaults
+(mirrored into `permissions._sandbox` via `is_sandbox()`/`set_sandbox()`); nothing consumes
+`theme` yet.
 `show_thinking` (default `true`) is read once by `JarvisClient.__init__` into
 `self._show_thinking` (unused there); `agent.py._stream_turn` reads its own module-level
 `_settings.show_thinking` to gate whether reasoning deltas are rendered (7.2).
