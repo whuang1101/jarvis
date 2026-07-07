@@ -1592,7 +1592,7 @@ stays emacs-style and simply ignores the setting.
   `persist_setting("vi_mode", "true", path=tmp)` followed by `Settings.load(path=tmp).vi_mode`
   returns `True`. `/selftest` (pytest) green.
 
-- [ ] **27.2 Build the session from the setting (`jarvis/cli.py`).**
+- [x] **27.2 Build the session from the setting (`jarvis/cli.py`).**
   In `_get_prompt_session()`, pass `vi_mode=Settings.load().vi_mode` to the `PromptSession`
   constructor. Add a module-level `def _reset_prompt_session() -> None:` that sets the cached
   `global _prompt_session = None` so the next `_read_input` rebuilds with the current setting
