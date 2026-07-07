@@ -1457,7 +1457,7 @@ Parity gap: "PR creation with generated title/body" is ❌. Jarvis already has `
 command that gathers the branch's context and hands the agent a prompt to write a PR title
 and body and run `gh pr create`, mirroring the `_RUN_AGENT_PREFIX` pattern those commands use.
 
-- [ ] **25.1 PR-context helper (`jarvis/commands.py`).**
+- [x] **25.1 PR-context helper (`jarvis/commands.py`).**
   Add a module-level helper `def _pr_context() -> tuple[str | None, str | None]:` returning
   `(context, error)` — exactly one non-`None`. It runs, each via
   `subprocess.run(..., capture_output=True, text=True, timeout=30)` inside a `try/except`

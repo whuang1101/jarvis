@@ -359,6 +359,61 @@ class TestReviewCommand:
         assert "No changes found" in capsys.readouterr().out
 
 
+class TestPrContext:
+    def test_returns_context_with_branch_commits_and_diff(self, monkeypatch):
+        def fake_run(cmd, **kwargs):
+            if cmd == ["git", "rev-parse", "--abbrev-ref", "HEAD"]:
+                return _completed(stdout="feat/x\n")
+            if cmd == ["git", "log", "main..HEAD", "--pretty=format:%s"]:
+                return _completed(stdout="Add feature x")
+            if cmd == ["git", "diff", "main...HEAD"]:
+                return _completed(stdout="diff --git a/x.py b/x.py\n+print(1)\n")
+            raise AssertionError(f"unexpected command: {cmd}")
+
+        monkeypatch.setattr(commands_module.subprocess, "run", fake_run)
+
+        context, error = commands_module._pr_context()
+
+        assert error is None
+        assert "feat/x" in context
+        assert "Add feature x" in context
+        assert "diff --git a/x.py b/x.py" in context
+
+    def test_on_main_reports_error(self, monkeypatch):
+        def fake_run(cmd, **kwargs):
+            if cmd == ["git", "rev-parse", "--abbrev-ref", "HEAD"]:
+                return _completed(stdout="main\n")
+            if cmd == ["git", "log", "main..HEAD", "--pretty=format:%s"]:
+                return _completed(stdout="")
+            if cmd == ["git", "diff", "main...HEAD"]:
+                return _completed(stdout="")
+            raise AssertionError(f"unexpected command: {cmd}")
+
+        monkeypatch.setattr(commands_module.subprocess, "run", fake_run)
+
+        context, error = commands_module._pr_context()
+
+        assert context is None
+        assert "main" in error
+
+    def test_empty_diff_reports_error(self, monkeypatch):
+        def fake_run(cmd, **kwargs):
+            if cmd == ["git", "rev-parse", "--abbrev-ref", "HEAD"]:
+                return _completed(stdout="feat/x\n")
+            if cmd == ["git", "log", "main..HEAD", "--pretty=format:%s"]:
+                return _completed(stdout="")
+            if cmd == ["git", "diff", "main...HEAD"]:
+                return _completed(stdout="")
+            raise AssertionError(f"unexpected command: {cmd}")
+
+        monkeypatch.setattr(commands_module.subprocess, "run", fake_run)
+
+        context, error = commands_module._pr_context()
+
+        assert context is None
+        assert "No commits" in error
+
+
 class TestTodosCommand:
     def test_shows_current_todos(self, capsys):
         todos_module.set_todos([{"content": "step one", "status": "in_progress"}])

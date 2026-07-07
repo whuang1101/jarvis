@@ -323,7 +323,10 @@ system prompt and survives `clear()`/`compact()`. `/selftest` runs pytest **and*
 with `git add -A`, then hands `git diff --staged` to the agent to write the message and run `git
 commit` itself (so the commit goes through the normal tool permission gate). `/review [pr#]` fetches
 `git diff main` (or `gh pr diff <pr#>`) and hands it to the agent with a review prompt. Both return
-via `_RUN_AGENT_PREFIX`. Any other `/name` falls back to a
+via `_RUN_AGENT_PREFIX`. `_pr_context()` gathers the current branch, `git log main..HEAD` commit
+subjects, and `git diff main...HEAD` into a single context string (or an error if on `main` or the
+diff is empty) — groundwork for an upcoming `/pr` command, not yet wired into `handle_command()`.
+Any other `/name` falls back to a
 custom command lookup. Inline `@path` mentions work in any normal message too — not just
 `/file` — attaching that file's contents at that point in the prompt, so `@path` can be
 stacked mid-sentence with surrounding text; image `@mentions` still route to vision instead.
