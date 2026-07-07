@@ -1114,7 +1114,7 @@ list, add, and remove servers at runtime. Runtime-added servers are session-scop
 > offline with pytest by monkeypatching `MCPManager`'s spawn/run seams — we test the
 > reconnect plumbing, not a live MCP server (which would need `gh`/Azure/Brave auth).
 
-- [ ] **20.1 Record spawn params and add a `reconnect` seam (`jarvis/mcp_manager.py`).**
+- [x] **20.1 Record spawn params and add a `reconnect` seam (`jarvis/mcp_manager.py`).**
   In `MCPManager.__init__` add `self._server_params: dict[str, dict[str, Any]] = {}`.
   At the top of `connect(name, command, args, env)` — synchronously, before spawning the
   `_connect` coroutine — record `self._server_params[name] = {"command": command,

@@ -348,7 +348,9 @@ A daemon thread runs a persistent asyncio loop. `connect()` launches a server su
 timeout it raises `TimeoutError` (not a bare KeyError). Each tool becomes an `MCPTool(BaseTool)`
 registered into the global `_REGISTRY` by `cli._connect_mcp`. Servers connect **at startup only**
 (GitHub via `gh auth token` → `GITHUB_PERSONAL_ACCESS_TOKEN`; Azure if `az account show` succeeds;
-Brave if `BRAVE_API_KEY` set). If one crashes, restart Jarvis.
+Brave if `BRAVE_API_KEY` set). `connect()` also records spawn params in `self._server_params[name]`;
+`reconnect(name)` disconnects and re-`connect()`s a crashed server from those saved params,
+returning `False` if the server was never connected or the respawn raises.
 `list_servers()`/`disconnect(name)` give introspection and teardown; `set_active_manager`/
 `get_active_manager` expose the running `MCPManager` module-wide (set in `cli.py` at startup).
 `/mcp` (no arg or `list`) prints `list_servers()` as `name — tool_count tools`; `/mcp add <name>
