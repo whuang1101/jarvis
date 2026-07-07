@@ -61,10 +61,16 @@ def _find_jarvis_md() -> tuple[str, Path] | None:
         path = parent
     return None
 
+try:
+    from prompt_toolkit.completion import Completer, Completion
+    _PROMPT_TOOLKIT = True
+except ImportError:
+    _PROMPT_TOOLKIT = False
+
 from .agent import run_agent
 from . import checkpoints
 from .client import JarvisClient
-from .commands import handle_command, _EXIT_SENTINEL, _RUN_AGENT_PREFIX
+from .commands import all_command_names, handle_command, _EXIT_SENTINEL, _RUN_AGENT_PREFIX
 from .permissions import (
     is_auto_mode,
     is_dangerously_skip_permissions,
@@ -85,6 +91,19 @@ from .sessions import SessionStore, list_sessions
 from .settings import Settings
 from .status import render_status
 from .tools import register_tool
+
+
+if _PROMPT_TOOLKIT:
+    class SlashCommandCompleter(Completer):
+        """Completes `/foo` prefixes against `all_command_names()`."""
+
+        def get_completions(self, document, complete_event):
+            text = document.text_before_cursor
+            if not text.startswith("/") or " " in text:
+                return
+            for name in all_command_names():
+                if name.lower().startswith(text.lower()):
+                    yield Completion(name, start_position=-len(text))
 
 
 def _read_input(status_plain: str) -> str:

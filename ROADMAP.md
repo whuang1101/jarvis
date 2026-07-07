@@ -1525,7 +1525,7 @@ one-shot/piped/headless runs and environments without prompt_toolkit still work.
   asserts `handle_command("/help")` still returns `None` and its captured output mentions
   `/pr`. `/selftest` (pytest) green.
 
-- [ ] **26.2 Slash-command completer (`pyproject.toml`, `jarvis/cli.py`).**
+- [x] **26.2 Slash-command completer (`pyproject.toml`, `jarvis/cli.py`).**
   Add `"prompt_toolkit>=3.0"` to `[project].dependencies`. In `cli.py` add a
   `class SlashCommandCompleter(Completer)` (import `Completer`, `Completion` from
   `prompt_toolkit.completion`) whose `get_completions(self, document, complete_event)` reads
