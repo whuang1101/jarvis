@@ -1024,6 +1024,85 @@ list, add, and remove servers at runtime. Runtime-added servers are session-scop
 
 ---
 
+## Phase 19 — Vision input: read images as visual content
+
+> PARITY.md's topmost genuinely-missing feature: "Read images (vision input)". Jarvis
+> can read text/PDF/notebooks but silently has no path for image files — a `read_file`
+> on a `.png` would just try to decode bytes as text. This phase lets the agent *see*
+> an image the user points it at by attaching it to the model conversation as an
+> `image_url` content part (the OpenAI/Azure multimodal shape). The actual model call
+> needs a vision-capable Azure deployment, but every step here is verified offline with
+> pytest — we test the encoding/message construction, not a live completion.
+
+- [ ] **19.1 Image encoding helpers (`jarvis/images.py`).**
+  Add a new module `jarvis/images.py` with: a `frozenset` constant `_IMAGE_EXTENSIONS =
+  {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"}`; `is_image_path(path: str) -> bool`
+  that lower-cases `path` and returns whether it ends with any extension in the set;
+  `_mime_for(path: str) -> str` mapping the extension to a MIME type (`.jpg`/`.jpeg` →
+  `image/jpeg`, `.png` → `image/png`, `.gif` → `image/gif`, `.webp` → `image/webp`,
+  `.bmp` → `image/bmp`, default `application/octet-stream`); `encode_image_data_url(path:
+  str) -> str` that reads the file bytes, base64-encodes them, and returns
+  `f"data:{_mime_for(path)};base64,{b64}"`; `image_content_part(path: str) -> dict` that
+  returns `{"type": "image_url", "image_url": {"url": encode_image_data_url(path)}}`; and
+  `image_message(path: str) -> dict` returning a user message
+  `{"role": "user", "content": [{"type": "text", "text": f"Here is the image {path}:"},
+  image_content_part(path)]}`. Pure functions, no imports from other jarvis modules.
+  *Verify:* add `jarvis/tests/test_images.py`: `is_image_path("a/b/Photo.PNG")` and
+  `is_image_path("x.jpg")` are `True`, `is_image_path("notes.txt")` is `False`; write a
+  tiny temp `.png` (a few bytes) and assert `encode_image_data_url(tmp)` starts with
+  `"data:image/png;base64,"`; `image_content_part(tmp)["image_url"]["url"]` equals that
+  data URL; `image_message(tmp)` has `role == "user"`, its `content[0]["type"] == "text"`
+  and `content[1]["type"] == "image_url"`. `/selftest` (pytest) green.
+
+- [ ] **19.2 `vision` setting (default on).**
+  In `jarvis/settings.py` add a field `vision: bool = True` to the `Settings` dataclass
+  (alongside `show_thinking`); because `scalar_keys` is derived from `fields(cls)` it is
+  picked up by the `~/.jarvis/config.toml` + project `.jarvis.toml` overlay automatically —
+  no other settings-loading change needed. Document the `vision` key in JARVIS.md's
+  settings/config section (one line: "`vision` (bool, default true) — attach image files
+  read with `read_file` to the conversation as visual input; set false to disable").
+  *Verify:* add to `jarvis/tests/test_settings.py` (or a new `test_settings_vision`):
+  `Settings().vision is True`; write a temp global TOML containing `vision = false` and
+  assert `Settings.load(path=tmp).vision is False`. `/selftest` (pytest) green.
+
+- [ ] **19.3 `read_file` recognises image files.**
+  In `jarvis/tools/read_file.py`, after the sensitive-path guard and before the
+  `os.path.getsize` size check, add `from ..images import is_image_path` and a branch:
+  when `is_image_path(path)`, first confirm the file exists (`os.path.exists(path)`,
+  returning `f"Error: file not found: {path}"` if not), then read `jarvis.settings`'s
+  `vision` flag via `from ..settings import Settings; Settings.load().vision` — if vision
+  is off, return the plain string `f"Note: {path} is an image; vision is disabled (set
+  vision = true in config to view it)."`; if vision is on, return the plain marker string
+  `f"[Image {path} attached below as visual input.]"`. This keeps the tool contract
+  (returns a plain string); the actual attachment happens in 19.4. Update JARVIS.md's tool
+  table row for `read_file` to note it now recognises image files and attaches them as
+  visual input when `vision` is enabled.
+  *Verify:* add to `jarvis/tests/test_read_file.py`: writing a temp `photo.png` and calling
+  `ReadFileTool().execute({"path": tmp})` returns a string containing `"attached below"`
+  by default; monkeypatching so vision is off returns a string containing `"vision is
+  disabled"`; a `.png` path that does not exist returns `"Error: file not found"`.
+  `/selftest` (pytest) green.
+
+- [ ] **19.4 Agent attaches the image after the tool result.**
+  In `jarvis/agent.py`, import `from .images import is_image_path, image_message` at the
+  top. In the tool-result loop, immediately after the existing `context.append({"role":
+  "tool", "tool_call_id": tc["id"], "content": result})`, add: if `_settings.vision` and
+  `tool_name == "read_file"` and `is_image_path(str(args.get("path", "")))` and the result
+  does not start with `"Error"`, then `context.append(image_message(str(args["path"])))` so
+  the encoded image is sent to the model on the next turn. Flip PARITY.md's "Read images
+  (vision input)" row from ❌ to ✅ with a note (`read_file` image detection + `image_url`
+  attachment, gated by `vision` setting).
+  *Verify:* add `jarvis/tests/test_vision_agent.py` (or extend an agent test): a small test
+  that builds a `read_file` image scenario and asserts the appended message — construct the
+  message directly via `image_message("pic.png")` and assert it is a `user` message whose
+  second content part is an `image_url` (the wiring in `agent.py` calls exactly this
+  helper); plus a `grep`-style assertion is unnecessary — instead assert the branch guard
+  logic by checking `is_image_path("pic.png") is True` and `is_image_path("x.py") is
+  False`. `/selftest` (pytest) green; grep confirms `agent.py` references `image_message`
+  and the PARITY "Read images (vision input)" row is no longer ❌.
+
+---
+
 ## Standing orders (apply to every step)
 
 - **Registration invariants:** new tool → `tools/__init__.py` `_REGISTRY` + JARVIS.md
