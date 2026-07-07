@@ -457,6 +457,8 @@ tool_timeout_secs = 60
 theme = "monokai"
 show_thinking = true
 vi_mode = false
+notify = true
+notify_min_seconds = 30
 vision = true
 mcp_auto_reconnect = true
 sandbox = false
@@ -490,6 +492,9 @@ returns an `Error:` instead of falling back to unsandboxed execution. Toggle at 
 `self._show_thinking` (unused there); `agent.py._stream_turn` reads its own module-level
 `_settings.show_thinking` to gate whether reasoning deltas are rendered (7.2).
 `vi_mode` (bool, default false): use vi-style editing keybindings in the prompt_toolkit input bar.
+`notify` (bool, default true): show a desktop notification when an interactive agent turn
+finishes. `notify_min_seconds` (int, default 30): only notify for turns that ran at least this
+many seconds.
 `vision` (bool, default true) — attach image files read with `read_file` to the conversation as
 visual input; set false to disable.
 `mcp_auto_reconnect` (bool, default true) — gates whether `mcp_manager._call_tool` retries a

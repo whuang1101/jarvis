@@ -23,6 +23,8 @@ class TestSettingsLoad:
         assert settings.sandbox is False
         assert settings.sandbox_allow_network is False
         assert settings.vi_mode is False
+        assert settings.notify is True
+        assert settings.notify_min_seconds == 30
 
     def test_statusline_default_is_empty(self, tmp_path):
         settings = Settings.load(tmp_path / "does_not_exist.toml")
@@ -311,6 +313,11 @@ class TestPersistSetting:
         path = tmp_path / "config.toml"
         persist_setting("vi_mode", "true", path)
         assert Settings.load(path).vi_mode is True
+
+    def test_writes_notify_min_seconds(self, tmp_path):
+        path = tmp_path / "config.toml"
+        persist_setting("notify_min_seconds", "5", path)
+        assert Settings.load(path).notify_min_seconds == 5
 
     def test_preserves_other_keys(self, tmp_path):
         path = tmp_path / "config.toml"
