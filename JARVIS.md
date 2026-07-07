@@ -483,6 +483,18 @@ to the in-memory settings, and writes it into `[permissions] allow` in `~/.jarvi
 via `settings.persist_allow_pattern` — so the same command/tool family is auto-approved for
 the rest of this run and every run after.
 
+## Skills (auto-triggered markdown capabilities)
+
+Skills live in two directories — global `~/.jarvis/skills/` and project `./.jarvis/skills/`
+(project overrides global on name conflict) — as either a flat `<name>.md` file or a
+`<name>/SKILL.md` file, each with an optional leading `---`-fenced frontmatter block carrying
+`name:`/`description:` keys (`jarvis/skills.py:discover_skills`/`_parse`; name falls back to the
+file/dir stem if omitted). `ContextManager.system_message` injects a `## Skills` catalog into the
+system prompt — one `- <name>: <description>` line per discovered skill plus an instruction to
+load one — omitted entirely when none are found. The model loads a skill's full body on demand via
+the `skill` tool (`jarvis/tools/skill.py`, wraps `skills.load_skill`), and a human can list them
+with the `/skills` command.
+
 ## Common commands
 
 ```bash
