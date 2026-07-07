@@ -64,6 +64,24 @@ def test_build_sandbox_argv_unavailable() -> None:
     assert argv == []
 
 
+def test_execute_denies_when_sandbox_enabled_and_bwrap_missing() -> None:
+    with patch("jarvis.permissions.is_sandbox", return_value=True), \
+            patch("jarvis.tools.run_command.shutil.which", return_value=None):
+        result = RunCommandTool().execute({"command": "echo hi"})
+
+    assert result == (
+        "Error: sandbox is enabled but 'bwrap' was not found on PATH; "
+        "install bubblewrap or run /sandbox off"
+    )
+
+
+def test_execute_unaffected_when_sandbox_disabled() -> None:
+    with patch("jarvis.permissions.is_sandbox", return_value=False):
+        result = RunCommandTool().execute({"command": "echo sandbox_off_marker"})
+
+    assert "sandbox_off_marker" in result
+
+
 def test_cd_still_works() -> None:
     original = os.getcwd()
     try:

@@ -11,6 +11,7 @@ from typing import Any
 
 from .base import BaseTool
 from ..formatter import print_streamed_line
+from ..settings import Settings
 from ..tasks import start_background_task
 
 _TIMEOUT = 120
@@ -78,16 +79,35 @@ class RunCommandTool(BaseTool):
             except Exception as e:
                 return f"Error: {e}"
 
+        from ..permissions import is_sandbox
+
         try:
-            proc = subprocess.Popen(
-                command,
-                shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                bufsize=1,
-                cwd=os.getcwd(),
-            )
+            if is_sandbox():
+                argv = _build_sandbox_argv(command, os.getcwd(), Settings.load().sandbox_allow_network)
+                if not argv:
+                    return (
+                        "Error: sandbox is enabled but 'bwrap' was not found on PATH; "
+                        "install bubblewrap or run /sandbox off"
+                    )
+                proc = subprocess.Popen(
+                    argv,
+                    shell=False,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    bufsize=1,
+                    cwd=os.getcwd(),
+                )
+            else:
+                proc = subprocess.Popen(
+                    command,
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    bufsize=1,
+                    cwd=os.getcwd(),
+                )
 
             stdout_lines: list[str] = []
             stderr_lines: list[str] = []
