@@ -6,6 +6,7 @@ import subprocess
 from dataclasses import fields
 from pathlib import Path
 
+from . import todos
 from .client import JarvisClient
 from .context import ContextManager, UsageTracker, is_plan_mode, set_plan_mode
 from .formatter import (
@@ -14,6 +15,7 @@ from .formatter import (
     print_command_output,
     print_error,
     print_system,
+    print_todo_list,
     set_code_theme,
 )
 from .permissions import (
@@ -57,6 +59,7 @@ _HELP_TEXT = """
   [cyan]/sessions[/cyan]      List the last 10 saved sessions (date, cwd, first message)
   [cyan]/resume <n>[/cyan]    Load a session from /sessions into this conversation
   [cyan]/memory[/cyan]        Manage persistent memory (`~/.jarvis/memory.md`)
+  [cyan]/todos[/cyan]         Show the maintained todo list (`/todos clear` to clear it)
   [cyan]#text[/cyan]          Shortcut: append `text` to memory without sending it to the agent
   [cyan]/init[/cyan]          Create a JARVIS.md project context file here
   [cyan]/selftest[/cyan]      Run Jarvis's own test suite (pytest) and type-check it (mypy)
@@ -216,6 +219,7 @@ def handle_command(
                 "/sessions",
                 "/resume",
                 "/memory",
+                "/todos",
                 "/init",
                 "/selftest",
                 "/commit",
@@ -670,6 +674,14 @@ def handle_command(
             "Point out bugs, correctness issues, and risky changes. Be concise."
         )
         return f"{_RUN_AGENT_PREFIX}{message}"
+
+    if cmd == "/todos":
+        if arg.strip().lower() == "clear":
+            todos.clear_todos()
+            print_system("Todo list cleared.")
+            return None
+        print_todo_list(todos.get_todos())
+        return None
 
     custom_template = _load_custom_command(cmd[1:])
     if custom_template is not None:

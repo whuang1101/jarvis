@@ -786,7 +786,7 @@ module-level-store pattern.
   `TodoWriteTool().execute({"todos": [...]})`, `todos.get_todos()` reflects the
   written list. `/selftest` (pytest) green.
 
-- [ ] **16.2 `/todos` command to view and clear the maintained list.**
+- [x] **16.2 `/todos` command to view and clear the maintained list.**
   In `jarvis/commands.py` `handle_command`, add `if cmd == "/todos":` — when
   `arg.strip().lower() == "clear"`, call `todos.clear_todos()` then
   `print_system("Todo list cleared.")` and `return None`; otherwise call

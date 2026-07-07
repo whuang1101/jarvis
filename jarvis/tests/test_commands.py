@@ -5,6 +5,7 @@ from pathlib import Path
 import jarvis.commands as commands_module
 import jarvis.sessions as sessions_module
 import jarvis.settings as settings_module
+import jarvis.todos as todos_module
 from jarvis.commands import append_memory, handle_command
 from jarvis.context import ContextManager
 from jarvis.sessions import SessionStore
@@ -315,3 +316,21 @@ class TestReviewCommand:
 
         assert result is None
         assert "No changes found" in capsys.readouterr().out
+
+
+class TestTodosCommand:
+    def test_shows_current_todos(self, capsys):
+        todos_module.set_todos([{"content": "step one", "status": "in_progress"}])
+
+        result = handle_command("/todos", None, None, None)
+
+        assert result is None
+        assert "step one" in capsys.readouterr().out
+
+    def test_clear_empties_the_list(self):
+        todos_module.set_todos([{"content": "step one", "status": "in_progress"}])
+
+        result = handle_command("/todos clear", None, None, None)
+
+        assert result is None
+        assert todos_module.get_todos() == []

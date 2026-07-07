@@ -281,8 +281,9 @@ or `_RUN_AGENT_PREFIX` (`__RUN__:`) + message (the REPL strips the prefix and ru
 case-insensitive; the argument keeps original case.
 
 Implemented commands: `/help /history /retry /undo /clear /compact /usage /model /theme /diff /pin
-/config /file /run /plan /go /cancel /restart /auto /fix /copy /save /sessions /resume /memory /init
-/selftest /commit /review /exit /quit`. Every one is listed in `_HELP_TEXT` — keep that invariant.
+/config /file /run /plan /go /cancel /restart /auto /fix /copy /save /sessions /resume /memory /todos
+/init /selftest /commit /review /exit /quit`. Every one is listed in `_HELP_TEXT` — keep that invariant.
+`/todos` prints the maintained todo list via `formatter.print_todo_list`; `/todos clear` clears it.
 `/theme` sets the Rich code-block Pygments style (persisted via `persist_setting`); `/diff` shows
 `git diff HEAD`; `/pin <text>` adds a note into `ContextManager._pinned`, which is rendered into the
 system prompt and survives `clear()`/`compact()`. `/selftest` runs pytest **and** mypy. `/commit` stages
