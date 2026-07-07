@@ -1582,7 +1582,7 @@ is a wiring job: `PromptSession` accepts `vi_mode=True` and exposes the resultin
 toggle command. The readline/`input()` fallback path (no prompt_toolkit or piped stdin)
 stays emacs-style and simply ignores the setting.
 
-- [ ] **27.1 `vi_mode` setting (`jarvis/settings.py`, `JARVIS.md`).**
+- [x] **27.1 `vi_mode` setting (`jarvis/settings.py`, `JARVIS.md`).**
   Add `vi_mode: bool = False` to the `Settings` dataclass (with the other scalar bools like
   `show_thinking`), so it participates in `load()`, `load_with_sources()`, and
   `persist_setting()` automatically. Document the key in JARVIS.md's settings list as
