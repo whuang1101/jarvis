@@ -1557,7 +1557,7 @@ one-shot/piped/headless runs and environments without prompt_toolkit still work.
   (fallback path intact); the interactive TTY dropdown is exercised manually (note in the PR).
   `/selftest` (pytest) green.
 
-- [ ] **26.4 Docs + parity flip (`JARVIS.md`, `PARITY.md`).**
+- [x] **26.4 Docs + parity flip (`JARVIS.md`, `PARITY.md`).**
   In JARVIS.md's interactive-UX/input section, document that the input bar uses
   `prompt_toolkit` when stdin is a TTY: typing `/` shows a live completion menu of slash
   commands (builtin + custom) sourced from `commands.all_command_names()`, with a graceful
