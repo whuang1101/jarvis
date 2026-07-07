@@ -20,6 +20,8 @@ class TestSettingsLoad:
         assert settings.autocompact_tokens == 25_000
         assert settings.tool_timeout_secs == 60
         assert settings.show_thinking is True
+        assert settings.sandbox is False
+        assert settings.sandbox_allow_network is False
 
     def test_full_file_overrides_all_defaults(self, tmp_path):
         path = tmp_path / "config.toml"
@@ -100,6 +102,14 @@ class TestProjectConfigOverlay:
 
         settings = Settings.load(tmp_path / "no-global.toml", cwd=nested)
         assert settings.auto_mode is True
+
+    def test_project_config_loads_sandbox_flag(self, tmp_path):
+        (tmp_path / ".jarvis.toml").write_text("sandbox = true\n")
+        nested = tmp_path / "a" / "b" / "c"
+        nested.mkdir(parents=True)
+
+        settings = Settings.load(tmp_path / "no-global.toml", cwd=nested)
+        assert settings.sandbox is True
 
     def test_no_project_config_falls_back_to_global_only(self, tmp_path):
         global_path = tmp_path / "global.toml"

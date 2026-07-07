@@ -7,9 +7,11 @@ from jarvis.permissions import (
     _DiffError,
     _edit_diff,
     _suggest_pattern,
+    is_sandbox,
     needs_permission,
     request_permission,
     set_dangerously_skip_permissions,
+    set_sandbox,
 )
 from jarvis.settings import Settings
 
@@ -85,6 +87,14 @@ def test_dangerously_skip_permissions_bypasses_all_permission_checks():
         assert not needs_permission("run_command", {"command": "ls"}, settings=settings)
     finally:
         set_dangerously_skip_permissions(False)
+
+
+def test_set_sandbox_toggles_is_sandbox():
+    set_sandbox(True)
+    try:
+        assert is_sandbox() is True
+    finally:
+        set_sandbox(False)
 
 
 class TestAllowDenyRules:

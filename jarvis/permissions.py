@@ -30,6 +30,7 @@ _DESTRUCTIVE_RE = re.compile(
 _settings: Settings = Settings.load()
 _auto_mode: bool = _settings.auto_mode
 _dangerously_skip_permissions: bool = _settings.dangerously_skip_permissions
+_sandbox: bool = _settings.sandbox
 
 
 def is_auto_mode() -> bool:
@@ -48,6 +49,15 @@ def is_dangerously_skip_permissions() -> bool:
 def set_dangerously_skip_permissions(enabled: bool) -> None:
     global _dangerously_skip_permissions
     _dangerously_skip_permissions = enabled
+
+
+def is_sandbox() -> bool:
+    return _sandbox
+
+
+def set_sandbox(enabled: bool) -> None:
+    global _sandbox
+    _sandbox = enabled
 
 
 def _invocation_string(tool_name: str, args: dict[str, Any]) -> str:

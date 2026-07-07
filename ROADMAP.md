@@ -1242,7 +1242,7 @@ read-only view of the root filesystem, a writable bind of the project directory,
 in `bwrap` when enabled, deny-by-default if `bwrap` is unavailable, toggleable per session
 via `/sandbox`. No change to command semantics when the sandbox is off (default).
 
-- [ ] **22.1 Sandbox setting + runtime toggle state.**
+- [x] **22.1 Sandbox setting + runtime toggle state.**
   In `jarvis/settings.py` `Settings`: add two scalar fields — `sandbox: bool = False` and
   `sandbox_allow_network: bool = False` (they load automatically as scalar keys; no
   `_TABLE_KEYS` change). In `jarvis/permissions.py`, mirror the `auto_mode` pattern: add a
