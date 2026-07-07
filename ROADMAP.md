@@ -1353,7 +1353,7 @@ No behavior change when no skills are present.
   returns the `no skill named` `Error:` string; a registry test confirms a tool named
   `skill` is present. `/selftest` green.
 
-- [ ] **23.4 `/skills` slash command (`jarvis/commands.py`).**
+- [x] **23.4 `/skills` slash command (`jarvis/commands.py`).**
   In `handle_command()`, add a `/skills` branch: call `skills.discover_skills()` and print,
   via a `formatter.py` helper (`print_system` is fine), one `<name> — <description>` line per
   skill, or a "No skills found" message when empty; the branch must `return`. Add the

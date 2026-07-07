@@ -301,7 +301,7 @@ case-insensitive; the argument keeps original case.
 
 Implemented commands: `/help /history /retry /undo /clear /compact /usage /model /theme /diff /pin
 /config /file /run /plan /go /cancel /restart /auto /sandbox /fix /copy /save /sessions /resume /rewind /mcp
-/memory /todos /init /selftest /commit /review /exit /quit`. Every one is listed in `_HELP_TEXT` — keep
+/memory /todos /skills /init /selftest /commit /review /exit /quit`. Every one is listed in `_HELP_TEXT` — keep
 that invariant. `/sandbox [on|off|status]` shows or toggles `permissions.is_sandbox()`/`set_sandbox()`
 (no arg or `status` just prints current state).
 `/todos` prints the maintained todo list via `formatter.print_todo_list`; `/todos clear` clears it.

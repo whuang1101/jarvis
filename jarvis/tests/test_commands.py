@@ -437,3 +437,33 @@ class TestMcpCommand:
             assert "Removed srv" in capsys.readouterr().out
         finally:
             mcp_manager.set_active_manager(None)
+
+
+class TestSkillsCommand:
+    def test_lists_discovered_skill_name_and_description(self, tmp_path, monkeypatch, capsys):
+        home = tmp_path / "home"
+        global_dir = home / ".jarvis" / "skills"
+        global_dir.mkdir(parents=True)
+        monkeypatch.setattr(Path, "home", lambda: home)
+        monkeypatch.chdir(tmp_path)
+        (global_dir / "hello.md").write_text(
+            "---\nname: hello\ndescription: says hello\n---\nHello body.\n"
+        )
+
+        result = handle_command("/skills", None, None, None)
+
+        assert result is None
+        out = capsys.readouterr().out
+        assert "hello" in out
+        assert "says hello" in out
+
+    def test_no_skills_reports_message(self, tmp_path, monkeypatch, capsys):
+        home = tmp_path / "home"
+        home.mkdir()
+        monkeypatch.setattr(Path, "home", lambda: home)
+        monkeypatch.chdir(tmp_path)
+
+        result = handle_command("/skills", None, None, None)
+
+        assert result is None
+        assert "No skills found" in capsys.readouterr().out
