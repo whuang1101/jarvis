@@ -31,6 +31,7 @@ class MCPManager:
         self._thread = threading.Thread(target=self._loop.run_forever, daemon=True)
         self._thread.start()
         self._servers: dict[str, dict[str, Any]] = {}
+        self._server_params: dict[str, dict[str, Any]] = {}
 
     def list_servers(self) -> list[dict[str, Any]]:
         return sorted(
@@ -59,6 +60,7 @@ class MCPManager:
         return future.result(timeout=timeout)
 
     def connect(self, name: str, command: str, args: list[str], env: dict[str, str]) -> list[MCPTool]:
+        self._server_params[name] = {"command": command, "args": list(args), "env": dict(env)}
         ready = threading.Event()
         errors: list[Exception] = []
 
@@ -137,6 +139,16 @@ class MCPManager:
             return "\n".join(parts)
 
         return self._run(_call(), timeout=60)
+
+    def reconnect(self, name: str) -> bool:
+        if name not in self._server_params:
+            return False
+        self.disconnect(name)
+        try:
+            self.connect(name, **self._server_params[name])
+        except Exception:
+            return False
+        return True
 
 
 _ACTIVE_MANAGER: MCPManager | None = None
