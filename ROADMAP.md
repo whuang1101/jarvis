@@ -1669,7 +1669,7 @@ interactive turn so only turns that both finish normally and ran at least the th
   asserts a `"\a"` was written and no exception raised; a third asserts a raising
   `subprocess.run` is swallowed. `/selftest` (pytest) green.
 
-- [ ] **28.3 Notify around the interactive turn (`jarvis/cli.py`).**
+- [x] **28.3 Notify around the interactive turn (`jarvis/cli.py`).**
   Import `time` and `send_notification`. Wrap the two interactive `run_agent(...)` call sites in
   the main loop — the `/`-command-triggered agent run and the plain-prompt run — so each records
   `start = time.monotonic()` before the call and, only on normal completion (not in the

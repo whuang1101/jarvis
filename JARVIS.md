@@ -497,7 +497,9 @@ returns an `Error:` instead of falling back to unsandboxed execution. Toggle at 
 `vi_mode` (bool, default false): use vi-style editing keybindings in the prompt_toolkit input bar.
 `notify` (bool, default true): show a desktop notification when an interactive agent turn
 finishes. `notify_min_seconds` (int, default 30): only notify for turns that ran at least this
-many seconds.
+many seconds. `cli.py._notify_turn_done(start)` applies this gate around the two interactive
+`run_agent` call sites (slash-command-triggered and plain-prompt); the startup resume-path
+`run_agent` call is not timed.
 `vision` (bool, default true) — attach image files read with `read_file` to the conversation as
 visual input; set false to disable.
 `mcp_auto_reconnect` (bool, default true) — gates whether `mcp_manager._call_tool` retries a

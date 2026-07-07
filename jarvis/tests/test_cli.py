@@ -502,6 +502,47 @@ class TestSlashCommandCompleter:
         assert completions == []
 
 
+class TestNotifyTurnDone:
+    def test_fires_when_enabled_and_over_threshold(self, monkeypatch):
+        calls = []
+        monkeypatch.setattr(cli, "send_notification", lambda title, message: calls.append((title, message)))
+        monkeypatch.setattr(cli.Settings, "load", staticmethod(lambda: Settings(notify=True, notify_min_seconds=1)))
+
+        times = iter([0.0, 2.0])
+        monkeypatch.setattr(cli.time, "monotonic", lambda: next(times))
+
+        start = cli.time.monotonic()
+        cli._notify_turn_done(start)
+
+        assert calls == [("Jarvis", "Turn finished in 2s")]
+
+    def test_silent_when_under_threshold(self, monkeypatch):
+        calls = []
+        monkeypatch.setattr(cli, "send_notification", lambda title, message: calls.append((title, message)))
+        monkeypatch.setattr(cli.Settings, "load", staticmethod(lambda: Settings(notify=True, notify_min_seconds=5)))
+
+        times = iter([0.0, 2.0])
+        monkeypatch.setattr(cli.time, "monotonic", lambda: next(times))
+
+        start = cli.time.monotonic()
+        cli._notify_turn_done(start)
+
+        assert calls == []
+
+    def test_silent_when_disabled(self, monkeypatch):
+        calls = []
+        monkeypatch.setattr(cli, "send_notification", lambda title, message: calls.append((title, message)))
+        monkeypatch.setattr(cli.Settings, "load", staticmethod(lambda: Settings(notify=False, notify_min_seconds=1)))
+
+        times = iter([0.0, 2.0])
+        monkeypatch.setattr(cli.time, "monotonic", lambda: next(times))
+
+        start = cli.time.monotonic()
+        cli._notify_turn_done(start)
+
+        assert calls == []
+
+
 @pytest.mark.skipif(not cli._PROMPT_TOOLKIT, reason="prompt_toolkit not installed")
 class TestPromptSessionViMode:
     def test_vi_mode_enabled_from_settings(self, monkeypatch):
