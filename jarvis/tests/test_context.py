@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from jarvis import todos
-from jarvis.context import ContextManager, _lookup_price, _PRICING, build_multimodal_content, expand_file_mentions
+from jarvis.context import ContextManager, UsageTracker, _lookup_price, _PRICING, build_multimodal_content, expand_file_mentions
 
 
 class TestLookupPrice:
@@ -17,6 +17,22 @@ class TestLookupPrice:
 
     def test_case_insensitive(self):
         assert _lookup_price("GPT-4O-MINI") == _PRICING["gpt-4o-mini"]
+
+
+class TestUsageTracker:
+    def test_record_with_cached_tokens_discounts_cost(self):
+        tracker = UsageTracker()
+        tracker.record(1000, 200, "gpt-4o", cached=800)
+        inp, out = _PRICING["gpt-4o"]
+        assert tracker.cached_tokens == 800
+        assert tracker.prompt_tokens == 1000
+        assert tracker.cost_usd == ((200 * inp) + (800 * inp * 0.5) + 200 * out) / 1_000_000
+
+    def test_record_without_cached_leaves_cached_tokens_unchanged(self):
+        tracker = UsageTracker()
+        tracker.record(1000, 200, "gpt-4o", cached=800)
+        tracker.record(500, 100, "gpt-4o")
+        assert tracker.cached_tokens == 800
 
 
 class TestLoadHistory:

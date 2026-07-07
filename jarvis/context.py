@@ -92,18 +92,22 @@ class UsageTracker:
     def __init__(self) -> None:
         self.prompt_tokens: int = 0
         self.completion_tokens: int = 0
+        self.cached_tokens: int = 0
         self.cost_usd: float = 0.0
 
     @property
     def total_tokens(self) -> int:
         return self.prompt_tokens + self.completion_tokens
 
-    def record(self, prompt: int, completion: int, deployment: str = "") -> None:
+    def record(self, prompt: int, completion: int, deployment: str = "", cached: int = 0) -> None:
         self.prompt_tokens += prompt
         self.completion_tokens += completion
+        self.cached_tokens += cached
         if deployment:
             inp, out = _lookup_price(deployment)
-            self.cost_usd += (prompt * inp + completion * out) / 1_000_000
+            self.cost_usd += (
+                (prompt - cached) * inp + cached * inp * 0.5 + completion * out
+            ) / 1_000_000
 
 
 _SYSTEM_PROMPT = (
