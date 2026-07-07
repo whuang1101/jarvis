@@ -1153,7 +1153,7 @@ list, add, and remove servers at runtime. Runtime-added servers are session-scop
   assert `_call_tool` returns an `"Error:"` string without calling `reconnect`.
   `/selftest` (pytest) green.
 
-- [ ] **20.3 Docs + parity flip.**
+- [x] **20.3 Docs + parity flip.**
   In `JARVIS.md`, add `mcp_auto_reconnect` to the runtime-settings section (one line:
   "`mcp_auto_reconnect` (bool, default true) — if an MCP tool call fails because its
   stdio server died, transparently respawn the server and retry the call once") and add
