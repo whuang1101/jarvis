@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import subprocess
+
 from jarvis import checkpoints
 
 
@@ -81,3 +83,31 @@ def test_summary_nonempty() -> None:
     checkpoints.create([{"role": "user", "content": "a"}])
     checkpoints.create([{"role": "user", "content": "b"}])
     assert checkpoints.summary() == "2 checkpoints"
+
+
+def test_snapshot_and_restore_files_round_trip(tmp_path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init"], cwd=repo, capture_output=True, text=True, check=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, capture_output=True, text=True, check=True)
+    subprocess.run(["git", "config", "user.name", "Test"], cwd=repo, capture_output=True, text=True, check=True)
+    tracked = repo / "tracked.txt"
+    tracked.write_text("original\n")
+    subprocess.run(["git", "add", "tracked.txt"], cwd=repo, capture_output=True, text=True, check=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=repo, capture_output=True, text=True, check=True)
+
+    tracked.write_text("modified\n")
+    sha = checkpoints.snapshot_files(cwd=str(repo))
+    assert sha is not None
+    assert len(sha) == 40
+
+    subprocess.run(["git", "checkout", "--", "tracked.txt"], cwd=repo, capture_output=True, text=True, check=True)
+    assert tracked.read_text() == "original\n"
+
+    result = checkpoints.restore_files(sha, cwd=str(repo))
+    assert result == "Files restored from checkpoint."
+    assert tracked.read_text() == "modified\n"
+
+
+def test_snapshot_files_returns_none_outside_git_repo(tmp_path) -> None:
+    assert checkpoints.snapshot_files(cwd=str(tmp_path)) is None

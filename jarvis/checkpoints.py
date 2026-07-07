@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 from datetime import datetime
 from typing import Any
 
@@ -48,3 +49,30 @@ def summary() -> str:
     if not _CHECKPOINTS:
         return ""
     return f"{len(_CHECKPOINTS)} checkpoints"
+
+
+def snapshot_files(cwd: str | None = None) -> str | None:
+    # git stash create only captures tracked-file modifications; untracked files are ignored.
+    try:
+        result = subprocess.run(
+            ["git", "stash", "create"],
+            capture_output=True,
+            text=True,
+            cwd=cwd,
+        )
+    except Exception:
+        return None
+    sha = result.stdout.strip()
+    return sha or None
+
+
+def restore_files(sha: str, cwd: str | None = None) -> str:
+    result = subprocess.run(
+        ["git", "stash", "apply", sha],
+        capture_output=True,
+        text=True,
+        cwd=cwd,
+    )
+    if result.returncode == 0:
+        return "Files restored from checkpoint."
+    return f"Error: could not restore files: {result.stderr.strip()}"
