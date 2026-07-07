@@ -1301,6 +1301,80 @@ via `/sandbox`. No change to command semantics when the sandbox is off (default)
 
 ---
 
+## Phase 23 — Skills (auto-triggered markdown capabilities)
+
+Jarvis already loads user-authored slash commands from markdown (Phase 4.1), but those
+only fire when the user types `/name`. Claude Code's *skills* go further: a folder of
+markdown capabilities, each with a short `description`, whose names + descriptions are
+surfaced to the model so it can decide on its own when a capability is relevant and pull
+in the full instructions. The token-efficient shape is: the system prompt carries only a
+cheap catalog (name + one-line description per skill), and the model loads a skill's full
+body on demand through a `skill` tool. This phase adds skill discovery from
+`~/.jarvis/skills/` (global) and `<project>/.jarvis/skills/` (project, shadowing global by
+name), a prompt catalog, the on-demand `skill` tool, and a `/skills` command to list them.
+No behavior change when no skills are present.
+
+- [ ] **23.1 Skill discovery + frontmatter parsing (`jarvis/skills.py`).**
+  New module `jarvis/skills.py`. A skill lives at either `<dir>/<name>.md` or
+  `<dir>/<name>/SKILL.md`, under `~/.jarvis/skills/` (global) and `Path.cwd()/.jarvis/skills/`
+  (project). Define a frozen `Skill` dataclass (`name: str`, `description: str`, `body: str`,
+  `path: Path`). Add a private `_parse(path)` that reads the file, strips a leading
+  `---`-fenced YAML-ish frontmatter block, pulls `name:` and `description:` via simple
+  `key: value` line splitting (fall back to the file/dir stem for `name`, `""` for
+  `description`), and treats the text after the frontmatter as `body`. Expose
+  `discover_skills() -> list[Skill]` (project entries override global ones with the same
+  `name`, returned sorted by name) and `load_skill(name) -> Skill | None`.
+  *Verify:* a test writes a temp global dir + project dir (monkeypatching `Path.home` and
+  `cwd`), and asserts `discover_skills()` parses `name`/`description`/`body`, that a project
+  skill shadows a same-named global one, and that `load_skill("missing")` returns `None`.
+  `/selftest` green.
+
+- [ ] **23.2 Inject the skills catalog into the system prompt (`jarvis/context.py`).**
+  In `ContextManager.system_message`, after the project-context block, import
+  `discover_skills` from `.skills` and, when it returns a non-empty list, append a
+  `## Skills` section: one `- <name>: <description>` line per skill, followed by a single
+  instruction line telling the model to call the `skill` tool with a skill's `name` to load
+  its full instructions before acting on it. Append nothing when there are no skills (prompt
+  byte-identical to today).
+  *Verify:* a test monkeypatches `context.discover_skills` to return one fake `Skill` and
+  asserts the rendered `system_message["content"]` contains the skill name, its description,
+  and the word `skill` (the tool-name instruction); a second test with `discover_skills`
+  returning `[]` asserts no `## Skills` header appears. `/selftest` green.
+
+- [ ] **23.3 On-demand `skill` tool (`jarvis/tools/skill.py` + registry).**
+  New `SkillTool(BaseTool)` with `name = "skill"`, a description explaining it loads a named
+  skill's full instructions, and a `parameters` schema with one required string `name`.
+  `execute` calls `load_skill(args["name"])` and returns the skill `body`, or
+  `"Error: no skill named '<name>'"` when it is missing. Register it in
+  `jarvis/tools/__init__.py` (`import` + `_REGISTRY` entry) and add a row to the tool table
+  in `JARVIS.md`.
+  *Verify:* a test monkeypatches `load_skill` to return a fake `Skill` and asserts
+  `SkillTool().execute({"name": "x"})` returns its body; with `load_skill` → `None` it
+  returns the `no skill named` `Error:` string; a registry test confirms a tool named
+  `skill` is present. `/selftest` green.
+
+- [ ] **23.4 `/skills` slash command (`jarvis/commands.py`).**
+  In `handle_command()`, add a `/skills` branch: call `skills.discover_skills()` and print,
+  via a `formatter.py` helper (`print_system` is fine), one `<name> — <description>` line per
+  skill, or a "No skills found" message when empty; the branch must `return`. Add the
+  `/skills` line to `_HELP_TEXT`, and add `/skills` to the command list in `JARVIS.md`.
+  *Verify:* a `commands.py` test writes a temp skill and asserts `handle_command("/skills")`
+  returns without raising and its captured output mentions the skill name; `grep` confirms
+  `_HELP_TEXT` and `JARVIS.md` mention `/skills`. `/selftest` green.
+
+- [ ] **23.5 Docs + parity flip.**
+  In `JARVIS.md`, document skills in the extensibility/config section: the two skill
+  directories, the `<name>.md` / `<name>/SKILL.md` layout with `name` + `description`
+  frontmatter, how the catalog is injected into the system prompt, the `skill` tool for
+  on-demand loading, and the `/skills` command. In `PARITY.md`, flip the "Skills (folder of
+  markdown capabilities, auto-triggered)" row from ❌ to 🟡 with the note "name+description
+  catalog injected into the system prompt from `~/.jarvis/skills/` + project `.jarvis/skills/`;
+  model loads full body on demand via the `skill` tool; `/skills` lists them".
+  *Verify:* `grep` confirms `JARVIS.md` mentions `skill`/`/skills` and the PARITY "Skills"
+  row is no longer ❌. `/selftest` (pytest) green.
+
+---
+
 ## Standing orders (apply to every step)
 
 - **Registration invariants:** new tool → `tools/__init__.py` `_REGISTRY` + JARVIS.md
