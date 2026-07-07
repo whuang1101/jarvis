@@ -564,3 +564,26 @@ class TestPromptSessionViMode:
         session = cli._get_prompt_session()
 
         assert session.editing_mode == EditingMode.EMACS
+
+
+@pytest.mark.skipif(not cli._PROMPT_TOOLKIT, reason="prompt_toolkit not installed")
+class TestContinuationSession:
+    def test_returns_same_object_on_repeat_calls(self, monkeypatch):
+        monkeypatch.setattr(cli.Settings, "load", staticmethod(lambda: Settings(vi_mode=False)))
+        cli._reset_prompt_session()
+
+        first = cli._get_continuation_session()
+        second = cli._get_continuation_session()
+
+        assert first is second
+        assert first.completer is None
+
+    def test_reset_prompt_session_rebuilds_continuation_session(self, monkeypatch):
+        monkeypatch.setattr(cli.Settings, "load", staticmethod(lambda: Settings(vi_mode=False)))
+        cli._reset_prompt_session()
+
+        first = cli._get_continuation_session()
+        cli._reset_prompt_session()
+        second = cli._get_continuation_session()
+
+        assert first is not second

@@ -132,11 +132,29 @@ def _get_prompt_session() -> "PromptSession":
     return _prompt_session
 
 
+_continuation_session: "PromptSession | None" = None
+
+
+def _get_continuation_session() -> "PromptSession":
+    """Session for `... ` continuation lines: no completer, so typing never
+    pops the slash-command dropdown mid-continuation."""
+    global _continuation_session
+    if _continuation_session is None:
+        _continuation_session = PromptSession(
+            history=InMemoryHistory(),
+            completer=None,
+            complete_while_typing=False,
+            vi_mode=Settings.load().vi_mode,
+        )
+    return _continuation_session
+
+
 def _reset_prompt_session() -> None:
-    """Drop the cached session so the next `_read_input` rebuilds it with the
+    """Drop the cached sessions so the next read rebuilds them with the
     current `vi_mode` setting (needed for `/vim` to take effect without a restart)."""
-    global _prompt_session
+    global _prompt_session, _continuation_session
     _prompt_session = None
+    _continuation_session = None
 
 
 def _read_input(status_plain: str) -> str:
