@@ -1177,7 +1177,7 @@ cache effectiveness. This phase threads that field through the usage tracker, th
 paths, and the displays — no request-shape changes, since the prompt prefix is already
 stable across turns.
 
-- [ ] **21.1 UsageTracker records cached tokens and discounts their cost.**
+- [x] **21.1 UsageTracker records cached tokens and discounts their cost.**
   In `jarvis/context.py` `UsageTracker`: add `self.cached_tokens: int = 0` in `__init__`,
   and change `record(self, prompt, completion, deployment="")` to
   `record(self, prompt, completion, deployment="", cached=0)`. In the body,
