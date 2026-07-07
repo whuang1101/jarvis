@@ -62,7 +62,9 @@ def _find_jarvis_md() -> tuple[str, Path] | None:
     return None
 
 try:
+    from prompt_toolkit import PromptSession
     from prompt_toolkit.completion import Completer, Completion
+    from prompt_toolkit.history import InMemoryHistory
     _PROMPT_TOOLKIT = True
 except ImportError:
     _PROMPT_TOOLKIT = False
@@ -106,6 +108,20 @@ if _PROMPT_TOOLKIT:
                     yield Completion(name, start_position=-len(text))
 
 
+_prompt_session: "PromptSession | None" = None
+
+
+def _get_prompt_session() -> "PromptSession":
+    global _prompt_session
+    if _prompt_session is None:
+        _prompt_session = PromptSession(
+            history=InMemoryHistory(),
+            completer=SlashCommandCompleter(),
+            complete_while_typing=True,
+        )
+    return _prompt_session
+
+
 def _read_input(status_plain: str) -> str:
     """Claude-Code-style input bar:
 
@@ -117,12 +133,18 @@ def _read_input(status_plain: str) -> str:
     its prompt separately from input(), so any readline redraw repaints the line
     from column 0 and erases it. ANSI codes inside the prompt are wrapped in
     \\001/\\002 so readline excludes them from its length accounting.
+
+    On an interactive TTY with prompt_toolkit installed, the line is read via a
+    PromptSession instead (dropdown completion for slash commands); readline's
+    input() is the fallback for pipes, redirected stdin, and tests.
     """
     width = max(min(console.width, 120), 20)
     top = f"╭─ {status_plain} " + "─" * max(width - len(status_plain) - 5, 0) + "╮"
     console.print(f"[bright_black]{top}[/bright_black]")
-    prompt = "\001\x1b[2m\002│\001\x1b[0m\002 \001\x1b[1m\002>\001\x1b[0m\002 "
     try:
+        if _PROMPT_TOOLKIT and sys.stdin.isatty():
+            return _get_prompt_session().prompt("│ > ")
+        prompt = "\001\x1b[2m\002│\001\x1b[0m\002 \001\x1b[1m\002>\001\x1b[0m\002 "
         return input(prompt)
     finally:
         console.print("[bright_black]╰" + "─" * (width - 2) + "╯[/bright_black]")

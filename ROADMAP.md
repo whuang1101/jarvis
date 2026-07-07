@@ -1541,7 +1541,7 @@ one-shot/piped/headless runs and environments without prompt_toolkit still work.
   `/compact` but not `/help`, and `get_completions(Document("hello", 5), CompleteEvent())`
   yields an empty list. `/selftest` (pytest) green.
 
-- [ ] **26.3 Route the input bar through prompt_toolkit (`jarvis/cli.py`).**
+- [x] **26.3 Route the input bar through prompt_toolkit (`jarvis/cli.py`).**
   Add a lazily-created module-level `PromptSession` (import `PromptSession` from
   `prompt_toolkit`, `InMemoryHistory` from `prompt_toolkit.history`) built with
   `history=InMemoryHistory()`, `completer=SlashCommandCompleter()`, and
