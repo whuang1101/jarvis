@@ -1754,7 +1754,7 @@ install is healthy. Today that state is scattered: Azure credentials fail lazily
 the suite. This phase adds a read-only `jarvis/doctor.py` that gathers those signals
 into structured checks and a `/doctor` command that renders them, then flips the row.
 
-- [ ] **30.1 Diagnostics module (`jarvis/doctor.py`).**
+- [x] **30.1 Diagnostics module (`jarvis/doctor.py`).**
   Add a new module defining `Check = namedtuple("Check", "name status detail")` where
   `status` is one of `"ok"`, `"warn"`, `"fail"`, and a pure `run_diagnostics() -> list[Check]`
   that appends, in order: (a) **Python version** — `ok` with `sys.version.split()[0]` as
