@@ -1266,7 +1266,7 @@ via `/sandbox`. No change to command semantics when the sandbox is off (default)
   binds `cwd` read-write (`"--bind", cwd, cwd` present), and ends with
   `["/bin/sh", "-c", command]`; a test with `which` returning `None` asserts `[]`. `/selftest` green.
 
-- [ ] **22.3 Wire the sandbox into `execute`, deny-by-default when unavailable.**
+- [x] **22.3 Wire the sandbox into `execute`, deny-by-default when unavailable.**
   In `run_command.py` `execute`, after the `cd`/`background` short-circuits and before the
   `subprocess.Popen`: import `is_sandbox` from `..permissions`; when `is_sandbox()` is true,
   call `_build_sandbox_argv(command, os.getcwd(), Settings.load().sandbox_allow_network)`.
