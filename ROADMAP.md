@@ -1103,6 +1103,70 @@ list, add, and remove servers at runtime. Runtime-added servers are session-scop
 
 ---
 
+## Phase 20 — MCP reconnect on crash
+
+> PARITY.md's topmost genuinely-missing, cleanly-feasible feature: "MCP reconnect on
+> crash". Today `MCPManager._call_tool` awaits `session.call_tool` against a long-lived
+> stdio subprocess; if that server has died (crashed, killed, OOM) the call raises and
+> the tool is dead for the rest of the session with no recovery. This phase makes a
+> failed MCP tool call transparently tear down and re-spawn the server once, then retry,
+> gated by a new `mcp_auto_reconnect` setting (default on). Every step is verified
+> offline with pytest by monkeypatching `MCPManager`'s spawn/run seams — we test the
+> reconnect plumbing, not a live MCP server (which would need `gh`/Azure/Brave auth).
+
+- [ ] **20.1 Record spawn params and add a `reconnect` seam (`jarvis/mcp_manager.py`).**
+  In `MCPManager.__init__` add `self._server_params: dict[str, dict[str, Any]] = {}`.
+  At the top of `connect(name, command, args, env)` — synchronously, before spawning the
+  `_connect` coroutine — record `self._server_params[name] = {"command": command,
+  "args": list(args), "env": dict(env)}` so a later crash that pops `self._servers[name]`
+  does not lose the parameters needed to respawn. Add a method
+  `reconnect(self, name: str) -> bool`: if `name not in self._server_params` return
+  `False`; call `self.disconnect(name)` (ignore its return), then in a `try` re-establish
+  the server with `self.connect(name, **self._server_params[name])` and return `True`;
+  on any `Exception` return `False`. Because `connect` re-records params and repopulates
+  `self._servers[name]`, a successful `reconnect` leaves a fresh session in place.
+  *Verify:* add `jarvis/tests/test_mcp_reconnect.py`: construct an `MCPManager()`,
+  monkeypatch `mgr.connect` with a stub that records `(name, kwargs)` and returns `[]`;
+  seed `mgr._server_params["srv"] = {"command": "c", "args": [], "env": {}}` and assert
+  `mgr.reconnect("srv") is True` and the stub was called once with `name == "srv"` and
+  the stored `command`/`args`/`env`; assert `mgr.reconnect("missing") is False`; then
+  monkeypatch `mgr.connect` to raise and assert `mgr.reconnect("srv") is False`.
+  `/selftest` (pytest) green.
+
+- [ ] **20.2 Retry a failed MCP tool call once via reconnect.**
+  In `jarvis/settings.py` add `mcp_auto_reconnect: bool = True` to the `Settings`
+  dataclass (alongside `vision`); it is auto-picked-up by the config overlay because
+  `scalar_keys` derives from `fields(cls)`. In `jarvis/mcp_manager.py._call_tool`, wrap
+  the existing `return self._run(_call(), timeout=60)` in a `try`; on `Exception as exc`,
+  read `from .settings import Settings` and if `Settings.load().mcp_auto_reconnect` and
+  `self.reconnect(server_name)` returns `True`, `return self._run(_call(), timeout=60)`
+  once more (the retry; `_call` reads `self._servers[server_name]["session"]` at call
+  time so it uses the fresh session); otherwise
+  `return f"Error: MCP tool '{tool_name}' on '{server_name}' failed and could not
+  reconnect: {exc}"`. Keep the tool contract (plain string, `"Error: ..."` on failure).
+  *Verify:* extend `jarvis/tests/test_mcp_reconnect.py`: monkeypatch `mgr._run` to raise
+  on its first call and return `"ok"` on the second, monkeypatch `mgr.reconnect` to
+  record a call and return `True`, and assert `mgr._call_tool("srv", "t", {})` returns
+  `"ok"` with `reconnect` called exactly once; then with `mgr.reconnect` returning
+  `False` assert the result starts with `"Error:"`; then with a temp global TOML setting
+  `mcp_auto_reconnect = false` (loaded via `Settings.load(path=tmp)` monkeypatched in)
+  assert `_call_tool` returns an `"Error:"` string without calling `reconnect`.
+  `/selftest` (pytest) green.
+
+- [ ] **20.3 Docs + parity flip.**
+  In `JARVIS.md`, add `mcp_auto_reconnect` to the runtime-settings section (one line:
+  "`mcp_auto_reconnect` (bool, default true) — if an MCP tool call fails because its
+  stdio server died, transparently respawn the server and retry the call once") and add
+  a sentence to the `### MCP integration (mcp_manager.py)` section noting that
+  `_call_tool` reconnects-and-retries once on failure. In `PARITY.md` flip the "MCP
+  reconnect on crash" row from ❌ to ✅ with the note "transparent respawn + single retry
+  in `_call_tool`, gated by `mcp_auto_reconnect`".
+  *Verify:* `grep` confirms `mcp_manager.py` defines `def reconnect` and that `_call_tool`
+  references `reconnect`; `grep` confirms `JARVIS.md` mentions `mcp_auto_reconnect` and
+  the PARITY "MCP reconnect on crash" row is no longer ❌. `/selftest` (pytest) green.
+
+---
+
 ## Standing orders (apply to every step)
 
 - **Registration invariants:** new tool → `tools/__init__.py` `_REGISTRY` + JARVIS.md
