@@ -1719,7 +1719,7 @@ is only reliable when stdin is piped. This phase routes continuation lines throu
   same object is returned and its `completer is None`; after `cli._reset_prompt_session()` a
   subsequent call returns a *different* object. `/selftest` (pytest) green.
 
-- [ ] **29.2 Route continuation lines through prompt_toolkit (`jarvis/cli.py`).**
+- [x] **29.2 Route continuation lines through prompt_toolkit (`jarvis/cli.py`).**
   Add a module-level `_read_continuation(prompt: str = "... ") -> str` that, when
   `_PROMPT_TOOLKIT and sys.stdin.isatty()`, reads the line via
   `_get_continuation_session().prompt(prompt)` (letting `prompt_toolkit`'s `EOFError` propagate),

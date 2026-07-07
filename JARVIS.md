@@ -353,6 +353,10 @@ emacs-style regardless of `vi_mode` — vi-style editing only applies on the pro
 call rebuilds it with the current `vi_mode` setting; it also clears a second lazily-created
 `_continuation_session` (`cli._get_continuation_session()`, same settings but `completer=None`)
 reserved for `... ` continuation lines so the slash dropdown never pops mid-continuation.
+`_read_full_input`'s two continuation loops (`` ``` ``-fenced blocks and `\`-continued lines)
+read each line via `cli._read_continuation()`, which mirrors `_read_input`'s TTY/non-TTY split:
+`_get_continuation_session().prompt("... ")` when `_PROMPT_TOOLKIT and sys.stdin.isatty()`,
+else plain `input("... ")`.
 `/config` (no args) prints
 effective settings from `Settings.load_with_sources()` (default/global/project); `/config <key>
 <value>` writes a scalar key to the global TOML via `settings.persist_setting`. `/sessions` lists
