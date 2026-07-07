@@ -348,6 +348,10 @@ registered into the global `_REGISTRY` by `cli._connect_mcp`. Servers connect **
 Brave if `BRAVE_API_KEY` set). If one crashes, restart Jarvis.
 `list_servers()`/`disconnect(name)` give introspection and teardown; `set_active_manager`/
 `get_active_manager` expose the running `MCPManager` module-wide (set in `cli.py` at startup).
+After the hardcoded servers, `_init_mcp` also connects every entry from
+`mcp_config.load_mcp_servers()`, which merges a global `~/.jarvis/mcp.json` with a project
+`.mcp.json` (walked up from `cwd`, 5 levels, project wins), each shaped
+`{"mcpServers": {name: {command, args, env}}}`.
 
 ### JARVIS.md loading (`cli.py:_find_jarvis_md`)
 
