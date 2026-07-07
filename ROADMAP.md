@@ -1011,7 +1011,7 @@ list, add, and remove servers at runtime. Runtime-added servers are session-scop
   ...)` returns `None` and output contains `"Removed srv"`; reset
   `set_active_manager(None)` after. `/selftest` (pytest) green.
 
-- [ ] **18.4 Docs + parity flip.**
+- [x] **18.4 Docs + parity flip.**
   In JARVIS.md, document the `/mcp` command in the command list (list/add/remove connected
   MCP servers) and note that extra MCP servers can be declared in a project `.mcp.json`
   or global `~/.jarvis/mcp.json` (`{"mcpServers": {name: {command, args, env}}}`) and are
