@@ -122,7 +122,10 @@ jarvis/
 │                    when `output_format != "text"` it calls `redirect_console(sys.stderr)` first so
 │                    human render never touches stdout, captures `run_agent`'s return as `result`
 │                    (exceptions become `result=str(e)`, `is_error=True`), then emits the payload to
-│                    `sys.stdout` via `_emit_result` before `sys.exit`.
+│                    `sys.stdout` via `_emit_result` before `sys.exit`. `--output-format json` prints a
+│                    single `{"type":"result",...}` object; `stream-json` prints newline-delimited
+│                    event objects (a `system`/`init` line, then the `result` line) — human render
+│                    goes to stderr in both modes so stdout stays machine-readable.
 ├── agent.py         Streaming tool-use loop. run_agent() + _stream_turn() (renders live) +
 │                    _stream_with_retry() (lazy generator) + _accumulate_tool_calls().
 ├── client.py        Only file importing openai for requests. stream() (lazy, include_usage),

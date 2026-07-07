@@ -746,7 +746,7 @@ payload builder, and an emitter writing to an in-memory stream — no Azure call
   `pytest.raises(SystemExit)` with `capsys`; assert the captured stdout parses as
   JSON with `type == "result"` and `result == "canned answer"`. `/selftest` (pytest) green.
 
-- [ ] **15.4 Docs + parity flip.**
+- [x] **15.4 Docs + parity flip.**
   In JARVIS.md, note under the headless / CLI section that `--output-format json`
   prints a single `{"type":"result",...}` object and `--output-format stream-json`
   prints newline-delimited event objects (init + result), with human render sent to
