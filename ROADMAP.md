@@ -1362,7 +1362,7 @@ No behavior change when no skills are present.
   returns without raising and its captured output mentions the skill name; `grep` confirms
   `_HELP_TEXT` and `JARVIS.md` mention `/skills`. `/selftest` green.
 
-- [ ] **23.5 Docs + parity flip.**
+- [x] **23.5 Docs + parity flip.**
   In `JARVIS.md`, document skills in the extensibility/config section: the two skill
   directories, the `<name>.md` / `<name>/SKILL.md` layout with `name` + `description`
   frontmatter, how the catalog is injected into the system prompt, the `skill` tool for

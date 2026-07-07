@@ -84,7 +84,7 @@ Legend: ✅ Jarvis has it · 🟡 partial · ❌ missing
 | MCP servers (stdio) | ✅ | GitHub / Azure / Brave at startup |
 | MCP: add/remove/list at runtime, project .mcp.json config | 🟡 | `/mcp` list/add/remove + `.mcp.json` startup loading; runtime-added servers are session-scoped |
 | MCP reconnect on crash | ✅ | transparent respawn + single retry in `_call_tool`, gated by `mcp_auto_reconnect` |
-| Skills (folder of markdown capabilities, auto-triggered) | ❌ | ambitious; markdown commands first |
+| Skills (folder of markdown capabilities, auto-triggered) | 🟡 | name+description catalog injected into the system prompt from `~/.jarvis/skills/` + project `.jarvis/skills/`; model loads full body on demand via the `skill` tool; `/skills` lists them |
 | Plugins / marketplaces | ❌ | out of scope for now |
 | Output styles / themes | ✅ | `/theme` + `theme` setting (Rich syntax themes) |
 | Status line customization | ❌ | input-bar top border is the hook point |
