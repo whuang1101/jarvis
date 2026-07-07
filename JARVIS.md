@@ -346,6 +346,8 @@ timeout it raises `TimeoutError` (not a bare KeyError). Each tool becomes an `MC
 registered into the global `_REGISTRY` by `cli._connect_mcp`. Servers connect **at startup only**
 (GitHub via `gh auth token` → `GITHUB_PERSONAL_ACCESS_TOKEN`; Azure if `az account show` succeeds;
 Brave if `BRAVE_API_KEY` set). If one crashes, restart Jarvis.
+`list_servers()`/`disconnect(name)` give introspection and teardown; `set_active_manager`/
+`get_active_manager` expose the running `MCPManager` module-wide (set in `cli.py` at startup).
 
 ### JARVIS.md loading (`cli.py:_find_jarvis_md`)
 
