@@ -985,7 +985,7 @@ list, add, and remove servers at runtime. Runtime-added servers are session-scop
   a project entry overrides a global entry of the same name; a malformed-JSON file returns
   `[]` without raising. `/selftest` (pytest) green.
 
-- [ ] **18.3 `unregister_tool` + `/mcp` command (list / add / remove).**
+- [x] **18.3 `unregister_tool` + `/mcp` command (list / add / remove).**
   In `jarvis/tools/__init__.py` add `unregister_tool(name: str) -> None` that deletes
   `_BY_NAME.pop(name, None)` and rebuilds `_REGISTRY` without any tool whose `.name ==
   name`. In `jarvis/commands.py:handle_command`, add a `/mcp` branch (import

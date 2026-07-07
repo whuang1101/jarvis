@@ -53,3 +53,8 @@ def get_tool_by_name(name: str) -> BaseTool | None:
 def register_tool(tool: BaseTool) -> None:
     _REGISTRY.append(tool)
     _BY_NAME[tool.name] = tool
+
+
+def unregister_tool(name: str) -> None:
+    _BY_NAME.pop(name, None)
+    _REGISTRY[:] = [t for t in _REGISTRY if t.name != name]
