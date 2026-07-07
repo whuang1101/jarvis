@@ -255,6 +255,7 @@ class TestAllCommandNames:
         assert "/help" in names
         assert "/commit" in names
         assert "/pr" in names
+        assert "/vim" in names
         assert all(name.startswith("/") for name in names)
         assert len(names) == len(set(names))
 
@@ -487,6 +488,38 @@ class TestSandboxCommand:
 
         assert result is None
         assert "andbox" in capsys.readouterr().out
+
+
+class TestVimCommand:
+    def test_on_persists_vi_mode_true(self, tmp_path, monkeypatch):
+        config_path = tmp_path / "config.toml"
+        monkeypatch.setattr(settings_module, "_CONFIG_PATH", config_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = handle_command("/vim on", None, None, None)
+
+        assert result is None
+        assert settings_module.Settings.load(config_path).vi_mode is True
+
+    def test_off_persists_vi_mode_false(self, tmp_path, monkeypatch):
+        config_path = tmp_path / "config.toml"
+        monkeypatch.setattr(settings_module, "_CONFIG_PATH", config_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = handle_command("/vim off", None, None, None)
+
+        assert result is None
+        assert settings_module.Settings.load(config_path).vi_mode is False
+
+    def test_no_arg_output_mentions_vim_mode(self, tmp_path, monkeypatch, capsys):
+        config_path = tmp_path / "config.toml"
+        monkeypatch.setattr(settings_module, "_CONFIG_PATH", config_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = handle_command("/vim", None, None, None)
+
+        assert result is None
+        assert "Vim mode" in capsys.readouterr().out
 
 
 class TestRewindCommand:
