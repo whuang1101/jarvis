@@ -133,7 +133,7 @@ jarvis/
 ├── config.py        Frozen Config dataclass. load() searches _ENV_CANDIDATES, validates 4 Azure vars.
 ├── settings.py      Frozen Settings dataclass (auto_mode, max_tool_iterations, autocompact_tokens,
 │                    tool_timeout_secs, theme, show_thinking, sandbox, sandbox_allow_network,
-│                    permission_allow/permission_deny glob-pattern tuples). load() reads
+│                    statusline, permission_allow/permission_deny glob-pattern tuples). load() reads
 │                    ~/.jarvis/config.toml (tomllib), then overlays a
 │                    per-project `.jarvis.toml` found by walking cwd + up to 4 parents (same walk
 │                    as _find_jarvis_md) — project values win. Missing files = defaults; malformed
@@ -439,6 +439,7 @@ vision = true
 mcp_auto_reconnect = true
 sandbox = false
 sandbox_allow_network = false
+statusline = ""
 
 [permissions]
 allow = ["write_file(*)"]          # glob patterns matched against "tool_name(args)"
@@ -470,6 +471,8 @@ returns an `Error:` instead of falling back to unsandboxed execution. Toggle at 
 visual input; set false to disable.
 `mcp_auto_reconnect` (bool, default true) — gates whether `mcp_manager._call_tool` retries a
 failed call once via `reconnect()`; false skips the retry and returns the error immediately.
+`statusline` (str, default `""`) — a top-level scalar setting reserved for status line
+customization (24); not yet consumed.
 
 `[permissions] allow`/`deny` are glob-style pattern lists (`fnmatch`) checked in
 `permissions.py:needs_permission` before the tool-specific logic: a `deny` match forces the
