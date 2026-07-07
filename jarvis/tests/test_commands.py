@@ -91,6 +91,43 @@ class TestConfigCommand:
         assert "Usage" in out
 
 
+class TestStatuslineCommand:
+    def test_no_args_shows_default(self, tmp_path, monkeypatch, capsys):
+        monkeypatch.setattr(settings_module, "_CONFIG_PATH", tmp_path / "config.toml")
+        monkeypatch.chdir(tmp_path)
+
+        handle_command("/statusline", None, None, None)
+
+        out = capsys.readouterr().out
+        assert "status" in out.lower()
+        assert "(default)" in out
+
+    def test_sets_and_persists_statusline(self, tmp_path, monkeypatch, capsys):
+        config_path = tmp_path / "config.toml"
+        monkeypatch.setattr(settings_module, "_CONFIG_PATH", config_path)
+        monkeypatch.chdir(tmp_path)
+
+        handle_command("/statusline my-status-cmd", None, None, None)
+
+        settings = settings_module.Settings.load(config_path)
+        assert settings.statusline == "my-status-cmd"
+        out = capsys.readouterr().out
+        assert "status" in out.lower()
+
+    def test_off_clears_statusline(self, tmp_path, monkeypatch, capsys):
+        config_path = tmp_path / "config.toml"
+        monkeypatch.setattr(settings_module, "_CONFIG_PATH", config_path)
+        monkeypatch.chdir(tmp_path)
+
+        handle_command("/statusline my-status-cmd", None, None, None)
+        handle_command("/statusline off", None, None, None)
+
+        settings = settings_module.Settings.load(config_path)
+        assert settings.statusline == ""
+        out = capsys.readouterr().out
+        assert "status" in out.lower()
+
+
 class TestSessionsCommand:
     def test_lists_no_sessions(self, tmp_path, monkeypatch, capsys):
         monkeypatch.setattr(sessions_module, "_SESSIONS_DIR", tmp_path / "missing")

@@ -1426,7 +1426,7 @@ setting is empty (the default today).
   `TimeoutExpired` (or returns `returncode=1`) asserts it returns the default status; with an
   empty `statusline` it returns the default without invoking the command; `/selftest` green.
 
-- [ ] **24.4 `/statusline` slash command (`jarvis/commands.py`).**
+- [x] **24.4 `/statusline` slash command (`jarvis/commands.py`).**
   In `handle_command()`, add a `/statusline` branch modeled on `/theme`: no arg prints the
   current `statusline` value (or "(default)" when empty) via a `formatter.py` helper;
   `/statusline off` clears it (`persist_setting("statusline", "")`); any other arg persists it

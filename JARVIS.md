@@ -304,7 +304,7 @@ or `_RUN_AGENT_PREFIX` (`__RUN__:`) + message (the REPL strips the prefix and ru
 `run_agent`). `/retry`, `/fix`, `/go`, `/cancel` use the `_RUN_AGENT_PREFIX` path. Commands are
 case-insensitive; the argument keeps original case.
 
-Implemented commands: `/help /history /retry /undo /clear /compact /usage /model /theme /diff /pin
+Implemented commands: `/help /history /retry /undo /clear /compact /usage /model /theme /statusline /diff /pin
 /config /file /run /plan /go /cancel /restart /auto /sandbox /fix /copy /save /sessions /resume /rewind /mcp
 /memory /todos /skills /init /selftest /commit /review /exit /quit`. Every one is listed in `_HELP_TEXT` — keep
 that invariant. `/sandbox [on|off|status]` shows or toggles `permissions.is_sandbox()`/`set_sandbox()`
@@ -316,7 +316,8 @@ agent re-sees its own checklist every turn.
 `ContextManager.system_message` also appends a `## Skills` section (one `- <name>: <description>`
 line per skill from `discover_skills()`, plus an instruction to call the `skill` tool to load one)
 whenever any skills are discovered; omitted entirely when there are none.
-`/theme` sets the Rich code-block Pygments style (persisted via `persist_setting`); `/diff` shows
+`/theme` sets the Rich code-block Pygments style (persisted via `persist_setting`); `/statusline [cmd]`
+shows/sets/clears (`off`) the `statusline` setting the same way. `/diff` shows
 `git diff HEAD`; `/pin <text>` adds a note into `ContextManager._pinned`, which is rendered into the
 system prompt and survives `clear()`/`compact()`. `/selftest` runs pytest **and** mypy. `/commit` stages
 with `git add -A`, then hands `git diff --staged` to the agent to write the message and run `git
