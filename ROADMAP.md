@@ -1570,6 +1570,63 @@ one-shot/piped/headless runs and environments without prompt_toolkit still work.
 
 ---
 
+## Phase 27 — Vim editing mode for the input bar
+
+Parity gap: "Vim mode / keybindings" is ❌. It is the topmost genuinely-missing,
+self-hostable row: "Plugins / marketplaces" above it is explicitly out of scope, and
+"Multiline input (backslash or ``` blocks)" is already implemented in
+`cli.py:_read_full_input` (backslash continuation + fenced ```` ``` ```` blocks) despite
+its stale ❌. Now that the input bar runs on `prompt_toolkit` (Phase 26), vi-style editing
+is a wiring job: `PromptSession` accepts `vi_mode=True` and exposes the resulting
+`editing_mode`. Add a persisted `vi_mode` setting, build the session from it, and a `/vim`
+toggle command. The readline/`input()` fallback path (no prompt_toolkit or piped stdin)
+stays emacs-style and simply ignores the setting.
+
+- [ ] **27.1 `vi_mode` setting (`jarvis/settings.py`, `JARVIS.md`).**
+  Add `vi_mode: bool = False` to the `Settings` dataclass (with the other scalar bools like
+  `show_thinking`), so it participates in `load()`, `load_with_sources()`, and
+  `persist_setting()` automatically. Document the key in JARVIS.md's settings list as
+  "vi_mode (bool, default false): use vi-style editing keybindings in the prompt_toolkit
+  input bar".
+  *Verify:* a `settings.py` test asserts `Settings().vi_mode is False`, and that
+  `persist_setting("vi_mode", "true", path=tmp)` followed by `Settings.load(path=tmp).vi_mode`
+  returns `True`. `/selftest` (pytest) green.
+
+- [ ] **27.2 Build the session from the setting (`jarvis/cli.py`).**
+  In `_get_prompt_session()`, pass `vi_mode=Settings.load().vi_mode` to the `PromptSession`
+  constructor. Add a module-level `def _reset_prompt_session() -> None:` that sets the cached
+  `global _prompt_session = None` so the next `_read_input` rebuilds with the current setting
+  (needed for the `/vim` toggle to take effect without a restart). Import `Settings` is already
+  present in `cli.py`.
+  *Verify:* a `cli.py` test (guarded by `_PROMPT_TOOLKIT`) monkeypatches
+  `jarvis.cli.Settings.load` to return a `Settings(vi_mode=True)`, calls
+  `_reset_prompt_session()` then `_get_prompt_session()`, and asserts the session's
+  `editing_mode == prompt_toolkit.enums.EditingMode.VI`; a second run with `vi_mode=False`
+  after `_reset_prompt_session()` asserts `EditingMode.EMACS`. `/selftest` (pytest) green.
+
+- [ ] **27.3 `/vim` toggle command (`jarvis/commands.py`).**
+  Add a `/vim` handler in `handle_command()` modelled on `/theme`: no arg reports the current
+  state from `Settings.load().vi_mode` ("Vim mode: on/off"); `on`/`off` (and bare `/vim` as a
+  toggle of the current value) call `persist_setting("vi_mode", ...)`, then
+  `cli._reset_prompt_session()` (import lazily inside the branch to avoid a cli↔commands import
+  cycle), and `print_system(...)` the new state; the handler `return`s. Add `"/vim"` to
+  `_BUILTIN_COMMANDS` (after `/theme`) and a `[cyan]/vim [on|off][/cyan]` line to `_HELP_TEXT`.
+  *Verify:* a `commands.py` test asserts `handle_command("/vim on")` returns `None` and
+  persists `vi_mode=True` (via a monkeypatched/`tmp` settings path), that a no-arg
+  `handle_command("/vim")` output mentions "Vim mode", and that `all_command_names()` contains
+  `/vim` with no duplicates. `/selftest` (pytest) green.
+
+- [ ] **27.4 Docs + parity flip (`JARVIS.md`, `PARITY.md`).**
+  In JARVIS.md's interactive-UX/input section and command list, document `/vim [on|off]` and
+  that vi-style editing applies on the prompt_toolkit TTY path (fallback `input()`/readline
+  stays emacs-style). In PARITY.md, flip the "Vim mode / keybindings" row from ❌ to ✅ with the
+  note "prompt_toolkit `vi_mode` on the TTY input bar; `/vim [on|off]` toggle + persisted
+  `vi_mode` setting".
+  *Verify:* `grep` confirms JARVIS.md mentions `/vim` and the PARITY "Vim mode / keybindings"
+  row is no longer ❌; `/selftest` (pytest) green.
+
+---
+
 ## Standing orders (apply to every step)
 
 - **Registration invariants:** new tool → `tools/__init__.py` `_REGISTRY` + JARVIS.md
