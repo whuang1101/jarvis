@@ -344,7 +344,8 @@ loads without the dependency) completes a bare `/prefix` against `all_command_na
 `_read_input` uses it: on a TTY with `prompt_toolkit` installed, a lazily-created
 module-level `PromptSession` (`InMemoryHistory`, `complete_while_typing=True`,
 `vi_mode=Settings.load().vi_mode`) reads the line for dropdown completion; any other case
-(piped stdin, tests) falls back to the existing `readline`-backed `input()` path.
+(piped stdin, tests) falls back to the existing `readline`-backed `input()` path, which stays
+emacs-style regardless of `vi_mode` — vi-style editing only applies on the prompt_toolkit TTY path.
 `cli._reset_prompt_session()` clears the cached session so the next `_get_prompt_session()`
 call rebuilds it with the current `vi_mode` setting. `/config` (no args) prints
 effective settings from `Settings.load_with_sources()` (default/global/project); `/config <key>

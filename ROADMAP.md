@@ -1616,7 +1616,7 @@ stays emacs-style and simply ignores the setting.
   `handle_command("/vim")` output mentions "Vim mode", and that `all_command_names()` contains
   `/vim` with no duplicates. `/selftest` (pytest) green.
 
-- [ ] **27.4 Docs + parity flip (`JARVIS.md`, `PARITY.md`).**
+- [x] **27.4 Docs + parity flip (`JARVIS.md`, `PARITY.md`).**
   In JARVIS.md's interactive-UX/input section and command list, document `/vim [on|off]` and
   that vi-style editing applies on the prompt_toolkit TTY path (fallback `input()`/readline
   stays emacs-style). In PARITY.md, flip the "Vim mode / keybindings" row from ❌ to ✅ with the
