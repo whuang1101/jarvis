@@ -6,6 +6,7 @@ import jarvis.commands as commands_module
 import jarvis.sessions as sessions_module
 import jarvis.settings as settings_module
 import jarvis.todos as todos_module
+from jarvis import checkpoints
 from jarvis.commands import append_memory, handle_command
 from jarvis.context import ContextManager
 from jarvis.sessions import SessionStore
@@ -334,3 +335,33 @@ class TestTodosCommand:
 
         assert result is None
         assert todos_module.get_todos() == []
+
+
+class TestRewindCommand:
+    def test_lists_checkpoints(self, capsys):
+        checkpoints.clear()
+        checkpoints.create([{"role": "user", "content": "first"}], label="first")
+
+        result = handle_command("/rewind", None, ContextManager(), None)
+
+        assert result is None
+        assert "first" in capsys.readouterr().out
+
+    def test_restores_checkpoint_history(self, capsys):
+        checkpoints.clear()
+        checkpoints.create([{"role": "user", "content": "first"}], label="first")
+        context = ContextManager()
+        context._history = [{"role": "user", "content": "other"}]
+
+        result = handle_command("/rewind 1", None, context, None)
+
+        assert result is None
+        assert context._history == [{"role": "user", "content": "first"}]
+
+    def test_clear_empties_checkpoints(self):
+        checkpoints.create([{"role": "user", "content": "first"}], label="first")
+
+        result = handle_command("/rewind clear", None, ContextManager(), None)
+
+        assert result is None
+        assert checkpoints.list_checkpoints() == []

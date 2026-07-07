@@ -6,7 +6,7 @@ import subprocess
 from dataclasses import fields
 from pathlib import Path
 
-from . import todos
+from . import checkpoints, todos
 from .client import JarvisClient
 from .context import ContextManager, UsageTracker, is_plan_mode, set_plan_mode
 from .formatter import (
@@ -58,6 +58,7 @@ _HELP_TEXT = """
   [cyan]/save <file>[/cyan]   Save conversation history to a markdown file.
   [cyan]/sessions[/cyan]      List the last 10 saved sessions (date, cwd, first message)
   [cyan]/resume <n>[/cyan]    Load a session from /sessions into this conversation
+  [cyan]/rewind [n][/cyan]    List checkpoints, restore checkpoint n, or `/rewind clear` to clear them
   [cyan]/memory[/cyan]        Manage persistent memory (`~/.jarvis/memory.md`)
   [cyan]/todos[/cyan]         Show the maintained todo list (`/todos clear` to clear it)
   [cyan]#text[/cyan]          Shortcut: append `text` to memory without sending it to the agent
@@ -218,6 +219,7 @@ def handle_command(
                 "/save",
                 "/sessions",
                 "/resume",
+                "/rewind",
                 "/memory",
                 "/todos",
                 "/init",
@@ -502,6 +504,35 @@ def handle_command(
             session.cwd = loaded_store.cwd
             session.first_message = loaded_store.first_message
         print_system(f"Resumed session {loaded_store.session_id} ({len(history)} messages).")
+        return None
+
+    if cmd == "/rewind":
+        if arg.strip().lower() == "clear":
+            checkpoints.clear()
+            print_system("Checkpoints cleared.")
+            return None
+        if arg.strip().isdigit() and int(arg.strip()) > 0:
+            n = int(arg.strip())
+            cp = checkpoints.get(n)
+            if cp is None:
+                print_error(f"No checkpoint {n}.")
+                return None
+            context.load_history(cp["history"])
+            if cp["file_stash"]:
+                restore_msg = checkpoints.restore_files(cp["file_stash"])
+                if restore_msg.startswith("Error"):
+                    print_error(restore_msg)
+                else:
+                    print_system(restore_msg)
+            print_system(f"Rewound to checkpoint {n}.")
+            return None
+        listing = checkpoints.list_checkpoints()
+        if not listing:
+            print_system("No checkpoints yet.")
+            return None
+        for i, cp in enumerate(listing, start=1):
+            suffix = " [files]" if cp["has_files"] else ""
+            print_system(f"{i}: {cp['label']}  ({cp['time']}){suffix}")
         return None
 
     if cmd == "/copy":

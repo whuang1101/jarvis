@@ -897,7 +897,7 @@ Azure calls.
   history at call time. Then `grep` confirms `jarvis/cli.py` calls
   `checkpoints.checkpoint_turn`. `/selftest` (pytest) green.
 
-- [ ] **17.4 `/rewind` command to list and restore checkpoints.**
+- [x] **17.4 `/rewind` command to list and restore checkpoints.**
   In `jarvis/commands.py` `handle_command`, add `if cmd == "/rewind":` — when
   `arg.strip().lower() == "clear"`, call `checkpoints.clear()` then
   `print_system("Checkpoints cleared.")` and `return None`; when `arg` is a positive
