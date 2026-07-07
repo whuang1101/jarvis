@@ -245,6 +245,7 @@ def _result_payload(result: str, is_error: bool, tracker: UsageTracker) -> dict:
         "usage": {
             "input_tokens": tracker.prompt_tokens,
             "output_tokens": tracker.completion_tokens,
+            "cached_input_tokens": tracker.cached_tokens,
         },
     }
 

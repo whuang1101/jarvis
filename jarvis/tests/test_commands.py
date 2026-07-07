@@ -10,7 +10,7 @@ import jarvis.settings as settings_module
 import jarvis.todos as todos_module
 from jarvis import checkpoints
 from jarvis.commands import append_memory, handle_command
-from jarvis.context import ContextManager
+from jarvis.context import ContextManager, UsageTracker
 from jarvis.sessions import SessionStore
 
 
@@ -367,6 +367,21 @@ class TestRewindCommand:
 
         assert result is None
         assert checkpoints.list_checkpoints() == []
+
+
+class TestUsageCommand:
+    def test_reports_cached_tokens_and_hit_rate(self, capsys):
+        client = types.SimpleNamespace(current_deployment=lambda: "fake-deployment")
+        tracker = UsageTracker()
+        tracker.record(100, 20, cached=25)
+
+        result = handle_command("/usage", client, ContextManager(), tracker)
+
+        assert result is None
+        out = capsys.readouterr().out
+        assert "Cached (of prompt)" in out
+        assert "25" in out
+        assert "25% hit" in out
 
 
 class TestMcpCommand:

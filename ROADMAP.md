@@ -1207,7 +1207,7 @@ stable across turns.
   asserts `tracker.cached_tokens == 600`; and a chunk whose `usage` lacks
   `prompt_tokens_details` records `cached_tokens == 0` without error. `/selftest` green.
 
-- [ ] **21.3 Surface cached tokens in `/usage` and the headless JSON result.**
+- [x] **21.3 Surface cached tokens in `/usage` and the headless JSON result.**
   In `jarvis/commands.py` `/usage` (around line 332), add a line after "Prompt tokens":
   `f"  Cached (of prompt): [cyan]{tracker.cached_tokens:>10,}[/cyan]  [dim]({pct}% hit)[/dim]\n"`
   where `pct = round(100 * tracker.cached_tokens / tracker.prompt_tokens)` if

@@ -326,10 +326,12 @@ def handle_command(
     if cmd == "/usage":
         msgs = context.message_count()
         cost = tracker.cost_usd
+        pct = round(100 * tracker.cached_tokens / tracker.prompt_tokens) if tracker.prompt_tokens else 0
         console.print(
             f"\n[bold cyan]Session usage[/bold cyan]\n"
             f"  Model:              [cyan]{client.current_deployment()}[/cyan]\n"
             f"  Prompt tokens:      [cyan]{tracker.prompt_tokens:>10,}[/cyan]\n"
+            f"  Cached (of prompt): [cyan]{tracker.cached_tokens:>10,}[/cyan]  [dim]({pct}% hit)[/dim]\n"
             f"  Completion tokens:  [cyan]{tracker.completion_tokens:>10,}[/cyan]\n"
             f"  Total tokens:       [bold cyan]{tracker.total_tokens:>10,}[/bold cyan]\n"
             f"  Estimated cost:     [bold cyan]${cost:>10.4f}[/bold cyan]\n"

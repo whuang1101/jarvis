@@ -341,8 +341,9 @@ surfaces the same value via `CompleteResult.cached_tokens` for the compaction pa
 `_lookup_price` lowercases the deployment and matches `_PRICING` keys **longest-first** (so
 `gpt-4o-mini` isn't mispriced as `gpt-4o`), falling back to gpt-4o pricing (2.50/10.00 per 1M).
 `cached` (a subset of `prompt`) tracks cached-prompt tokens in `cached_tokens` and bills them at
-half the input rate. `/usage` shows tokens and estimated USD. `token_estimate()` is rough: total
-content chars ÷ 4 (ignores tool_calls payloads and the system message).
+half the input rate. `/usage` shows tokens, estimated USD, and a "Cached (of prompt)" line with
+hit-rate %; the headless JSON result's `usage` dict includes `cached_input_tokens`.
+`token_estimate()` is rough: total content chars ÷ 4 (ignores tool_calls payloads and the system message).
 
 ### MCP integration (`mcp_manager.py`)
 

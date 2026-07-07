@@ -119,12 +119,16 @@ class TestConfigModelOverride:
 class TestResultPayload:
     def test_success_payload(self):
         tracker = UsageTracker()
-        tracker.record(10, 20)
+        tracker.record(10, 20, cached=4)
         payload = cli._result_payload("hi", False, tracker)
         assert payload["subtype"] == "success"
         assert payload["is_error"] is False
         assert payload["result"] == "hi"
-        assert payload["usage"] == {"input_tokens": 10, "output_tokens": 20}
+        assert payload["usage"] == {
+            "input_tokens": 10,
+            "output_tokens": 20,
+            "cached_input_tokens": 4,
+        }
 
     def test_error_payload(self):
         tracker = UsageTracker()
