@@ -944,7 +944,7 @@ handle; (2) loads extra servers from a Claude-Code-compatible `.mcp.json`
 list, add, and remove servers at runtime. Runtime-added servers are session-scoped
 (config-file and hardcoded ones reconnect each launch). No new Azure calls.
 
-- [ ] **18.1 MCPManager introspection, disconnect, and an active-manager handle.**
+- [x] **18.1 MCPManager introspection, disconnect, and an active-manager handle.**
   In `jarvis/mcp_manager.py` add three `MCPManager` methods: `list_servers() ->
   list[dict[str, Any]]` returning `[{"name": name, "tool_count": len(info.get("tools",
   []))} for name, info in self._servers.items()]` sorted by `name`; `disconnect(name:

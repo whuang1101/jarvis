@@ -79,7 +79,7 @@ from .formatter import (
     redirect_console, set_code_theme,
 )
 from .logger import SessionLogger
-from .mcp_manager import MCPManager
+from .mcp_manager import MCPManager, set_active_manager
 from .sessions import SessionStore, list_sessions
 from .settings import Settings
 from .tools import register_tool
@@ -279,7 +279,9 @@ def _run_one_shot(
     context = ContextManager(project_context=jarvis_md[0] if jarvis_md else None)
 
     if connect_mcp:
-        _init_mcp(MCPManager())
+        mcp = MCPManager()
+        set_active_manager(mcp)
+        _init_mcp(mcp)
 
     set_auto_mode(True)
 

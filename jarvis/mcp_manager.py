@@ -32,6 +32,28 @@ class MCPManager:
         self._thread.start()
         self._servers: dict[str, dict[str, Any]] = {}
 
+    def list_servers(self) -> list[dict[str, Any]]:
+        return sorted(
+            (
+                {"name": name, "tool_count": len(info.get("tools", []))}
+                for name, info in self._servers.items()
+            ),
+            key=lambda entry: entry["name"],
+        )
+
+    def disconnect(self, name: str) -> list[str]:
+        if name not in self._servers:
+            return []
+        info = self._servers.pop(name)
+        tool_names = [t.name for t in info.get("tools", [])]
+        task = info.get("task")
+        if task is not None:
+            try:
+                task.cancel()
+            except Exception:
+                pass
+        return tool_names
+
     def _run(self, coro: Any, timeout: int = 30) -> Any:
         future = asyncio.run_coroutine_threadsafe(coro, self._loop)
         return future.result(timeout=timeout)
@@ -59,6 +81,7 @@ class MCPManager:
                             "tools": tools_result.tools,
                         }
                         ready.set()
+                        self._servers[name]["task"] = asyncio.current_task()
                         await asyncio.Event().wait()  # keep session alive
             except Exception as exc:
                 errors.append(exc)
@@ -114,3 +137,15 @@ class MCPManager:
             return "\n".join(parts)
 
         return self._run(_call(), timeout=60)
+
+
+_ACTIVE_MANAGER: MCPManager | None = None
+
+
+def set_active_manager(manager: MCPManager | None) -> None:
+    global _ACTIVE_MANAGER
+    _ACTIVE_MANAGER = manager
+
+
+def get_active_manager() -> MCPManager | None:
+    return _ACTIVE_MANAGER
