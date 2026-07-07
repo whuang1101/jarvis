@@ -450,6 +450,11 @@ skipped (the other file/defaults still apply). Unknown keys are ignored. Current
 `auto_mode`, `dangerously_skip_permissions`, and `sandbox`/`sandbox_allow_network` defaults
 (mirrored into `permissions._sandbox` via `is_sandbox()`/`set_sandbox()`); nothing consumes
 `theme` yet.
+`sandbox` (bool, default false) routes `run_command` through a `bwrap` sandbox (read-only `/`,
+writable cwd, network off unless `sandbox_allow_network` is true); requires `bwrap` on PATH
+(Linux only) and is deny-by-default — if `bwrap` is missing while sandboxing is on, `execute`
+returns an `Error:` instead of falling back to unsandboxed execution. Toggle at runtime with
+`/sandbox [on|off|status]`.
 `show_thinking` (default `true`) is read once by `JarvisClient.__init__` into
 `self._show_thinking` (unused there); `agent.py._stream_turn` reads its own module-level
 `_settings.show_thinking` to gate whether reasoning deltas are rendered (7.2).
