@@ -77,6 +77,7 @@ _HELP_TEXT = """
   [cyan]/selftest[/cyan]      Run Jarvis's own test suite (pytest) and type-check it (mypy)
   [cyan]/commit[/cyan]        Stage changes and have Jarvis write and make the commit
   [cyan]/review [pr#][/cyan]  Review the diff against main, or a PR's diff if given
+  [cyan]/pr[/cyan]            Have Jarvis write a title/body and open a PR for this branch
   [cyan]/exit[/cyan]          Exit Jarvis
   [cyan]/quit[/cyan]          Exit Jarvis
 """
@@ -271,6 +272,7 @@ def handle_command(
                 "/selftest",
                 "/commit",
                 "/review",
+                "/pr",
                 "/exit",
                 "/quit",
             ]
@@ -836,6 +838,18 @@ def handle_command(
         message = (
             f"Review {source}. Here is the diff:\n```diff\n{review_diff}\n```\n"
             "Point out bugs, correctness issues, and risky changes. Be concise."
+        )
+        return f"{_RUN_AGENT_PREFIX}{message}"
+
+    if cmd == "/pr":
+        context, error = _pr_context()
+        if error:
+            print_error(error)
+            return None
+        message = (
+            f"Open a pull request for this branch. Here is the context:\n{context}\n\n"
+            "Write a concise PR title and body (why, not just what), then run "
+            '`gh pr create --title "<title>" --body "<body>"`.'
         )
         return f"{_RUN_AGENT_PREFIX}{message}"
 

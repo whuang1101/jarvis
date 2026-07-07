@@ -1475,7 +1475,7 @@ and body and run `gh pr create`, mirroring the `_RUN_AGENT_PREFIX` pattern those
   "main" and context is `None`; a third where the diff is empty asserts the error mentions
   "No commits". `/selftest` (pytest) green.
 
-- [ ] **25.2 Wire the `/pr` command (`jarvis/commands.py`).**
+- [x] **25.2 Wire the `/pr` command (`jarvis/commands.py`).**
   In `handle_command()`, add a `/pr` branch (near `/commit`/`/review`): call `_pr_context()`;
   on error, `print_error(error)` and `return None`; otherwise return
   `f"{_RUN_AGENT_PREFIX}{message}"` where `message` embeds the context and instructs the agent

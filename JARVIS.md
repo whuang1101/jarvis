@@ -306,7 +306,7 @@ case-insensitive; the argument keeps original case.
 
 Implemented commands: `/help /history /retry /undo /clear /compact /usage /model /theme /statusline /diff /pin
 /config /file /run /plan /go /cancel /restart /auto /sandbox /fix /copy /save /sessions /resume /rewind /mcp
-/memory /todos /skills /init /selftest /commit /review /exit /quit`. Every one is listed in `_HELP_TEXT` — keep
+/memory /todos /skills /init /selftest /commit /review /pr /exit /quit`. Every one is listed in `_HELP_TEXT` — keep
 that invariant. `/sandbox [on|off|status]` shows or toggles `permissions.is_sandbox()`/`set_sandbox()`
 (no arg or `status` just prints current state).
 `/todos` prints the maintained todo list via `formatter.print_todo_list`; `/todos clear` clears it.
@@ -325,7 +325,9 @@ commit` itself (so the commit goes through the normal tool permission gate). `/r
 `git diff main` (or `gh pr diff <pr#>`) and hands it to the agent with a review prompt. Both return
 via `_RUN_AGENT_PREFIX`. `_pr_context()` gathers the current branch, `git log main..HEAD` commit
 subjects, and `git diff main...HEAD` into a single context string (or an error if on `main` or the
-diff is empty) — groundwork for an upcoming `/pr` command, not yet wired into `handle_command()`.
+diff is empty). `/pr` calls `_pr_context()` and hands the result to the agent with a prompt to
+write a title/body and run `gh pr create --title "<title>" --body "<body>"` itself (same
+tool-permission-gate pattern as `/commit`).
 Any other `/name` falls back to a
 custom command lookup. Inline `@path` mentions work in any normal message too — not just
 `/file` — attaching that file's contents at that point in the prompt, so `@path` can be
