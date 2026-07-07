@@ -179,6 +179,9 @@ jarvis/
 │                    for tracked-file working-tree snapshots (untracked files are not covered).
 │                    checkpoint_turn(context, message) snapshots context._history + file_stash
 │                    before a new user turn; cli.py calls it ahead of each interactive run_agent.
+├── notify.py         send_notification(title, message) — best-effort desktop notification via
+│                    `osascript`/`notify-send` (whichever `shutil.which` finds first), else a
+│                    `\a` bell to stderr; subprocess errors are swallowed, never raised.
 └── tools/
     ├── __init__.py      _REGISTRY (17 built-ins) + get_all_tools/get_tool_by_name/register_tool.
     ├── base.py          BaseTool(ABC): name/description/parameters/execute + to_openai_schema().

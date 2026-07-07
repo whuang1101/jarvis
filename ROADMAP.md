@@ -1653,7 +1653,7 @@ interactive turn so only turns that both finish normally and ran at least the th
   path=tmp)` followed by `Settings.load(path=tmp).notify_min_seconds` returns `5`. `/selftest`
   (pytest) green.
 
-- [ ] **28.2 Cross-platform notifier module (`jarvis/notify.py`, `JARVIS.md`).**
+- [x] **28.2 Cross-platform notifier module (`jarvis/notify.py`, `JARVIS.md`).**
   Add a new module with `def send_notification(title: str, message: str) -> None`. Resolve a
   notifier via `shutil.which`: on `osascript` run
   `["osascript", "-e", f'display notification "{message}" with title "{title}"']`; else on
