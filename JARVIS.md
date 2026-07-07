@@ -339,8 +339,11 @@ lists both dirs' `*.md` stems; `all_command_names()` combines the module-level `
 tuple with `f"/{name}"` for each discovered custom command, and is the single source the plain
 `/help` command list (and the completer) build from. `cli.py:SlashCommandCompleter` (a
 `prompt_toolkit` `Completer`, guarded behind a `_PROMPT_TOOLKIT` import flag so `cli.py` still
-loads without the dependency) completes a bare `/prefix` against `all_command_names()`; it is
-not yet wired into the input loop (that's `readline` today). `/config` (no args) prints
+loads without the dependency) completes a bare `/prefix` against `all_command_names()`.
+`_read_input` uses it: on a TTY with `prompt_toolkit` installed, a lazily-created
+module-level `PromptSession` (`InMemoryHistory`, `complete_while_typing=True`) reads the
+line for dropdown completion; any other case (piped stdin, tests) falls back to the
+existing `readline`-backed `input()` path. `/config` (no args) prints
 effective settings from `Settings.load_with_sources()` (default/global/project); `/config <key>
 <value>` writes a scalar key to the global TOML via `settings.persist_setting`. `/sessions` lists
 `sessions.list_sessions(limit=10)`; `/resume <n>` loads that entry via `SessionStore.load` into

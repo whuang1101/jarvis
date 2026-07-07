@@ -174,6 +174,13 @@ class TestEmitResult:
         assert buf.getvalue() == ""
 
 
+class TestReadInput:
+    def test_non_tty_falls_back_to_input(self, monkeypatch):
+        monkeypatch.setattr(sys.stdin, "isatty", lambda: False)
+        monkeypatch.setattr("builtins.input", lambda prompt="": "hi")
+        assert cli._read_input("~/x · 0k") == "hi"
+
+
 class TestReadFullInput:
     def test_single_line_passthrough(self, monkeypatch):
         monkeypatch.setattr(cli, "_read_input", lambda status: "hello")
