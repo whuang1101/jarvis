@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from jarvis import todos
 from jarvis.tools.todo_write import TodoWriteTool
 
 
@@ -16,6 +17,15 @@ def test_updates_and_renders(capsys) -> None:
     assert "Write tests" in out
     assert "Implement feature" in out
     assert "Update docs" in out
+
+
+def test_writes_to_todo_store() -> None:
+    items = [
+        {"content": "Write tests", "status": "completed"},
+        {"content": "Implement feature", "status": "in_progress"},
+    ]
+    TodoWriteTool().execute({"todos": items})
+    assert todos.get_todos() == items
 
 
 def test_rejects_non_list() -> None:

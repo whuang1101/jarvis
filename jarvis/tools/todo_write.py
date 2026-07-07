@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from .base import BaseTool
+from .. import todos as todo_store
 from ..formatter import print_todo_list
 
 _STATUSES = ("pending", "in_progress", "completed")
@@ -52,6 +53,7 @@ class TodoWriteTool(BaseTool):
                 return f"Error: invalid status '{status}' (must be one of {_STATUSES})"
             normalized.append({"content": content, "status": status})
 
+        todo_store.set_todos(normalized)
         print_todo_list(normalized)
         done = sum(1 for t in normalized if t["status"] == "completed")
         return f"Todo list updated ({done}/{len(normalized)} completed)."
