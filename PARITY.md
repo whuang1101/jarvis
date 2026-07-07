@@ -49,7 +49,7 @@ Legend: ✅ Jarvis has it · 🟡 partial · ❌ missing
 | Allow/deny rules with patterns, e.g. Bash(git *) | ✅ | ROADMAP 2.3 |
 | "Yes, don't ask again" option that persists | ✅ | ROADMAP 2.4 |
 | Settings hierarchy (user / project / local overrides) | ✅ | ROADMAP 2.1–2.2 |
-| Sandboxed command execution | ❌ | ROADMAP Phase 6 / security section of TODO.md |
+| Sandboxed command execution | 🟡 | opt-in `bwrap` sandbox (read-only root, writable project dir, net off by default); Linux-only, deny-by-default when bwrap missing; `/sandbox` toggle |
 | Sensitive-file protection (.env etc. excluded from reads) | ✅ | |
 
 ## Sessions & persistence

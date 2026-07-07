@@ -1290,7 +1290,7 @@ via `/sandbox`. No change to command semantics when the sandbox is off (default)
   `handle_command("/sandbox")` returns without raising; `grep` confirms `_HELP_TEXT` and
   `JARVIS.md` mention `/sandbox`. `/selftest` green.
 
-- [ ] **22.5 Docs + parity flip.**
+- [x] **22.5 Docs + parity flip.**
   In `JARVIS.md`, document the sandbox in the settings/config section: `sandbox` and
   `sandbox_allow_network` keys, `bwrap` requirement, deny-by-default behavior, and the
   `/sandbox` toggle. In `PARITY.md`, flip the "Sandboxed command execution" row from ❌ to
