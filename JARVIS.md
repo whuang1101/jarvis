@@ -221,6 +221,8 @@ jarvis/
     │                    basenames against secret-file patterns (.env, *.pem, id_rsa, …);
     │                    wired into read_file.py and search_files.py.
     ├── package_info.py  npm / PyPI package metadata lookup.
+    ├── skill.py         Loads a named skill's full body on demand via skills.load_skill();
+    │                    returns an `Error:` string if no skill matches.
     ├── git_tools.py     git_status, git_diff, git_log (shared _git() helper, 15s timeout).
     ├── todo_write.py    Replaces the visible task list wholesale (content + pending/in_progress/
     │                    completed), writes it into jarvis/todos.py's module-level store (a

@@ -1341,7 +1341,7 @@ No behavior change when no skills are present.
   and the word `skill` (the tool-name instruction); a second test with `discover_skills`
   returning `[]` asserts no `## Skills` header appears. `/selftest` green.
 
-- [ ] **23.3 On-demand `skill` tool (`jarvis/tools/skill.py` + registry).**
+- [x] **23.3 On-demand `skill` tool (`jarvis/tools/skill.py` + registry).**
   New `SkillTool(BaseTool)` with `name = "skill"`, a description explaining it loads a named
   skill's full instructions, and a `parameters` schema with one required string `name`.
   `execute` calls `load_skill(args["name"])` and returns the skill `body`, or
