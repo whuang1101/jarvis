@@ -140,6 +140,8 @@ jarvis/
 │                    file = stderr warning + that file skipped. persist_allow_pattern() appends to
 │                    the global config's `[permissions] allow` list on disk (hand-rolled
 │                    _dump_toml — tomllib has no writer).
+├── status.py        build_default_status(cwd, tokens, plan, auto, danger) — pure function for the
+│                    REPL's dim status line (`~`-abbreviated cwd · Nk tokens · PLAN · AUTO · DANGER).
 ├── context.py       ContextManager (history + system prompt), UsageTracker (tokens+cost),
 │                    _PRICING table, plan-mode globals, _clean_history, compact().
 │                    expand_file_mentions() inlines `@path` file contents (non-image) into text.

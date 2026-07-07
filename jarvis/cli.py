@@ -83,6 +83,7 @@ from .mcp_config import load_mcp_servers
 from .mcp_manager import MCPManager, set_active_manager
 from .sessions import SessionStore, list_sessions
 from .settings import Settings
+from .status import build_default_status
 from .tools import register_tool
 
 
@@ -398,17 +399,13 @@ def main() -> None:
             try:
                 console.print()
                 cwd = Path.cwd()
-                try:
-                    short = "~" / cwd.relative_to(Path.home())
-                except ValueError:
-                    short = cwd
-                status = f"{short} · {context.token_estimate() / 1000:.1f}k tokens"
-                if is_plan_mode():
-                    status += " · PLAN"
-                if is_auto_mode():
-                    status += " · AUTO"
-                if is_dangerously_skip_permissions():
-                    status += " · DANGER"
+                status = build_default_status(
+                    cwd,
+                    context.token_estimate(),
+                    is_plan_mode(),
+                    is_auto_mode(),
+                    is_dangerously_skip_permissions(),
+                )
                 user_input = _read_full_input(status).strip()
                 if user_input:
                     readline.add_history(user_input)
