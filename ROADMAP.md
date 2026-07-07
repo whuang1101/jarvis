@@ -1314,7 +1314,7 @@ body on demand through a `skill` tool. This phase adds skill discovery from
 name), a prompt catalog, the on-demand `skill` tool, and a `/skills` command to list them.
 No behavior change when no skills are present.
 
-- [ ] **23.1 Skill discovery + frontmatter parsing (`jarvis/skills.py`).**
+- [x] **23.1 Skill discovery + frontmatter parsing (`jarvis/skills.py`).**
   New module `jarvis/skills.py`. A skill lives at either `<dir>/<name>.md` or
   `<dir>/<name>/SKILL.md`, under `~/.jarvis/skills/` (global) and `Path.cwd()/.jarvis/skills/`
   (project). Define a frozen `Skill` dataclass (`name: str`, `description: str`, `body: str`,
