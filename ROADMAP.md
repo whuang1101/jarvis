@@ -1818,7 +1818,7 @@ skills, and `.mcp.json` loaders so nothing new has to parse markdown or MCP JSON
   `Plugin`s, that the empty-manifest one takes `name` from its directory, and that a plugin dir
   containing invalid TOML is skipped without raising. `/selftest` (pytest) green.
 
-- [ ] **31.2 Wire plugin commands + skills into discovery (`jarvis/plugins.py`, `jarvis/skills.py`, `jarvis/commands.py`).**
+- [x] **31.2 Wire plugin commands + skills into discovery (`jarvis/plugins.py`, `jarvis/skills.py`, `jarvis/commands.py`).**
   In `plugins.py` add `plugin_command_dirs() -> list[Path]` and `plugin_skill_dirs() -> list[Path]`
   returning, for every `discover_plugins()` entry, its `<path>/commands` resp. `<path>/skills`
   subdir that `is_dir()`. In `skills.py`, extend `_skill_dirs()` to append

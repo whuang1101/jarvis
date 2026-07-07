@@ -159,8 +159,14 @@ _BUILTIN_COMMANDS = (
 )
 
 
-def _custom_command_dirs() -> tuple[Path, Path]:
-    return (_CUSTOM_COMMANDS_GLOBAL_DIR, Path.cwd() / _CUSTOM_COMMANDS_PROJECT_DIRNAME)
+def _custom_command_dirs() -> list[Path]:
+    from . import plugins
+
+    return [
+        _CUSTOM_COMMANDS_GLOBAL_DIR,
+        Path.cwd() / _CUSTOM_COMMANDS_PROJECT_DIRNAME,
+        *plugins.plugin_command_dirs(),
+    ]
 
 
 def _load_custom_command(name: str) -> str | None:

@@ -31,6 +31,16 @@ def _parse(path: Path) -> Plugin | None:
     return Plugin(name=name, description=description, version=version, path=path)
 
 
+def plugin_command_dirs() -> list[Path]:
+    """The `commands` subdir of each discovered plugin bundle that exists."""
+    return [d for p in discover_plugins() if (d := p.path / "commands").is_dir()]
+
+
+def plugin_skill_dirs() -> list[Path]:
+    """The `skills` subdir of each discovered plugin bundle that exists."""
+    return [d for p in discover_plugins() if (d := p.path / "skills").is_dir()]
+
+
 def discover_plugins() -> list[Plugin]:
     """Discover plugin bundles from the global (~/.jarvis/plugins) and project
     (./.jarvis/plugins) directories. Project plugins override global ones with the same name."""
