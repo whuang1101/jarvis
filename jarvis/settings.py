@@ -62,9 +62,11 @@ class Settings:
     max_tool_iterations: int = 40
     autocompact_tokens: int = 25_000
     tool_timeout_secs: int = 60
+    notify_min_seconds: int = 30
     theme: str = "monokai"
     show_thinking: bool = True
     vi_mode: bool = False
+    notify: bool = True
     vision: bool = True
     mcp_auto_reconnect: bool = True
     # Glob-style patterns matched against "tool_name(args)", e.g. "run_command(git *)".

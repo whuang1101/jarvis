@@ -1640,7 +1640,7 @@ turn and switches away gets no signal when it completes. Add a small cross-platf
 with a `notify_min_seconds` threshold so quick turns stay silent, and wire it around the
 interactive turn so only turns that both finish normally and ran at least the threshold fire.
 
-- [ ] **28.1 `notify` + `notify_min_seconds` settings (`jarvis/settings.py`, `JARVIS.md`).**
+- [x] **28.1 `notify` + `notify_min_seconds` settings (`jarvis/settings.py`, `JARVIS.md`).**
   Add `notify: bool = True` (next to the other scalar bools like `vi_mode`) and
   `notify_min_seconds: int = 30` (next to the other scalar ints like `tool_timeout_secs`) to the
   `Settings` dataclass, so both participate in `load()`, `load_with_sources()`, and
