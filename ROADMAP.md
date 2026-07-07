@@ -839,7 +839,7 @@ best-effort over *tracked* modifications via `git stash create`/`apply` — a
 smaller, self-contained cousin of Claude Code's cross-session `/rewind`. No new
 Azure calls.
 
-- [ ] **17.1 In-memory checkpoint store the REPL writes into.**
+- [x] **17.1 In-memory checkpoint store the REPL writes into.**
   Add `jarvis/checkpoints.py` with a module-level `_CHECKPOINTS: list[dict[str,
   Any]] = []` and `_MAX_CHECKPOINTS = 30`, plus: `create(history: list[dict],
   label: str = "", file_stash: str | None = None) -> int` — appends `{"label":
