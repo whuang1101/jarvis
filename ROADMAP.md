@@ -1490,7 +1490,7 @@ and body and run `gh pr create`, mirroring the `_RUN_AGENT_PREFIX` pattern those
   mentions "boom". `grep` confirms `_HELP_TEXT` and the autocomplete list mention `/pr`.
   `/selftest` (pytest) green.
 
-- [ ] **25.3 Docs + parity flip (`JARVIS.md`, `PARITY.md`).**
+- [x] **25.3 Docs + parity flip (`JARVIS.md`, `PARITY.md`).**
   In JARVIS.md, add `/pr` to the `Implemented commands:` list and document it beside
   `/commit`/`/review`: it collects the branch, commit subjects, and `git diff main...HEAD`,
   then has the agent author a title/body and run `gh pr create` (through the permission gate).

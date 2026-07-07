@@ -95,7 +95,7 @@ Legend: ✅ Jarvis has it · 🟡 partial · ❌ missing
 |---|---|---|
 | git status/diff/log tools | ✅ | |
 | Commit with generated message (through permission gate) | ✅ | `/commit`, ROADMAP 5.5 |
-| PR creation with generated title/body | ❌ | ROADMAP 5.5 |
+| PR creation with generated title/body | ✅ | `/pr` gathers branch + commits + diff, agent writes title/body and runs `gh pr create` |
 | PR review (/review) | ✅ | `/review [pr#]`, ROADMAP 5.5 |
 | GitHub MCP integration | ✅ | 26 tools when gh is authed |
 
